@@ -1,7 +1,17 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
-import { GameState, ResourceType, Resources, Production } from '@/types/game';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { GameState, ResourceType, Resources, Production, ToastMessage } from '@/types/game';
 import { initialGameState } from '@/data/gameData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { formatNumberFrench } from '@/utils/formatters';
+import { migrateGameState, isValidGameState } from '@/utils/stateMigration';
+import { 
+  calculateConformitePercentage, 
+  shouldUnlockConformite, 
+  canPerformTest,
+  TEST_COST,
+  TEST_GAIN,
+  MAX_PERCENTAGE
+} from '@/data/conformiteLogic';
 
 interface GameContextType {
   gameState: GameState;
@@ -12,6 +22,17 @@ interface GameContextType {
   formatNumber: (value: number) => string;
   canPurchaseAgent: (administrationId: string, agentId: string) => boolean;
   canUnlockAdministration: (administrationId: string) => boolean;
+  
+  // Conformité system methods
+  isConformiteUnlocked: () => boolean;
+  isPhase2ButtonActive: () => boolean;
+  performConformiteTest: () => boolean;
+  
+  // Toast system methods
+  toastQueue: ToastMessage[];
+  showToast: (message: string, type: ToastMessage['type'], duration?: number) => void;
+  dismissToast: (toastId: string) => void;
+  getActiveToasts: () => ToastMessage[];
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -24,6 +45,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const [gameState, setGameState] = useState<GameState>(() => ({
     ...initialGameState,
   }));
+  
+  // Toast queue state (separate from GameState, not persisted)
+  const [toastQueue, setToastQueue] = useState<ToastMessage[]>([]);
   
   const gameLoopRef = useRef<number | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -109,11 +133,25 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       try {
         const storedState = await AsyncStorage.getItem(STORAGE_KEY);
         if (storedState && isMountedRef.current) {
-          const parsedState = JSON.parse(storedState) as GameState;
-          setGameState(prevState => ({
-            ...parsedState,
+          const parsedState = JSON.parse(storedState);
+          
+          // Migrate state from old versions to current version
+          const migratedState = migrateGameState(parsedState);
+          
+          // Validate migrated state
+          if (!isValidGameState(migratedState)) {
+            console.error('[GameState] Migrated state is invalid, using initial state');
+            setGameState({
+              ...initialGameState,
+              lastTimestamp: Date.now(),
+            });
+            return;
+          }
+          
+          setGameState({
+            ...migratedState,
             lastTimestamp: Date.now(),
-          }));
+          });
         } else if (isMountedRef.current) {
           setGameState(prevState => ({
             ...prevState,
@@ -121,7 +159,14 @@ export default function GameStateProvider({ children }: { children: React.ReactN
           }));
         }
       } catch (error) {
-        console.error('Failed to load game state:', error);
+        console.error('[GameState] Failed to load game state:', error);
+        // Fallback to initial state on any error (corrupted save, migration failure, etc.)
+        if (isMountedRef.current) {
+          setGameState({
+            ...initialGameState,
+            lastTimestamp: Date.now(),
+          });
+        }
       }
     };
 
@@ -170,16 +215,57 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       productionCacheRef.current = currentProduction;
 
       const newResources = { ...gameState.resources };
+      const formulairesGained = currentProduction.formulaires * deltaTime;
+      
       Object.keys(currentProduction).forEach(resource => {
         const resourceKey = resource as keyof Resources;
         newResources[resourceKey] += currentProduction[resourceKey as keyof Production] * deltaTime;
       });
 
+      // Update conformité system
+      let newConformite = gameState.conformite ? { ...gameState.conformite } : undefined;
+      
+      if (newConformite) {
+        // Track lifetime formulaires for passive progression
+        newConformite.lifetimeFormulaires += formulairesGained;
+        
+        // Update highest-ever counts for unlock tracking
+        newConformite.highestEverTampons = Math.max(
+          newConformite.highestEverTampons,
+          newResources.tampons
+        );
+        newConformite.highestEverFormulaires = Math.max(
+          newConformite.highestEverFormulaires,
+          newResources.formulaires
+        );
+        
+        // Check if conformité should unlock
+        if (!newConformite.isUnlocked) {
+          // Check if last administration (agence-redondance) is unlocked
+          const lastAdmin = updatedState.administrations.find(a => a.id === 'agence-redondance');
+          const isLastAdminUnlocked = lastAdmin?.isUnlocked ?? false;
+          
+          if (shouldUnlockConformite(
+            newConformite.highestEverTampons,
+            newConformite.highestEverFormulaires,
+            isLastAdminUnlocked
+          )) {
+            newConformite.isUnlocked = true;
+          }
+        }
+        
+        // Calculate passive conformité progression
+        newConformite.percentage = calculateConformitePercentage(
+          newConformite.lifetimeFormulaires
+        );
+      }
+
       pendingUpdatesRef.current = {
         ...pendingUpdatesRef.current,
         resources: newResources,
         production: currentProduction,
-        lastTimestamp: currentTime
+        lastTimestamp: currentTime,
+        conformite: newConformite
       };
 
       applyPendingUpdates();
@@ -278,17 +364,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   }, []);
 
   const formatNumber = useCallback((value: number): string => {
-    if (value >= 1000000) {
-      return (value / 1000000).toFixed(2) + 'M';
-    } else if (value >= 1000) {
-      return (value / 1000).toFixed(2) + 'K';
-    } else if (value >= 100) {
-      return Math.floor(value).toString();
-    } else if (value >= 10) {
-      return value.toFixed(1);
-    } else {
-      return value.toFixed(2);
-    }
+    return formatNumberFrench(value);
   }, []);
 
   const canPurchaseAgent = useCallback((administrationId: string, agentId: string): boolean => {
@@ -308,6 +384,124 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return canAfford(administration.unlockCost);
   }, [gameState.administrations, canAfford]);
 
+  // Conformité system methods
+  
+  /**
+   * Check if conformité system is unlocked
+   * Memoized for performance
+   */
+  const isConformiteUnlocked = useMemo(() => {
+    return () => {
+      if (!gameState.conformite) return false;
+      return gameState.conformite.isUnlocked;
+    };
+  }, [gameState.conformite]);
+
+  /**
+   * Check if Phase 2 transition button should be active
+   * Requires 100% conformité
+   */
+  const isPhase2ButtonActive = useMemo(() => {
+    return () => {
+      if (!gameState.conformite) return false;
+      return gameState.conformite.percentage >= MAX_PERCENTAGE;
+    };
+  }, [gameState.conformite]);
+
+  /**
+   * Perform a conformité test
+   * Costs 150 formulaires, grants +3% conformité (capped at 100%)
+   * 
+   * @returns true if test succeeded, false if validation failed
+   */
+  const performConformiteTest = useCallback((): boolean => {
+    if (!gameState.conformite) return false;
+    
+    // Validate test can be performed
+    const canTest = canPerformTest(
+      gameState.resources.formulaires,
+      gameState.conformite.lastTestTimestamp,
+      gameState.conformite.isUnlocked
+    );
+    
+    if (!canTest) return false;
+    
+    // Atomic state update: deduct resources, increase percentage, update timestamp
+    setGameState(prevState => {
+      if (!prevState.conformite) return prevState;
+      
+      const newPercentage = Math.min(
+        prevState.conformite.percentage + TEST_GAIN,
+        MAX_PERCENTAGE
+      );
+      
+      return {
+        ...prevState,
+        resources: {
+          ...prevState.resources,
+          formulaires: prevState.resources.formulaires - TEST_COST
+        },
+        conformite: {
+          ...prevState.conformite,
+          percentage: newPercentage,
+          lastTestTimestamp: Date.now()
+        }
+      };
+    });
+    
+    return true;
+  }, [gameState.resources.formulaires, gameState.conformite]);
+
+  // Toast system methods
+  
+  /**
+   * Show a toast notification
+   * Max 3 toasts displayed simultaneously
+   * 
+   * @param message - Message text (French)
+   * @param type - Message type for styling
+   * @param duration - Auto-dismiss duration in ms (default: 4000)
+   */
+  const showToast = useCallback((
+    message: string,
+    type: ToastMessage['type'],
+    duration: number = 4000
+  ): void => {
+    const newToast: ToastMessage = {
+      id: `${Date.now()}_${Math.random()}`,
+      text: message,
+      type,
+      duration,
+      timestamp: Date.now()
+    };
+    
+    // Add to queue, keep max 3 toasts (evict oldest)
+    setToastQueue(prev => [...prev, newToast].slice(-3));
+    
+    // Auto-dismiss after duration
+    setTimeout(() => {
+      dismissToast(newToast.id);
+    }, duration);
+  }, []);
+
+  /**
+   * Dismiss a toast by ID
+   * 
+   * @param toastId - Toast ID to dismiss
+   */
+  const dismissToast = useCallback((toastId: string): void => {
+    setToastQueue(prev => prev.filter(toast => toast.id !== toastId));
+  }, []);
+
+  /**
+   * Get list of active toasts
+   * 
+   * @returns Array of active toast messages
+   */
+  const getActiveToasts = useCallback((): ToastMessage[] => {
+    return toastQueue;
+  }, [toastQueue]);
+
   return (
     <GameContext.Provider value={{
       gameState,
@@ -318,6 +512,13 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       formatNumber,
       canPurchaseAgent,
       canUnlockAdministration,
+      isConformiteUnlocked,
+      isPhase2ButtonActive,
+      performConformiteTest,
+      toastQueue,
+      showToast,
+      dismissToast,
+      getActiveToasts,
     }}>
       {children}
     </GameContext.Provider>
