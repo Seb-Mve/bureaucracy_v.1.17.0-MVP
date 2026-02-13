@@ -1,0 +1,204 @@
+================================================================================
+TASK GENERATION SUMMARY
+================================================================================
+
+Feature: Conformité Aléatoire System and Hidden Narrative Layer
+Branch: 001-conformite-narrative
+Generated: $(date)
+Output File: tasks.md
+
+================================================================================
+OVERALL STATISTICS
+================================================================================
+
+Total Tasks Generated: 198
+Total Lines: 689
+Total Phases: 8
+Estimated Effort: 20-28 hours (2.5-3.5 working days)
+MVP Effort: 16-22 hours (US1 + US4 + core testing)
+
+================================================================================
+TASK BREAKDOWN BY USER STORY
+================================================================================
+
+US1 - Discovering the Conformité System (P1 - MVP):     33 tasks
+  → Core conformité progression mechanic (0-100%)
+  → Active testing (150 formulaires cost, +3% gain)
+  → Passive progression (+1% per 150 formulaires)
+  → Unlock at 1000 tampons + 100 formulaires
+  
+US4 - Phase 2 Transition Discovery (P1 - MVP):          42 tasks
+  → Toast notification system infrastructure
+  → "Réaffectation différée" button (grayed → active at 100%)
+  → Phase 2 notification display
+  
+US2 - Encountering Hidden Narrative Messages (P2):      22 tasks
+  → S.I.C. message system (6 French variants)
+  → Production milestone triggers
+  → Adaptive probability (2% cooldown → 12.5% base → 20% boost)
+  
+US3 - Rare Conformity Violation Notifications (P3):     15 tasks
+  → "Tampon non conforme" rare notification (0.2%)
+  → Rate limiting (max 1 per 10 minutes)
+  → Purely cosmetic (no gameplay impact)
+  
+US5 - Bureau Name Correction (P3):                       5 tasks
+  → Simple text change: "Administration Centrale" → "Bureau des Documents Obsolètes"
+  → Already completed in Phase 1 setup
+  
+Cross-Cutting (Setup, Foundation, Polish):               81 tasks
+  → Type definitions, data layer, state migration
+  → Performance optimization, accessibility audit
+  → French language review, end-to-end testing
+
+================================================================================
+TASK BREAKDOWN BY PHASE
+================================================================================
+
+Phase 1: Setup (Project Structure & Dependencies)
+  Duration: 2-3 hours | Risk: ✅ Low
+  Tasks: T001-T014 (14 tasks)
+  Focus: Type definitions, data layer modules, constants
+  
+Phase 2: Foundational (State Migration & Persistence)
+  Duration: 2-3 hours | Risk: ⚠️ Medium
+  Tasks: T015-T028 (14 tasks)
+  Focus: V1→V2 save migration, AsyncStorage integration
+  CRITICAL: Blocks all user story work
+  
+Phase 3: User Story 1 - Conformité Core (P1 MVP)
+  Duration: 6-8 hours | Risk: ⚠️ Medium
+  Tasks: T029-T061 (33 tasks)
+  Focus: Context methods, game loop integration, UI components
+  Delivers: Complete conformité progression system
+  
+Phase 4: User Story 4 - Phase 2 Button (P1 MVP)
+  Duration: 4-5 hours | Risk: ⚠️ Medium
+  Tasks: T062-T103 (42 tasks)
+  Focus: Toast system, Phase 2 transition button, notifications
+  Delivers: Phase 2 gate and notification infrastructure
+  
+Phase 5: User Story 2 - S.I.C. Messages (P2)
+  Duration: 3-4 hours | Risk: ✅ Low
+  Tasks: T104-T125 (22 tasks)
+  Focus: Narrative atmosphere, production milestones, messages
+  Delivers: Hidden narrative layer
+  
+Phase 6: User Story 3 - Non-conformity (P3)
+  Duration: 2-3 hours | Risk: ✅ Low
+  Tasks: T126-T140 (15 tasks)
+  Focus: Rare notifications, rate limiting
+  Delivers: Surveillance atmosphere polish
+  
+Phase 7: User Story 5 - Bureau Rename (P3)
+  Duration: 0.5 hours | Risk: ✅ Low
+  Tasks: T141-T144 (4 tasks)
+  Focus: Verify text change completed in Phase 1
+  Delivers: Thematic consistency
+  
+Phase 8: Polish & Cross-Cutting Concerns
+  Duration: 3-4 hours | Risk: 🔴 High
+  Tasks: T145-T198 (54 tasks)
+  Focus: Performance, accessibility, i18n, E2E testing
+  Delivers: Production-ready feature
+
+================================================================================
+PARALLEL EXECUTION OPPORTUNITIES
+================================================================================
+
+Setup Phase: 13 tasks can run in parallel (all marked [P])
+Foundation Phase: 3 testing tasks can run in parallel
+US1 Phase: 16 tasks can run in parallel (UI components + tests)
+US4 Phase: 34 tasks can run in parallel (Toast, Button, tests)
+After US4: US2, US3, US5 can all run in parallel
+Polish Phase: 54 tasks can run in parallel (testing, audits)
+
+Team Strategy:
+  - Solo developer: 20-28 hours sequential
+  - Team of 3: ~12-16 hours with parallelization
+  
+================================================================================
+DEPENDENCIES & CRITICAL PATH
+================================================================================
+
+Critical Path (MVP):
+  Phase 1 (Setup) → Phase 2 (Foundation) → Phase 3 (US1) → Phase 4 (US4)
+  
+  Duration: 16-22 hours
+  Delivers: Complete conformité system + Phase 2 transition gate
+  
+Full Feature Path:
+  Add Phase 5 (US2) + Phase 6 (US3) + Phase 7 (US5) + Phase 8 (Polish)
+  
+  Duration: 20-28 hours
+  Delivers: Complete feature with narrative atmosphere + polish
+
+User Story Dependencies:
+  - US1: No dependencies (start after Phase 2)
+  - US4: Depends on US1 (requires conformité percentage)
+  - US2: Depends on US4 (requires toast system)
+  - US3: Depends on US4 (requires toast system)
+  - US5: No dependencies (text change only)
+
+================================================================================
+FORMAT VALIDATION
+================================================================================
+
+✅ All tasks follow strict checklist format: - [ ] [ID] [P?] [Story?] Description
+✅ All story tasks have [US1-US5] labels
+✅ All parallel tasks marked with [P]
+✅ All accessibility tasks marked with [a11y]
+✅ All localization tasks marked with [i18n]
+✅ All performance tasks marked with [perf]
+✅ All task descriptions include file paths
+✅ Task IDs sequential (T001-T198)
+
+================================================================================
+SUCCESS CRITERIA COVERAGE
+================================================================================
+
+All 12 success criteria from spec.md have validation tasks:
+  SC-001: Conformité unlock timing → T166
+  SC-002: Progression timeline (4-6h) → T169
+  SC-003: S.I.C. frequency (2-3/30min) → T173
+  SC-004: Button response <100ms → T145
+  SC-005: Rare notification frequency → T175
+  SC-006: Touch target sizes 44×44pt → T153
+  SC-007: Save persistence → T178
+  SC-008: Phase 2 activation timing → T171
+  SC-009: Rapid clicking handling → T183
+  SC-010: French text rendering → T164
+  SC-011: Bureau name display → T142
+  SC-012: Player curiosity (qualitative) → Post-deployment feedback
+
+================================================================================
+DELIVERABLES
+================================================================================
+
+✅ tasks.md - 689 lines, 198 actionable tasks
+✅ Task breakdown by user story (independent testing)
+✅ Task breakdown by phase (8 phases from plan.md)
+✅ Time estimates per phase and overall
+✅ Dependency graph showing execution order
+✅ Parallel execution examples
+✅ MVP scope definition (US1 + US4)
+✅ Implementation strategies (MVP-first, incremental, parallel team)
+✅ Testing checkpoints after each user story
+✅ Format validation (checklist, IDs, labels, file paths)
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+
+For immediate implementation:
+  1. Start with Phase 1 + Phase 2 (Setup + Foundation) - 4-6 hours
+  2. Implement Phase 3 (US1: Conformité Core) - 6-8 hours
+  3. Test US1 independently → Deliver MVP increment
+  4. Implement Phase 4 (US4: Phase 2 Button) - 4-5 hours
+  5. Test US4 independently → Deliver complete MVP (16-22 hours)
+  6. Add narrative polish: Phase 5 + 6 + 7 - 5-7 hours
+  7. Final polish: Phase 8 - 3-4 hours
+  
+Total: 20-28 hours for complete feature
+
+================================================================================

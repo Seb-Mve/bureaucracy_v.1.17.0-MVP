@@ -19,7 +19,12 @@ export default function ResourceBar() {
   const { resources, production } = gameState;
 
   return (
-    <View style={styles.container}>
+    <View 
+      style={styles.container}
+      accessible={true}
+      accessibilityLabel={`Ressources. Dossiers: ${formatNumber(resources.dossiers)}, production ${formatNumber(production.dossiers)} par seconde. Tampons: ${formatNumber(resources.tampons)}, production ${formatNumber(production.tampons)} par seconde. Formulaires: ${formatNumber(resources.formulaires)}, production ${formatNumber(production.formulaires)} par seconde.`}
+      accessibilityRole="summary"
+    >
       <View style={styles.resourceItem}>
         <File color={Colors.resourceDossiers} size={18} />
         <View style={styles.resourceValues}>
@@ -66,6 +71,7 @@ const styles = StyleSheet.create({
   resourceItem: {
     alignItems: 'center',
     paddingHorizontal: 10,
+    flex: 1,
   },
   resourceValues: {
     alignItems: 'center',
@@ -81,5 +87,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textLight,
     marginTop: 2,
+    flexShrink: 1,
   },
 });

@@ -52,6 +52,10 @@ export default function StampButton() {
               style={styles.button}
               onPress={handlePress}
               activeOpacity={0.8}
+              accessible={true}
+              accessibilityLabel="Tamponner un dossier"
+              accessibilityHint="Appuyez pour tamponner un dossier et gagner une ressource"
+              accessibilityRole="button"
             >
               <Text style={styles.buttonText}>TAMPONNER</Text>
             </TouchableOpacity>

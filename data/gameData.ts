@@ -4,7 +4,7 @@ import { Administration, GameState } from '@/types/game';
 export const administrations: Administration[] = [
   {
     id: 'administration-centrale',
-    name: 'Administration Centrale',
+    name: 'Bureau des Documents Obsolètes',
     unlockCost: {},
     isUnlocked: true,
     imagePath: require('@/assets/carousel-images/administration_centrale_bureaucracy_carousel.png'),
@@ -386,6 +386,7 @@ export const administrations: Administration[] = [
 
 // Initial game state
 export const initialGameState: GameState = {
+  version: 2,
   resources: {
     dossiers: 0,
     tampons: 0,
@@ -398,5 +399,22 @@ export const initialGameState: GameState = {
   },
   administrations: administrations,
   activeAdministrationId: 'administration-centrale',
-  lastTimestamp: null
+  lastTimestamp: null,
+  conformite: {
+    percentage: 0,
+    isUnlocked: false,
+    lifetimeFormulaires: 0,
+    lastTestTimestamp: null,
+    highestEverTampons: 0,
+    highestEverFormulaires: 0
+  },
+  messageSystem: {
+    sicLastTriggerTime: null,
+    nonConformityLastTriggerTime: null,
+    lastProductionMilestone: {
+      dossiers: 0,
+      tampons: 0,
+      formulaires: 0
+    }
+  }
 };

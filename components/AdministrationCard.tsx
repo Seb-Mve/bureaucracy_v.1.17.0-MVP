@@ -36,6 +36,16 @@ export default function AdministrationCard({
     ));
   };
 
+  const getAccessibilityLabel = () => {
+    if (!administration.isUnlocked) {
+      const costText = Object.entries(administration.unlockCost)
+        .map(([resource, amount]) => `${formatNumber(amount || 0)} ${resource}`)
+        .join(', ');
+      return `${administration.name}. Verrouillé. Coût de déblocage: ${costText}`;
+    }
+    return `${administration.name}. ${isActive ? 'Sélectionné' : 'Non sélectionné'}`;
+  };
+
   return (
     <TouchableOpacity 
       style={[
@@ -44,6 +54,11 @@ export default function AdministrationCard({
       ]}
       onPress={administration.isUnlocked ? onPress : undefined}
       activeOpacity={0.8}
+      accessible={true}
+      accessibilityLabel={getAccessibilityLabel()}
+      accessibilityHint={administration.isUnlocked ? 'Appuyez pour sélectionner cette administration' : (isUnlockable ? 'Appuyez sur le bouton débloquer pour accéder à cette administration' : 'Ressources insuffisantes pour débloquer')}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive, disabled: !administration.isUnlocked }}
     >
       <Image 
         source={administration.imagePath}
@@ -61,6 +76,10 @@ export default function AdministrationCard({
               <TouchableOpacity 
                 style={styles.unlockButton}
                 onPress={handleUnlock}
+                accessible={true}
+                accessibilityLabel={`Débloquer ${administration.name}`}
+                accessibilityHint="Appuyez pour débloquer cette administration"
+                accessibilityRole="button"
               >
                 <Text style={styles.unlockButtonText}>Débloquer</Text>
               </TouchableOpacity>

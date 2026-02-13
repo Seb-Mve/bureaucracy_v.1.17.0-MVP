@@ -106,6 +106,7 @@ export default function AgentItem({ agent, administrationId }: AgentItemProps) {
 
   const getCostDisplay = () => {
     const [resource, amount] = Object.entries(agent.cost)[0];
+    const resourceLabel = resource === 'dossiers' ? 'dossiers' : resource === 'tampons' ? 'tampons' : 'formulaires';
     return (
       <View style={styles.costDisplay}>
         <Text style={[styles.costText, { color: 'white' }]}>
@@ -114,6 +115,22 @@ export default function AgentItem({ agent, administrationId }: AgentItemProps) {
         {getResourceIcon(resource)}
       </View>
     );
+  };
+
+  const getAccessibilityLabel = () => {
+    const [resource, amount] = Object.entries(agent.cost)[0];
+    const resourceLabel = resource === 'dossiers' ? 'dossiers' : resource === 'tampons' ? 'tampons' : 'formulaires';
+    let production = '';
+    
+    if (agent.baseProduction && Object.keys(agent.baseProduction).length > 0) {
+      const [prodResource, prodAmount] = Object.entries(agent.baseProduction)[0];
+      production = `Produit ${formatNumber(prodAmount)} ${prodResource} par seconde`;
+    } else if (agent.productionBonus) {
+      const { target, value, isPercentage } = agent.productionBonus;
+      production = `Augmente ${target} de ${formatNumber(value)}${isPercentage ? ' pourcent' : ''}`;
+    }
+    
+    return `${agent.name}. ${agent.description}. ${production}. Coût: ${formatNumber(amount || 0)} ${resourceLabel}. Possédé: ${agent.owned}`;
   };
 
   return (
@@ -131,6 +148,11 @@ export default function AgentItem({ agent, administrationId }: AgentItemProps) {
           style={[styles.buyButton, !canBuy && styles.disabledButton]}
           onPress={handleBuy}
           disabled={!canBuy}
+          accessible={true}
+          accessibilityLabel={getAccessibilityLabel()}
+          accessibilityHint={canBuy ? 'Appuyez pour recruter cet agent' : 'Ressources insuffisantes pour recruter cet agent'}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canBuy }}
         >
           {getCostDisplay()}
         </TouchableOpacity>

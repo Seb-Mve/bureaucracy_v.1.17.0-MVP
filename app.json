@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "bolt-expo-nativewind",
-    "slug": "bolt-expo-nativewind",
-    "version": "1.0.0",
+    "name": "BUREAUCRACY++",
+    "slug": "bureaucracy-mvp",
+    "version": "1.17.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "bureaucracy",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
