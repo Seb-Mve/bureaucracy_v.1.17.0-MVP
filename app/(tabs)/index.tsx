@@ -5,7 +5,6 @@ import ResourceBar from '@/components/ResourceBar';
 import StampButton from '@/components/StampButton';
 import AdministrationCard from '@/components/AdministrationCard';
 import ConformiteDisplay from '@/components/ConformiteDisplay';
-import Phase2TransitionButton from '@/components/Phase2TransitionButton';
 import ToastContainer from '@/components/ToastContainer';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
@@ -137,9 +136,6 @@ export default function BureauScreen() {
         <View style={styles.buttonContainer}>
           <StampButton />
         </View>
-        
-        {/* Phase 2 transition button (appears when conformité unlocked) */}
-        <Phase2TransitionButton />
       </View>
     </SafeAreaView>
   );
