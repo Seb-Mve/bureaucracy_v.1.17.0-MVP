@@ -100,6 +100,8 @@ A player exploring different departments notices that one administration is name
 
 - **What happens if a player has enough formulaires to click "Réaliser un test de conformité" multiple times rapidly?** The button should debounce or disable briefly after each click to prevent accidental spam-clicking, with appropriate visual feedback.
 
+- **What happens when a player clicks "Réaliser un test de conformité" without sufficient formulaires?** The system displays a toast notification showing the shortfall (e.g., "Formulaires insuffisants : il vous manque 80 formulaires. Continuez la production pour effectuer ce test.") and the button remains interactive for retry.
+
 - **What happens when conformité reaches exactly 100% through passive progression?** The system should immediately activate the "Réaffectation différée" button and potentially show a subtle notification that conformité is complete.
 
 - **How does the system handle edge cases where tampons/formulaires counts decrease (if refund/consumption mechanics exist)?** Conformité unlock should be based on "lifetime total produced" or "highest achieved" rather than current counts to prevent the stat from disappearing if resources are spent.
@@ -124,9 +126,10 @@ A player exploring different departments notices that one administration is name
 - **FR-002**: System MUST hide the conformité stat and button until player reaches both 1000 tampons AND 100 formulaires (inclusive thresholds)
 - **FR-003**: System MUST display "Conformité aléatoire: X%" in the game interface when unlocked, with percentage value visible to player
 - **FR-004**: System MUST provide a "Réaliser un test de conformité" button that costs 150 formulaires when clicked
-- **FR-005**: System MUST increment conformité by a fixed amount when player clicks test button and has sufficient formulaires (exact increment amount TBD based on balance testing, estimated +2-5%)
+- **FR-005**: System MUST increment conformité by exactly +3% when player clicks test button and has sufficient formulaires (150 formulaires cost for +3% gain)
+- **FR-005a**: System MUST display a toast notification when test button is clicked with insufficient formulaires, showing the shortfall amount and suggesting production strategies
 - **FR-006**: System MUST automatically increment conformité by +1% for every 150 formulaires produced (passive progression tracking lifetime production)
-- **FR-007**: System MUST persist conformité value across app sessions using AsyncStorage
+- **FR-007**: System MUST persist conformité value across app sessions using AsyncStorage with asynchronous throttled saves every 5 seconds to balance data safety with performance
 - **FR-008**: System MUST track total formulaires produced (lifetime counter) separate from current formulaires count to enable passive progression
 - **FR-009**: System MUST prevent conformité from exceeding 100% (hard cap)
 
@@ -141,21 +144,26 @@ A player exploring different departments notices that one administration is name
 
 #### Phase 2 Transition UI
 
-- **FR-016**: System MUST display a "Réaffectation différée" button in the game interface (location TBD - recommend near conformité display)
+- **FR-016**: System MUST display a "Réaffectation différée" button in the game interface organized as a vertical layout group with the button positioned below the conformité percentage display
 - **FR-017**: Button MUST appear grayed out (inactive/disabled visual state) when conformité is 0-99%
 - **FR-018**: Button MUST become active (normal interactive state) when conformité reaches exactly 100%
 - **FR-019**: When button is clicked at 100% conformité, System MUST display notification: "Votre niveau de conformité a été jugé satisfaisant. Une réaffectation de niveau supérieur pourrait être envisagée..."
 - **FR-020**: Button MUST remain non-functional for conformité below 100% (clicks should be ignored or show tooltip explaining requirement)
+- **FR-021**: The conformité display and Phase 2 button MUST be grouped together visually as a cohesive component with vertical stacking (stat above, button below)
 
 #### Minor Fixes
 
-- **FR-021**: System MUST rename the administration with id 'administration-centrale' from "Administration Centrale" to "Bureau des Documents Obsolètes" in all UI locations
-- **FR-022**: Rename MUST preserve the administration ID 'administration-centrale' for save data compatibility
+- **FR-022**: System MUST rename the administration with id 'administration-centrale' from "Administration Centrale" to "Bureau des Documents Obsolètes" in all UI locations
+- **FR-023**: Rename MUST preserve the administration ID 'administration-centrale' for save data compatibility
+
+#### Unlock Logic
+
+- **FR-024**: System MUST use lifetime totals (highestEverTampons, highestEverFormulaires) for conformité unlock checks, not current resource counts, to ensure unlock state persists even when resources are spent
 
 ### Accessibility Requirements (Constitutional - Principle IV)
 
 - **AR-001**: "Réaliser un test de conformité" button MUST have minimum 44×44pt touch target
-- **AR-002**: "Réaffectation différée" button MUST have minimum 44×44pt touch target
+- **AR-002**: "Réaffectation différée" button MUST have minimum 44×44pt touch target and be positioned in a vertical layout below the conformité percentage display for clear spatial hierarchy
 - **AR-003**: Grayed-out (inactive) button state MUST use sufficient contrast reduction to be visually distinguishable while maintaining minimum 3:1 contrast ratio with background
 - **AR-004**: Active state of "Réaffectation différée" button MUST have clear visual indicator (color change, border, or brightness increase)
 - **AR-005**: Conformité percentage display MUST have accessibility label: "Conformité aléatoire: X pourcent" for screen readers
@@ -201,7 +209,7 @@ A player exploring different departments notices that one administration is name
 
 - **SC-002**: Players can progress from 0% to 100% conformité through normal idle gameplay over approximately 4-6 hours of active play at average production rates (15,000 formulaires total requirement)
 
-- **SC-003**: S.I.C. messages appear frequently enough to create atmosphere (player sees 2-3 messages per 30-minute play session on average) without feeling spammy
+- **SC-003**: S.I.C. messages appear frequently enough to create atmosphere (player sees 3-5 messages per 30-minute play session on average) without feeling spammy
 
 - **SC-004**: 95% of conformité button clicks complete within 100ms (deduct resources + update percentage + save to AsyncStorage)
 
@@ -263,6 +271,16 @@ A player exploring different departments notices that one administration is name
 - Localization to languages other than French
 - Backend synchronization or cloud save for conformité progress
 - A/B testing different conformité progression rates
+
+## Clarifications
+
+### Session 2025-01-21
+
+- Q: When the "Réaliser un test de conformité" button fails due to insufficient formulaires, what user feedback should be shown? → A: Show toast notification + retry automatically
+- Q: What should be the fixed conformité increment amount when clicking "Réaliser un test de conformité"? → A: +3% per test
+- Q: What is the target frequency for S.I.C. messages during typical gameplay to maintain mystery without spam? → A: 3-5 messages per 30 minutes
+- Q: How should the system handle conformité state persistence to balance data safety with performance? → A: Asynchronous throttled save - every 5 seconds
+- Q: How should the conformité stat display and Phase 2 transition button be organized in the UI? → A: Vertical group with Phase 2 button positioned below conformité display
 
 ## Open Questions for Future Consideration
 
