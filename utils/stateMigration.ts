@@ -29,6 +29,19 @@ export function migrateGameState(loaded: any): GameState {
     // Detect version (assume v1 if no version field)
     const version = loaded.version || 1;
     
+    // V2 with missing new fields → V2 updated
+    if (version === 2 && loaded.conformite && !loaded.conformite.hasOwnProperty('isActivated')) {
+      console.log('[Migration] v2→v2: Adding isActivated and accumulatedFormulaires');
+      return {
+        ...loaded,
+        conformite: {
+          ...loaded.conformite,
+          isActivated: false,
+          accumulatedFormulaires: 0
+        }
+      };
+    }
+    
     // Already at current version
     if (version >= 2) {
       return loaded as GameState;
@@ -48,6 +61,8 @@ export function migrateGameState(loaded: any): GameState {
         conformite: {
           percentage: 0,
           isUnlocked: false,
+          isActivated: false,
+          accumulatedFormulaires: 0,
           // Initialize lifetime with current count (assume all existing formulaires count toward progression)
           lifetimeFormulaires: currentFormulaires,
           lastTestTimestamp: null,

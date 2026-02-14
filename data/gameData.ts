@@ -403,6 +403,8 @@ export const initialGameState: GameState = {
   conformite: {
     percentage: 0,
     isUnlocked: false,
+    isActivated: false,
+    accumulatedFormulaires: 0,
     lifetimeFormulaires: 0,
     lastTestTimestamp: null,
     highestEverTampons: 0,

@@ -52,6 +52,12 @@ export interface ConformiteState {
   /** Whether the conformité system has been unlocked for display */
   isUnlocked: boolean;
   
+  /** Whether the conformité system has been activated (one-time action) */
+  isActivated: boolean;
+  
+  /** Formulaires accumulated since activation (for exponential progression) */
+  accumulatedFormulaires: number;
+  
   /** Total formulaires produced across lifetime (for passive progression tracking) */
   lifetimeFormulaires: number;
   

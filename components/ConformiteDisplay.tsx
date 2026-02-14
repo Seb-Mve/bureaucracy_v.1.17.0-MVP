@@ -1,37 +1,36 @@
 /**
  * Conformité Display Component
  * 
- * Shows the mysterious "Conformité aléatoire" percentage and test button.
- * Only visible after unlocking (1000 tampons + 100 formulaires).
+ * Shows the "Conformité aléatoire" system:
+ * - Appears after unlocking 5th administration
+ * - Activation button (mystery mechanic - no costs shown)
+ * - Progress bar showing passive progression
  */
 
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
-import { TEST_COST } from '@/data/conformiteLogic';
 
 export default function ConformiteDisplay() {
   const { 
     gameState, 
-    performConformiteTest, 
-    formatNumber 
+    shouldShowConformite,
+    canActivateConformite,
+    activateConformite
   } = useGameState();
   
   const conformite = gameState.conformite;
   
-  // Don't render if not unlocked
-  if (!conformite || !conformite.isUnlocked) {
+  // Don't render if 5th admin not unlocked
+  if (!shouldShowConformite || !conformite) {
     return null;
   }
   
-  // Hide the test button once conformité has started (> 0%)
-  const showTestButton = conformite.percentage === 0;
-  const canAffordTest = gameState.resources.formulaires >= TEST_COST;
-  const buttonDisabled = !canAffordTest;
+  const isActivated = conformite.isActivated;
+  const percentage = Math.floor(conformite.percentage);
   
-  const handleTestPress = () => {
-    const success = performConformiteTest();
-    // Success feedback handled by optimistic UI update
+  const handleActivate = () => {
+    activateConformite();
   };
   
   return (
@@ -39,9 +38,9 @@ export default function ConformiteDisplay() {
       <View style={styles.header}>
         <Text 
           style={styles.title}
-          accessibilityLabel={`Conformité aléatoire : ${Math.floor(conformite.percentage)} pourcent`}
+          accessibilityLabel={`Conformité aléatoire : ${percentage} pourcent`}
         >
-          Conformité aléatoire : {Math.floor(conformite.percentage)}%
+          Conformité aléatoire : {percentage}%
         </Text>
       </View>
       
@@ -56,38 +55,50 @@ export default function ConformiteDisplay() {
         </View>
       </View>
       
-      {showTestButton && (
+      {!isActivated && (
         <Pressable
           style={({ pressed }) => [
             styles.testButton,
-            buttonDisabled && styles.testButtonDisabled,
-            pressed && !buttonDisabled && styles.testButtonPressed
+            !canActivateConformite && styles.testButtonDisabled,
+            pressed && canActivateConformite && styles.testButtonPressed
           ]}
-          onPress={handleTestPress}
-          disabled={buttonDisabled}
-          accessibilityLabel={`Réaliser un test de conformité. Coûte ${formatNumber(TEST_COST)} formulaires.`}
+          onPress={handleActivate}
+          disabled={!canActivateConformite}
+          accessibilityLabel="Activer le système de conformité aléatoire"
           accessibilityRole="button"
-          accessibilityState={{ disabled: buttonDisabled }}
+          accessibilityState={{ disabled: !canActivateConformite }}
         >
           <Text style={[
             styles.testButtonText,
-            buttonDisabled && styles.testButtonTextDisabled
+            !canActivateConformite && styles.testButtonTextDisabled
           ]}>
-            Réaliser un test de conformité
-          </Text>
-          <Text style={[
-            styles.testButtonCost,
-            buttonDisabled && styles.testButtonCostDisabled
-          ]}>
-            ({formatNumber(TEST_COST)} formulaires)
+            Activer la conformité
           </Text>
         </Pressable>
       )}
       
-      {!showTestButton && (
+      {isActivated && percentage < 100 && (
         <Text style={styles.progressInfo}>
           Progression passive en cours...
         </Text>
+      )}
+      
+      {percentage >= 100 && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.phase2Button,
+            pressed && styles.testButtonPressed
+          ]}
+          onPress={() => {
+            // Phase 2 - Not yet implemented
+          }}
+          accessibilityLabel="Réaffectation différée"
+          accessibilityRole="button"
+        >
+          <Text style={styles.phase2ButtonText}>
+            Réaffectation différée
+          </Text>
+        </Pressable>
       )}
     </View>
   );
@@ -169,5 +180,20 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 8,
+  },
+  phase2Button: {
+    backgroundColor: '#E2A94A',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 200,
+  },
+  phase2ButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

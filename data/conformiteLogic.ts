@@ -103,3 +103,86 @@ export function canPerformTest(
   
   return true;
 }
+
+// NEW: Activation system constants
+export const ACTIVATION_COST_TAMPONS = 40000;
+export const ACTIVATION_COST_FORMULAIRES = 10000;
+
+/**
+ * Check if conformité system can be activated
+ * Requires 40k tampons + 10k formulaires
+ * 
+ * @param currentTampons - Current tampons count
+ * @param currentFormulaires - Current formulaires count
+ * @returns True if activation requirements met
+ * 
+ * @example
+ * canActivateConformite(40000, 10000) // → true
+ * canActivateConformite(39999, 10000) // → false
+ * canActivateConformite(40000, 9999) // → false
+ */
+export function canActivateConformite(
+  currentTampons: number,
+  currentFormulaires: number
+): boolean {
+  return (
+    currentTampons >= ACTIVATION_COST_TAMPONS &&
+    currentFormulaires >= ACTIVATION_COST_FORMULAIRES
+  );
+}
+
+/**
+ * Get the number of formulaires required for the next percentage bracket
+ * Uses exponential formula: 1000 × (1.1)^bracket
+ * 
+ * @param currentPercent - Current conformité percentage (0-100)
+ * @returns Number of formulaires needed for the next 1%
+ * 
+ * @example
+ * getFormulairesRequiredForNextPercent(0) // → 1000 (bracket 0: 0-9%)
+ * getFormulairesRequiredForNextPercent(9) // → 1000 (bracket 0: 0-9%)
+ * getFormulairesRequiredForNextPercent(10) // → 1100 (bracket 1: 10-19%)
+ * getFormulairesRequiredForNextPercent(50) // → 1611 (bracket 5: 50-59%)
+ * getFormulairesRequiredForNextPercent(90) // → 2358 (bracket 9: 90-99%)
+ */
+export function getFormulairesRequiredForNextPercent(currentPercent: number): number {
+  const bracket = Math.floor(currentPercent / 10);
+  return Math.round(1000 * Math.pow(1.1, bracket));
+}
+
+/**
+ * Calculate new conformité percentage using exponential progression
+ * 1000 × (1.1)^bracket formulaires per 1%
+ * 
+ * @param startingPercent - Starting percentage (usually 0 after activation)
+ * @param formulairesProduced - Total formulaires produced since activation
+ * @returns New conformité percentage (0-100, capped)
+ * 
+ * @example
+ * calculateConformitePercentageNew(0, 0) // → 0
+ * calculateConformitePercentageNew(0, 1000) // → 1 (first %)
+ * calculateConformitePercentageNew(0, 10000) // → 10 (reaches bracket 1)
+ * calculateConformitePercentageNew(0, 159390) // → 100 (full completion)
+ */
+export function calculateConformitePercentageNew(
+  startingPercent: number,
+  formulairesProduced: number
+): number {
+  let currentPercent = startingPercent;
+  let remainingFormulaires = formulairesProduced;
+  
+  // Calculate percentage by consuming formulaires bracket by bracket
+  while (currentPercent < MAX_PERCENTAGE && remainingFormulaires > 0) {
+    const costForNext = getFormulairesRequiredForNextPercent(currentPercent);
+    
+    if (remainingFormulaires >= costForNext) {
+      remainingFormulaires -= costForNext;
+      currentPercent++;
+    } else {
+      // Not enough for next percentage point
+      break;
+    }
+  }
+  
+  return Math.min(currentPercent, MAX_PERCENTAGE);
+}

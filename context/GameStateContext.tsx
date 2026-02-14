@@ -8,6 +8,11 @@ import {
   calculateConformitePercentage, 
   shouldUnlockConformite, 
   canPerformTest,
+  canActivateConformite as canActivateConformiteCheck,
+  calculateConformitePercentageNew,
+  getFormulairesRequiredForNextPercent,
+  ACTIVATION_COST_TAMPONS,
+  ACTIVATION_COST_FORMULAIRES,
   TEST_COST,
   TEST_GAIN,
   MAX_PERCENTAGE
@@ -24,6 +29,9 @@ interface GameContextType {
   canUnlockAdministration: (administrationId: string) => boolean;
   
   // Conformité system methods
+  shouldShowConformite: boolean;
+  canActivateConformite: boolean;
+  activateConformite: () => boolean;
   isConformiteUnlocked: () => boolean;
   isPhase2ButtonActive: () => boolean;
   performConformiteTest: () => boolean;
@@ -239,10 +247,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
           newResources.formulaires
         );
         
-        // Check if conformité should unlock
+        // Check if conformité should unlock (old logic - kept for compatibility)
         if (!newConformite.isUnlocked) {
-          // Check if last administration (agence-redondance) is unlocked
-          const lastAdmin = updatedState.administrations.find(a => a.id === 'agence-redondance');
+          const lastAdmin = gameState.administrations.find(a => a.id === 'agence-redondance');
           const isLastAdminUnlocked = lastAdmin?.isUnlocked ?? false;
           
           if (shouldUnlockConformite(
@@ -254,10 +261,14 @@ export default function GameStateProvider({ children }: { children: React.ReactN
           }
         }
         
-        // Calculate passive conformité progression
-        newConformite.percentage = calculateConformitePercentage(
-          newConformite.lifetimeFormulaires
-        );
+        // NEW: Calculate passive conformité progression (exponential formula)
+        if (newConformite.isActivated) {
+          newConformite.accumulatedFormulaires += formulairesGained;
+          newConformite.percentage = calculateConformitePercentageNew(
+            0,
+            newConformite.accumulatedFormulaires
+          );
+        }
       }
 
       pendingUpdatesRef.current = {
@@ -502,6 +513,60 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return toastQueue;
   }, [toastQueue]);
 
+  // NEW: Conformité system state helpers
+  
+  /**
+   * Check if conformité system should be visible (5th admin unlocked)
+   */
+  const shouldShowConformite = useMemo(() => {
+    return gameState.administrations[4]?.isUnlocked || false;
+  }, [gameState.administrations]);
+
+  /**
+   * Check if player can activate conformité (40k tampons + 10k formulaires)
+   */
+  const canActivateConformite = useMemo(() => {
+    if (!gameState.conformite) return false;
+    if (gameState.conformite.isActivated) return false;
+    
+    return canActivateConformiteCheck(
+      gameState.resources.tampons,
+      gameState.resources.formulaires
+    );
+  }, [gameState.resources.tampons, gameState.resources.formulaires, gameState.conformite]);
+
+  /**
+   * Activate conformité system (one-time action)
+   */
+  const activateConformite = useCallback((): boolean => {
+    if (!gameState.conformite) return false;
+    if (gameState.conformite.isActivated) return false;
+    
+    if (!canActivateConformiteCheck(
+      gameState.resources.tampons,
+      gameState.resources.formulaires
+    )) {
+      return false;
+    }
+    
+    setGameState(prevState => ({
+      ...prevState,
+      resources: {
+        ...prevState.resources,
+        tampons: prevState.resources.tampons - ACTIVATION_COST_TAMPONS,
+        formulaires: prevState.resources.formulaires - ACTIVATION_COST_FORMULAIRES
+      },
+      conformite: prevState.conformite ? {
+        ...prevState.conformite,
+        isActivated: true,
+        percentage: 0,
+        accumulatedFormulaires: 0
+      } : prevState.conformite
+    }));
+    
+    return true;
+  }, [gameState.resources, gameState.conformite]);
+
   return (
     <GameContext.Provider value={{
       gameState,
@@ -512,6 +577,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       formatNumber,
       canPurchaseAgent,
       canUnlockAdministration,
+      shouldShowConformite,
+      canActivateConformite,
+      activateConformite,
       isConformiteUnlocked,
       isPhase2ButtonActive,
       performConformiteTest,
