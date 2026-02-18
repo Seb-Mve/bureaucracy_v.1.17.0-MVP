@@ -14,10 +14,10 @@
 
 **Purpose**: Prepare codebase for S.I.C. message system implementation
 
-- [ ] T001 Verify react-native-reanimated v3 installation and babel plugin configuration in babel.config.js
-- [ ] T002 Verify lucide-react-native installation for Menu icon (burger button)
-- [ ] T003 [P] Create utils/dateFormatters.ts with French timestamp formatting (Intl.RelativeTimeFormat)
-- [ ] T004 [P] Update types/game.ts with JournalEntry interface definition
+- [X] T001 Verify react-native-reanimated v3 installation and babel plugin configuration in babel.config.js
+- [X] T002 Verify lucide-react-native installation for Menu icon (burger button)
+- [X] T003 [P] Create utils/dateFormatters.ts with French timestamp formatting (Intl.RelativeTimeFormat)
+- [X] T004 [P] Update types/game.ts with JournalEntry interface definition
 
 ---
 
@@ -27,13 +27,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Update types/game.ts to add journal: JournalEntry[] field to GameState interface
-- [ ] T006 Implement V2→V3 migration in utils/stateMigration.ts (add journal: [] default, bump version to 3)
-- [ ] T007 Update validation in utils/stateMigration.ts for V3 (validate journal entries structure)
-- [ ] T008 Add addJournalEntry() method to context/GameStateContext.tsx (create entry, enforce 500 max, FIFO rotation)
-- [ ] T009 Add revealNarrativeHint() method to context/GameStateContext.tsx (update isRevealed flag, replace text)
-- [ ] T010 Integrate milestone detection in GameStateContext game loop (hasCrossedMilestone for dossiers/tampons/formulaires)
-- [ ] T011 Wire messageSystem triggers into game loop (calculateSICProbability, shouldTriggerNonConformity, getRandomSICMessage)
+- [X] T005 Update types/game.ts to add journal: JournalEntry[] field to GameState interface
+- [X] T006 Implement V2→V3 migration in utils/stateMigration.ts (add journal: [] default, bump version to 3)
+- [X] T007 Update validation in utils/stateMigration.ts for V3 (validate journal entries structure)
+- [X] T008 Add addJournalEntry() method to context/GameStateContext.tsx (create entry, enforce 500 max, FIFO rotation)
+- [X] T009 Add revealNarrativeHint() method to context/GameStateContext.tsx (update isRevealed flag, replace text)
+- [X] T010 Integrate milestone detection in GameStateContext game loop (hasCrossedMilestone for dossiers/tampons/formulaires)
+- [X] T011 Wire messageSystem triggers into game loop (calculateSICProbability, shouldTriggerNonConformity, getRandomSICMessage)
 
 **Checkpoint**: Foundation ready - toasts can now trigger and journal can persist
 

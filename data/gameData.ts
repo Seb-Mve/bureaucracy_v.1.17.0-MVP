@@ -386,7 +386,7 @@ export const administrations: Administration[] = [
 
 // Initial game state
 export const initialGameState: GameState = {
-  version: 2,
+  version: 3,
   resources: {
     dossiers: 0,
     tampons: 0,
@@ -418,5 +418,6 @@ export const initialGameState: GameState = {
       tampons: 0,
       formulaires: 0
     }
-  }
+  },
+  journal: []
 };

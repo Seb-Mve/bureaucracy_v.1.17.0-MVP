@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { GameState, ResourceType, Resources, Production, ToastMessage } from '@/types/game';
+import { GameState, ResourceType, Resources, Production, ToastMessage, JournalEntry } from '@/types/game';
 import { initialGameState } from '@/data/gameData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatNumberFrench } from '@/utils/formatters';
@@ -17,6 +17,15 @@ import {
   TEST_GAIN,
   MAX_PERCENTAGE
 } from '@/data/conformiteLogic';
+import {
+  getRandomSICMessage,
+  calculateSICProbability,
+  shouldTriggerNonConformity,
+  hasCrossedMilestone,
+  MILESTONE_DOSSIERS,
+  MILESTONE_TAMPONS,
+  MILESTONE_FORMULAIRES
+} from '@/data/messageSystem';
 
 interface GameContextType {
   gameState: GameState;
@@ -41,6 +50,17 @@ interface GameContextType {
   showToast: (message: string, type: ToastMessage['type'], duration?: number) => void;
   dismissToast: (toastId: string) => void;
   getActiveToasts: () => ToastMessage[];
+  
+  // Journal system methods
+  addJournalEntry: (
+    type: 'sic' | 'non-conformity' | 'narrative-hint',
+    text: string,
+    options?: {
+      revealedText?: string;
+      targetId?: string;
+    }
+  ) => void;
+  revealNarrativeHint: (targetId: string) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -271,12 +291,59 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         }
       }
 
+      // Check for milestone crossings and trigger S.I.C. messages
+      let newMessageSystem = gameState.messageSystem ? { ...gameState.messageSystem } : undefined;
+      
+      if (newMessageSystem) {
+        const { lastProductionMilestone } = newMessageSystem;
+        let milestoneTriggered = false;
+        
+        // Check dossiers milestone (every 100)
+        if (hasCrossedMilestone(newResources.dossiers, lastProductionMilestone.dossiers, MILESTONE_DOSSIERS)) {
+          milestoneTriggered = true;
+          newMessageSystem.lastProductionMilestone.dossiers = newResources.dossiers;
+        }
+        
+        // Check tampons milestone (every 50)
+        if (hasCrossedMilestone(newResources.tampons, lastProductionMilestone.tampons, MILESTONE_TAMPONS)) {
+          milestoneTriggered = true;
+          newMessageSystem.lastProductionMilestone.tampons = newResources.tampons;
+        }
+        
+        // Check formulaires milestone (every 25)
+        if (hasCrossedMilestone(newResources.formulaires, lastProductionMilestone.formulaires, MILESTONE_FORMULAIRES)) {
+          milestoneTriggered = true;
+          newMessageSystem.lastProductionMilestone.formulaires = newResources.formulaires;
+        }
+        
+        // If any milestone crossed, check if we should trigger a message
+        if (milestoneTriggered) {
+          // Check non-conformity first (rarer, higher priority)
+          if (shouldTriggerNonConformity(newMessageSystem.nonConformityLastTriggerTime)) {
+            const nonConformityMessage = 'Tampon non conforme détecté. Analyse en cours.';
+            showToast(nonConformityMessage, 'non-conformity', 5000);
+            addJournalEntry('non-conformity', nonConformityMessage);
+            newMessageSystem.nonConformityLastTriggerTime = Date.now();
+          } else {
+            // Check S.I.C. message probability
+            const probability = calculateSICProbability(newMessageSystem.sicLastTriggerTime);
+            if (Math.random() < probability) {
+              const sicMessage = getRandomSICMessage();
+              showToast(sicMessage, 'sic', 5000);
+              addJournalEntry('sic', sicMessage);
+              newMessageSystem.sicLastTriggerTime = Date.now();
+            }
+          }
+        }
+      }
+
       pendingUpdatesRef.current = {
         ...pendingUpdatesRef.current,
         resources: newResources,
         production: currentProduction,
         lastTimestamp: currentTime,
-        conformite: newConformite
+        conformite: newConformite,
+        messageSystem: newMessageSystem
       };
 
       applyPendingUpdates();
@@ -290,7 +357,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         clearInterval(gameLoopRef.current as unknown as NodeJS.Timeout);
       }
     };
-  }, [gameState, calculateProduction, applyPendingUpdates]);
+  }, [gameState, calculateProduction, applyPendingUpdates, showToast, addJournalEntry]);
 
   useEffect(() => {
     productionCacheRef.current = null;
@@ -583,6 +650,55 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return true;
   }, [gameState.resources, gameState.conformite]);
 
+  /**
+   * Add a journal entry (S.I.C. message, non-conformity, or narrative hint)
+   * Enforces 500-entry limit via FIFO rotation
+   */
+  const addJournalEntry = useCallback((
+    type: 'sic' | 'non-conformity' | 'narrative-hint',
+    text: string,
+    options: {
+      revealedText?: string;
+      targetId?: string;
+    } = {}
+  ) => {
+    const newEntry: JournalEntry = {
+      id: `${Date.now()}_${Math.random()}`,
+      type,
+      text,
+      timestamp: Date.now(),
+      ...(type === 'narrative-hint' ? {
+        isRevealed: false,
+        revealedText: options.revealedText,
+        targetId: options.targetId
+      } : {})
+    };
+    
+    setGameState(prevState => ({
+      ...prevState,
+      journal: [newEntry, ...prevState.journal].slice(0, 500) // Prepend, keep max 500
+    }));
+  }, []);
+
+  /**
+   * Reveal a narrative hint by targetId (when unlock condition met)
+   */
+  const revealNarrativeHint = useCallback((targetId: string) => {
+    setGameState(prevState => ({
+      ...prevState,
+      journal: prevState.journal.map(entry => {
+        if (entry.type === 'narrative-hint' && entry.targetId === targetId && !entry.isRevealed) {
+          return {
+            ...entry,
+            isRevealed: true,
+            text: entry.revealedText || entry.text // Replace redacted text with revealed
+          };
+        }
+        return entry;
+      })
+    }));
+  }, []);
+
   return (
     <GameContext.Provider value={{
       gameState,
@@ -603,6 +719,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       showToast,
       dismissToast,
       getActiveToasts,
+      addJournalEntry,
+      revealNarrativeHint,
     }}>
       {children}
     </GameContext.Provider>
