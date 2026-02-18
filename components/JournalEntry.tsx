@@ -62,7 +62,11 @@ function JournalEntry({ entry }: JournalEntryProps) {
   };
 
   const formattedTimestamp = formatTimestampFrench(entry.timestamp);
-  const accessibilityLabel = `${getTypeLabel()}, ${formattedTimestamp}, ${entry.text}`;
+  
+  // Accessibility label: "Information classifiée" for unrevealed hints, full text for revealed/other types
+  const accessibilityLabel = entry.type === 'narrative-hint' && !entry.isRevealed
+    ? `Information classifiée, ${formattedTimestamp}`
+    : `${getTypeLabel()}, ${formattedTimestamp}, ${entry.text}`;
 
   return (
     <View 

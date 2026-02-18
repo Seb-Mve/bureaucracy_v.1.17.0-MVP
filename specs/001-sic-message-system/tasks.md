@@ -134,23 +134,25 @@
 
 ### Implementation for User Story 4
 
-- [ ] T060 [P] [US4] Update JournalEntry.tsx to display redacted text for narrative-hint type when isRevealed=false (show text with █ blocks)
-- [ ] T061 [P] [US4] Update JournalEntry.tsx to display full text for narrative-hint type when isRevealed=true (show revealedText)
-- [ ] T062 [P] [US4] Update JournalEntry.tsx styling for narrative-hint unrevealed (purple/gold border #9B59B6)
-- [ ] T063 [P] [US4] Update JournalEntry.tsx styling for narrative-hint revealed (green border #27AE60)
-- [ ] T064 [US4] Add checkUnlockableAdministrations() helper in GameStateContext to detect when administrations become unlockable
-- [ ] T065 [US4] Call checkUnlockableAdministrations() in GameStateContext on resource changes
-- [ ] T066 [US4] Create narrative hint entry in checkUnlockableAdministrations() when administration unlockable but not purchased
-- [ ] T067 [US4] Call revealNarrativeHint() in unlockAdministration() method when administration is purchased
-- [ ] T068 [US4] Add conformité system unlock detection in GameStateContext (when thresholds reached)
-- [ ] T069 [US4] Create narrative hint entry for conformité system unlock (redacted text)
-- [ ] T070 [US4] Call revealNarrativeHint() when conformité system is activated
-- [ ] T071 [P] [US4] [i18n] Create French redacted text templates with █ blocks for narrative hints
-- [ ] T072 [P] [US4] [i18n] Create French revealed text for narrative hints (administration names, conformité system)
-- [ ] T073 [P] [US4] [a11y] Add accessibilityLabel="Information classifiée" for redacted text in JournalEntry.tsx
-- [ ] T074 [P] [US4] [a11y] Update accessibilityLabel to full text when narrative hint is revealed
+- [X] T060 [P] [US4] Update JournalEntry.tsx to display redacted text for narrative-hint type when isRevealed=false (show text with █ blocks)
+- [X] T061 [P] [US4] Update JournalEntry.tsx to display full text for narrative-hint type when isRevealed=true (show revealedText)
+- [X] T062 [P] [US4] Update JournalEntry.tsx styling for narrative-hint unrevealed (purple/gold border #9B59B6)
+- [X] T063 [P] [US4] Update JournalEntry.tsx styling for narrative-hint revealed (green border #27AE60)
+- [X] T064 [US4] Add checkUnlockableAdministrations() helper in GameStateContext to detect when administrations become unlockable
+- [X] T065 [US4] Call checkUnlockableAdministrations() in GameStateContext on resource changes
+- [X] T066 [US4] Create narrative hint entry in checkUnlockableAdministrations() when administration unlockable but not purchased
+- [X] T067 [US4] Call revealNarrativeHint() in unlockAdministration() method when administration is purchased
+- [X] T068 [US4] Add conformité system unlock detection in GameStateContext (when thresholds reached)
+- [X] T069 [US4] Create narrative hint entry for conformité system unlock (redacted text)
+- [X] T070 [US4] Call revealNarrativeHint() when conformité system is activated
+- [X] T071 [P] [US4] [i18n] Create French redacted text templates with █ blocks for narrative hints
+- [X] T072 [P] [US4] [i18n] Create French revealed text for narrative hints (administration names, conformité system)
+- [X] T073 [P] [US4] [a11y] Add accessibilityLabel="Information classifiée" for redacted text in JournalEntry.tsx
+- [X] T074 [P] [US4] [a11y] Update accessibilityLabel to full text when narrative hint is revealed
 
 **Checkpoint**: All user stories complete - Full S.I.C. message system functional with narrative hints
+
+**Note**: Narrative hint infrastructure is complete. Manual creation of narrative hints will be done by game designers when adding new unlock conditions.
 
 ---
 

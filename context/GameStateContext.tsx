@@ -417,6 +417,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
   /**
    * Unlock an administration, deducting its unlockCost and switching the active view to it.
+   * Also reveals any narrative hints for this administration.
    * @returns true if unlock succeeded, false if already unlocked or insufficient resources
    */
   const unlockAdministration = useCallback((administrationId: string): boolean => {
@@ -443,8 +444,11 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       };
     });
     
+    // Reveal any narrative hint for this administration
+    revealNarrativeHint(administrationId);
+    
     return true;
-  }, [gameState.administrations, canAfford]);
+  }, [gameState.administrations, canAfford, revealNarrativeHint]);
 
   /** Switch the currently displayed administration tab. */
   const setActiveAdministration = useCallback((administrationId: string) => {
@@ -621,6 +625,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
   /**
    * Activate conformité system (one-time action)
+   * Also reveals any narrative hint for conformité system.
    */
   const activateConformite = useCallback((): boolean => {
     if (!gameState.conformite) return false;
@@ -648,8 +653,11 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       } : prevState.conformite
     }));
     
+    // Reveal any narrative hint for conformité system
+    revealNarrativeHint('conformite');
+    
     return true;
-  }, [gameState.resources, gameState.conformite]);
+  }, [gameState.resources, gameState.conformite, revealNarrativeHint]);
 
   /**
    * Add a journal entry (S.I.C. message, non-conformity, or narrative hint)
