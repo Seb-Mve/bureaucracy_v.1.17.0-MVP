@@ -129,6 +129,25 @@ export interface JournalEntry {
   targetId?: string;
 }
 
+// Upgrade structure
+export interface Upgrade {
+  id: string;
+  name: string;
+  description: string;
+  cost: Partial<Resources>;
+  effect: string;
+  type: 'agent' | 'production' | 'storage';
+  isPurchased: boolean;
+  administrationId?: number;
+  
+  // Storage-specific configuration (only for type='storage')
+  storageConfig?: {
+    newCap: number | null;       // null = unlimited (Upgrade 4)
+    requiredUpgradeId?: string;  // Previous upgrade in sequence
+    sequenceIndex: number;       // 0-3 for strict order
+  };
+}
+
 // Game state structure
 export interface GameState {
   /** Schema version for migration support */
@@ -139,6 +158,9 @@ export interface GameState {
   administrations: Administration[];
   activeAdministrationId: string;
   lastTimestamp: number | null;
+  
+  /** Current storage cap for formulaires (null = unlimited) - V4 addition */
+  currentStorageCap: number | null;
   
   /** Conformité system state */
   conformite?: ConformiteState;

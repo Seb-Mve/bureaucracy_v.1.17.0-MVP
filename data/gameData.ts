@@ -1,4 +1,68 @@
-import { Administration, GameState } from '@/types/game';
+import { Administration, GameState, Upgrade } from '@/types/game';
+
+// Storage upgrades data
+export const storageUpgrades: Upgrade[] = [
+  {
+    id: 'storage_upgrade_1',
+    name: 'Casier de Secours B-9',
+    description: 'Un espace de rangement supplémentaire découvert lors d\'un audit oublié.',
+    cost: { formulaires: 983 },
+    effect: 'Augmente la capacité de stockage à 1 983 formulaires',
+    type: 'storage',
+    isPurchased: false,
+    administrationId: 2,
+    storageConfig: {
+      newCap: 1983,
+      sequenceIndex: 0
+      // No requiredUpgradeId (first in sequence)
+    }
+  },
+  {
+    id: 'storage_upgrade_2',
+    name: 'Rayonnage Vertical Optimisé',
+    description: 'Une réorganisation spatiale permettant d\'exploiter la hauteur sous plafond.',
+    cost: { formulaires: 1983 },
+    effect: 'Augmente la capacité de stockage à 4 583 formulaires',
+    type: 'storage',
+    isPurchased: false,
+    administrationId: 3,
+    storageConfig: {
+      newCap: 4583,
+      requiredUpgradeId: 'storage_upgrade_1',
+      sequenceIndex: 1
+    }
+  },
+  {
+    id: 'storage_upgrade_3',
+    name: 'Compression d\'Archives A-1',
+    description: 'Une technique bureaucratique avancée de pliage conforme aux normes ISO 17025.',
+    cost: { formulaires: 4583 },
+    effect: 'Augmente la capacité de stockage à 11 025 formulaires',
+    type: 'storage',
+    isPurchased: false,
+    administrationId: 4,
+    storageConfig: {
+      newCap: 11025,
+      requiredUpgradeId: 'storage_upgrade_2',
+      sequenceIndex: 2
+    }
+  },
+  {
+    id: 'storage_upgrade_4',
+    name: 'Vide Juridique de Stockage',
+    description: 'L\'exploitation d\'une faille réglementaire permettant un stockage théoriquement infini.',
+    cost: { formulaires: 11025 },
+    effect: 'Supprime toute limite de stockage (capacité illimitée)',
+    type: 'storage',
+    isPurchased: false,
+    administrationId: 5,
+    storageConfig: {
+      newCap: null, // unlimited
+      requiredUpgradeId: 'storage_upgrade_3',
+      sequenceIndex: 3
+    }
+  }
+];
 
 // Administration data
 export const administrations: Administration[] = [
@@ -386,7 +450,7 @@ export const administrations: Administration[] = [
 
 // Initial game state
 export const initialGameState: GameState = {
-  version: 3,
+  version: 4,
   resources: {
     dossiers: 0,
     tampons: 0,
@@ -400,6 +464,7 @@ export const initialGameState: GameState = {
   administrations: administrations,
   activeAdministrationId: 'administration-centrale',
   lastTimestamp: null,
+  currentStorageCap: 983,
   conformite: {
     percentage: 0,
     isUnlocked: false,

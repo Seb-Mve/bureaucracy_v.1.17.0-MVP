@@ -32,20 +32,35 @@ export function migrateGameState(loaded: unknown): GameState {
     const version = (s.version as number | undefined) || 1;
     const conformite = s.conformite as Record<string, unknown> | undefined;
 
+    // V3 → V4 Migration: Add storage cap system
+    if (version === 3) {
+      console.log('[Migration] v3→v4: Adding storage cap system');
+      return {
+        ...s,
+        version: 4,
+        currentStorageCap: s.currentStorageCap ?? 983 // Default initial cap
+      } as GameState;
+    }
+
+    // Already at current version or newer
+    if (version >= 4) {
+      return s as unknown as GameState;
+    }
+    
     // V2 → V3 Migration: Add journal system
     if (version === 2) {
       console.log('[Migration] v2→v3: Adding journal system');
-      return {
+      return migrateGameState({
         ...s,
         version: 3,
         journal: [] // Empty journal for existing V2 saves
-      } as GameState;
+      }); // Chain migration to v4
     }
 
     // V2 with missing new fields → V2 updated (legacy path)
     if (version === 2 && conformite && !Object.prototype.hasOwnProperty.call(conformite, 'isActivated')) {
       console.log('[Migration] v2→v2: Adding isActivated and accumulatedFormulaires, then migrating to v3');
-      return {
+      return migrateGameState({
         ...s,
         version: 3,
         conformite: {
@@ -54,12 +69,7 @@ export function migrateGameState(loaded: unknown): GameState {
           accumulatedFormulaires: 0
         },
         journal: [] // Also add journal when fixing V2 conformité
-      } as GameState;
-    }
-    
-    // Already at current version or newer
-    if (version >= 3) {
-      return s as unknown as GameState;
+      }); // Chain migration to v4
     }
     
     // V1 → V3 Migration: Add conformité, message systems, and journal
@@ -71,7 +81,7 @@ export function migrateGameState(loaded: unknown): GameState {
       const currentFormulaires = resources?.formulaires || 0;
       const currentTampons = resources?.tampons || 0;
       
-      return {
+      return migrateGameState({
         ...s,
         version: 3,
         conformite: {
@@ -96,11 +106,11 @@ export function migrateGameState(loaded: unknown): GameState {
           }
         },
         journal: [] // Empty journal for V1→V3 migration
-      };
+      }); // Chain migration to v4
     }
     
     // Future migrations would go here
-    // if (version === 3) { ... migrate v3→v4 ... }
+    // if (version === 4) { ... migrate v4→v5 ... }
     
     // Unknown version - return as-is and hope for the best
     console.warn(`[Migration] Unknown version ${version}, attempting to load as-is`);
@@ -176,6 +186,15 @@ export function isValidGameState(state: unknown): boolean {
             return false;
           }
         }
+      }
+    }
+    
+    // Check currentStorageCap field (required in v4+)
+    if ((s.version as number) >= 4) {
+      // currentStorageCap must be number or null
+      if (s.currentStorageCap !== null && typeof s.currentStorageCap !== 'number') {
+        console.error('[Validation] currentStorageCap must be number or null');
+        return false;
       }
     }
     

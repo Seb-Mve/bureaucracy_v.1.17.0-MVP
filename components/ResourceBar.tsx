@@ -1,11 +1,40 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming 
+} from 'react-native-reanimated';
 import { File, Stamp, ClipboardList } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
 
 export default function ResourceBar() {
-  const { gameState, formatNumber } = useGameState();
+  const { gameState, formatNumber, isStorageBlocked } = useGameState();
+  
+  // Shared value for blinking animation
+  const opacity = useSharedValue(1);
+  
+  // Animation effect for storage blocking
+  useEffect(() => {
+    if (isStorageBlocked) {
+      // Start blinking at ~2Hz (500ms total: 250ms fade out + 250ms fade in)
+      opacity.value = withRepeat(
+        withTiming(0, { duration: 250 }),
+        -1, // infinite loop
+        true // reverse (fade in after fade out)
+      );
+    } else {
+      // Stop blinking immediately
+      opacity.value = withTiming(1, { duration: 0 });
+    }
+  }, [isStorageBlocked, opacity]);
+  
+  // Animated style for formulaires
+  const animatedFormulairesStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value
+  }));
   
   // Early return with loading state if gameState is not initialized
   if (!gameState || !gameState.resources || !gameState.production) {
@@ -22,7 +51,11 @@ export default function ResourceBar() {
     <View 
       style={styles.container}
       accessible={true}
-      accessibilityLabel={`Ressources. Dossiers: ${formatNumber(resources.dossiers)}, production ${formatNumber(production.dossiers)} par seconde. Tampons: ${formatNumber(resources.tampons)}, production ${formatNumber(production.tampons)} par seconde. Formulaires: ${formatNumber(resources.formulaires)}, production ${formatNumber(production.formulaires)} par seconde.`}
+      accessibilityLabel={
+        isStorageBlocked 
+          ? `Ressources. Dossiers: ${formatNumber(resources.dossiers)}, production ${formatNumber(production.dossiers)} par seconde. Tampons: ${formatNumber(resources.tampons)}, production ${formatNumber(production.tampons)} par seconde. Formulaires: ${formatNumber(resources.formulaires)}, BLOQUÉ à ${gameState.currentStorageCap}, capacité maximale atteinte.`
+          : `Ressources. Dossiers: ${formatNumber(resources.dossiers)}, production ${formatNumber(production.dossiers)} par seconde. Tampons: ${formatNumber(resources.tampons)}, production ${formatNumber(production.tampons)} par seconde. Formulaires: ${formatNumber(resources.formulaires)}, production ${formatNumber(production.formulaires)} par seconde.`
+      }
       accessibilityRole="summary"
     >
       <View style={styles.resourceItem}>
@@ -46,13 +79,23 @@ export default function ResourceBar() {
       </View>
 
       <View style={styles.resourceItem}>
-        <ClipboardList color={Colors.resourceFormulaires} size={18} />
-        <View style={styles.resourceValues}>
-          <Text style={styles.resourceValue}>{formatNumber(resources.formulaires)}</Text>
+        <ClipboardList 
+          color={isStorageBlocked ? Colors.storageCapped : Colors.resourceFormulaires} 
+          size={18} 
+        />
+        <Animated.View style={[styles.resourceValues, animatedFormulairesStyle]}>
+          <Text 
+            style={[
+              styles.resourceValue, 
+              isStorageBlocked && { color: Colors.storageCapped }
+            ]}
+          >
+            {formatNumber(resources.formulaires)}
+          </Text>
           <Text style={styles.resourceProduction}>
             +{formatNumber(production.formulaires)}/s
           </Text>
-        </View>
+        </Animated.View>
       </View>
     </View>
   );

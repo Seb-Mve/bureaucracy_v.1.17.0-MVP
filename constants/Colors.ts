@@ -26,4 +26,7 @@ export default {
   journalText: '#DDDDDD',
   journalTimestamp: '#999999',
   toastText: '#FFFFFF',
+  
+  // Storage cap system
+  storageCapped: '#FF0000',
 };
