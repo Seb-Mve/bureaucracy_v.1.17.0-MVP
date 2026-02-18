@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { GameState, ResourceType, Resources, Production, ToastMessage, JournalEntry } from '@/types/game';
-import { initialGameState } from '@/data/gameData';
+import { GameState, ResourceType, Resources, Production, ToastMessage, JournalEntry, Upgrade } from '@/types/game';
+import { initialGameState, storageUpgrades } from '@/data/gameData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatNumberFrench } from '@/utils/formatters';
 import { migrateGameState, isValidGameState } from '@/utils/stateMigration';
@@ -26,6 +26,12 @@ import {
   MILESTONE_TAMPONS,
   MILESTONE_FORMULAIRES
 } from '@/data/messageSystem';
+import {
+  applyStorageCap,
+  canPurchaseStorageUpgrade,
+  getStorageCapAfterUpgrade,
+  isStorageBlocked
+} from '@/data/storageLogic';
 
 interface GameContextType {
   gameState: GameState;
@@ -36,6 +42,10 @@ interface GameContextType {
   formatNumber: (value: number) => string;
   canPurchaseAgent: (administrationId: string, agentId: string) => boolean;
   canUnlockAdministration: (administrationId: string) => boolean;
+  
+  // Storage cap system methods
+  purchaseStorageUpgrade: (upgradeId: string) => boolean;
+  isStorageBlocked: boolean;
   
   // Conformité system methods
   shouldShowConformite: boolean;
@@ -323,6 +333,12 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         const resourceKey = resource as keyof Resources;
         newResources[resourceKey] += currentProduction[resourceKey as keyof Production] * deltaTime;
       });
+      
+      // Apply storage cap to formulaires (strict enforcement)
+      newResources.formulaires = applyStorageCap(
+        newResources.formulaires,
+        gameState.currentStorageCap
+      );
 
       // Update conformité system
       let newConformite = gameState.conformite ? { ...gameState.conformite } : undefined;
@@ -555,6 +571,53 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return canAfford(administration.unlockCost);
   }, [gameState.administrations, canAfford]);
 
+  // Storage cap system methods
+  
+  /**
+   * Check if storage is currently blocked (formulaires >= cap)
+   * Memoized computed value for UI reactivity
+   */
+  const isStorageBlockedValue = useMemo(() => {
+    return isStorageBlocked(gameState);
+  }, [gameState.resources.formulaires, gameState.currentStorageCap]);
+  
+  /**
+   * Purchase a storage upgrade
+   * Validates sequence and cost, then atomically:
+   * - Sets formulaires to 0
+   * - Updates currentStorageCap to new value
+   * - Marks upgrade as purchased
+   * 
+   * @param upgradeId - ID of the storage upgrade to purchase
+   * @returns true if purchase succeeded, false if validation failed
+   */
+  const purchaseStorageUpgrade = useCallback((upgradeId: string): boolean => {
+    // Validate purchase
+    if (!canPurchaseStorageUpgrade(gameState, storageUpgrades, upgradeId)) {
+      console.warn('[StorageUpgrade] Cannot purchase:', upgradeId);
+      return false;
+    }
+    
+    const upgrade = storageUpgrades.find(u => u.id === upgradeId);
+    if (!upgrade || !upgrade.storageConfig) {
+      console.error('[StorageUpgrade] Invalid upgrade config:', upgradeId);
+      return false;
+    }
+    
+    // Atomic transaction: reset formulaires + update cap + mark purchased
+    setGameState(prevState => ({
+      ...prevState,
+      resources: {
+        ...prevState.resources,
+        formulaires: 0 // Reset to 0 (cost = entire stock)
+      },
+      currentStorageCap: upgrade.storageConfig!.newCap
+    }));
+    
+    console.log(`[StorageUpgrade] Purchased ${upgradeId}, new cap: ${upgrade.storageConfig.newCap}`);
+    return true;
+  }, [gameState]);
+
   // Conformité system methods
   
   /**
@@ -710,6 +773,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       formatNumber,
       canPurchaseAgent,
       canUnlockAdministration,
+      purchaseStorageUpgrade,
+      isStorageBlocked: isStorageBlockedValue,
       shouldShowConformite,
       canActivateConformite,
       activateConformite,
