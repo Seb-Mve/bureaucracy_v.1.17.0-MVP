@@ -230,6 +230,80 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     };
   }, [gameState, saveGameState]);
 
+  // Toast system methods (declared before game loop to avoid TDZ)
+
+  /**
+   * Show a toast notification
+   * Enforces max 3 active toasts (overflow silently dropped)
+   */
+  const showToast = useCallback((
+    message: string,
+    type: ToastMessage['type'],
+    duration: number = 4000
+  ): void => {
+    setToastQueue(prev => {
+      if (prev.length >= 3) {
+        return prev; // Drop overflow
+      }
+      const newToast: ToastMessage = {
+        id: `${Date.now()}_${Math.random()}`,
+        text: message,
+        type,
+        duration,
+        timestamp: Date.now()
+      };
+      return [...prev, newToast];
+    });
+  }, []);
+
+  /**
+   * Add a journal entry (S.I.C. message, non-conformity, or narrative hint)
+   * Enforces 500-entry limit via FIFO rotation
+   */
+  const addJournalEntry = useCallback((
+    type: 'sic' | 'non-conformity' | 'narrative-hint',
+    text: string,
+    options: {
+      revealedText?: string;
+      targetId?: string;
+    } = {}
+  ) => {
+    const newEntry: JournalEntry = {
+      id: `${Date.now()}_${Math.random()}`,
+      type,
+      text,
+      timestamp: Date.now(),
+      ...(type === 'narrative-hint' ? {
+        isRevealed: false,
+        revealedText: options.revealedText,
+        targetId: options.targetId
+      } : {})
+    };
+    setGameState(prevState => ({
+      ...prevState,
+      journal: [newEntry, ...prevState.journal].slice(0, 500)
+    }));
+  }, []);
+
+  /**
+   * Reveal a narrative hint by targetId (when unlock condition met)
+   */
+  const revealNarrativeHint = useCallback((targetId: string) => {
+    setGameState(prevState => ({
+      ...prevState,
+      journal: prevState.journal.map(entry => {
+        if (entry.type === 'narrative-hint' && entry.targetId === targetId && !entry.isRevealed) {
+          return {
+            ...entry,
+            isRevealed: true,
+            text: entry.revealedText || entry.text
+          };
+        }
+        return entry;
+      })
+    }));
+  }, []);
+
   // Boucle de jeu optimisée pour la production
   useEffect(() => {
     const updateGameState = () => {
@@ -550,39 +624,6 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return true;
   }, [gameState.resources.formulaires, gameState.conformite]);
 
-  // Toast system methods
-  
-  /**
-   * Show a toast notification
-   * Enforces max 3 active toasts (overflow silently dropped)
-   * 
-   * @param message - Message text (French)
-   * @param type - Message type for styling
-   * @param duration - Auto-dismiss duration in ms (default: 4000)
-   */
-  const showToast = useCallback((
-    message: string,
-    type: ToastMessage['type'],
-    duration: number = 4000
-  ): void => {
-    // Silently drop if already at max 3 toasts
-    setToastQueue(prev => {
-      if (prev.length >= 3) {
-        return prev; // Drop overflow
-      }
-      
-      const newToast: ToastMessage = {
-        id: `${Date.now()}_${Math.random()}`,
-        text: message,
-        type,
-        duration,
-        timestamp: Date.now()
-      };
-      
-      return [...prev, newToast];
-    });
-  }, []);
-
   /**
    * Dismiss a toast by ID
    * 
@@ -658,55 +699,6 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     
     return true;
   }, [gameState.resources, gameState.conformite, revealNarrativeHint]);
-
-  /**
-   * Add a journal entry (S.I.C. message, non-conformity, or narrative hint)
-   * Enforces 500-entry limit via FIFO rotation
-   */
-  const addJournalEntry = useCallback((
-    type: 'sic' | 'non-conformity' | 'narrative-hint',
-    text: string,
-    options: {
-      revealedText?: string;
-      targetId?: string;
-    } = {}
-  ) => {
-    const newEntry: JournalEntry = {
-      id: `${Date.now()}_${Math.random()}`,
-      type,
-      text,
-      timestamp: Date.now(),
-      ...(type === 'narrative-hint' ? {
-        isRevealed: false,
-        revealedText: options.revealedText,
-        targetId: options.targetId
-      } : {})
-    };
-    
-    setGameState(prevState => ({
-      ...prevState,
-      journal: [newEntry, ...prevState.journal].slice(0, 500) // Prepend, keep max 500
-    }));
-  }, []);
-
-  /**
-   * Reveal a narrative hint by targetId (when unlock condition met)
-   */
-  const revealNarrativeHint = useCallback((targetId: string) => {
-    setGameState(prevState => ({
-      ...prevState,
-      journal: prevState.journal.map(entry => {
-        if (entry.type === 'narrative-hint' && entry.targetId === targetId && !entry.isRevealed) {
-          return {
-            ...entry,
-            isRevealed: true,
-            text: entry.revealedText || entry.text // Replace redacted text with revealed
-          };
-        }
-        return entry;
-      })
-    }));
-  }, []);
 
   return (
     <GameContext.Provider value={{
