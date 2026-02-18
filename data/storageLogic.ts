@@ -97,11 +97,28 @@ function findStorageUpgrade(
 }
 
 /**
+ * Determines if a storage upgrade has already been purchased.
+ * Uses currentStorageCap to infer purchase state (isPurchased is static and unreliable).
+ * 
+ * @param state - Complete game state
+ * @param upgrade - The upgrade to check
+ * @returns true if the upgrade's newCap has already been applied
+ */
+function isUpgradePurchased(state: GameState, upgrade: Upgrade): boolean {
+  if (!upgrade.storageConfig) return false;
+  const { newCap } = upgrade.storageConfig;
+  if (newCap === null) return state.currentStorageCap === null; // unlimited = last upgrade purchased
+  if (state.currentStorageCap === null) return true; // unlimited cap → all finite upgrades are purchased
+  return state.currentStorageCap >= newCap;
+}
+
+/**
  * Checks if a storage upgrade can be purchased.
  * Validates:
  * 1. Upgrade exists and is type 'storage'
- * 2. Required previous upgrade is purchased (sequence enforcement)
- * 3. Player has enough formulaires (cost validation)
+ * 2. Not already purchased (inferred from currentStorageCap)
+ * 3. Required previous upgrade is purchased (sequence enforcement)
+ * 4. Player has enough formulaires (cost validation)
  * 
  * @param state - Complete game state
  * @param upgrades - List of all upgrades
@@ -124,8 +141,8 @@ export function canPurchaseStorageUpgrade(
   const upgrade = findStorageUpgrade(upgrades, upgradeId);
   if (!upgrade) return false;
   
-  // Check if already purchased
-  if (upgrade.isPurchased) return false;
+  // Check if already purchased (via currentStorageCap, not static isPurchased flag)
+  if (isUpgradePurchased(state, upgrade)) return false;
   
   // Check sequence (required previous upgrade must be purchased)
   if (upgrade.storageConfig?.requiredUpgradeId) {
@@ -133,7 +150,7 @@ export function canPurchaseStorageUpgrade(
       upgrades,
       upgrade.storageConfig.requiredUpgradeId
     );
-    if (!required?.isPurchased) return false;
+    if (!required || !isUpgradePurchased(state, required)) return false;
   }
   
   // Check cost (player has enough formulaires)
@@ -189,8 +206,8 @@ export function getVisibleStorageUpgrades(
   // Only show storage upgrades when blocked
   if (!isStorageBlocked(state)) return [];
   
-  // Return all storage upgrades (UI will handle purchase validation)
-  return upgrades.filter(u => u.type === 'storage');
+  // Return only unpurchased storage upgrades (purchased ones are invisible)
+  return upgrades.filter(u => u.type === 'storage' && !isUpgradePurchased(state, u));
 }
 
 /**
@@ -236,6 +253,6 @@ export function getNextStorageCap(
       (a.storageConfig?.sequenceIndex ?? 0) - (b.storageConfig?.sequenceIndex ?? 0)
     );
   
-  const nextUpgrade = storageUpgrades.find(u => !u.isPurchased);
+  const nextUpgrade = storageUpgrades.find(u => !isUpgradePurchased(state, u));
   return nextUpgrade?.storageConfig?.newCap ?? null;
 }
