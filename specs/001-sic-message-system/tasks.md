@@ -96,29 +96,29 @@
 
 ### Implementation for User Story 3
 
-- [ ] T035 [P] [US3] Create components/JournalEntry.tsx component (fixed 80pt height, type indicator, timestamp, text display)
-- [ ] T036 [P] [US3] Implement entry styling by type in JournalEntry.tsx (blue for sic, red for non-conformity, purple for narrative-hint unrevealed)
-- [ ] T037 [P] [US3] Add timestamp display in JournalEntry.tsx using formatTimestampFrench() from utils/dateFormatters.ts
-- [ ] T038 [P] [US3] Implement text truncation in JournalEntry.tsx (numberOfLines={3}, ellipsizeMode="tail")
-- [ ] T039 [US3] Wrap JournalEntry in React.memo for performance optimization
-- [ ] T040 [P] [US3] Create components/JournalDrawer.tsx component with full-height drawer layout
-- [ ] T041 [P] [US3] Implement slide animation in JournalDrawer.tsx (useSharedValue + withTiming, 300ms from right)
-- [ ] T042 [US3] Add FlatList to JournalDrawer.tsx with virtualization props (windowSize: 10, initialNumToRender: 25)
-- [ ] T043 [US3] Implement getItemLayout in JournalDrawer.tsx FlatList (fixed 80pt height for performance)
-- [ ] T044 [US3] Add overlay dismiss in JournalDrawer.tsx (semi-transparent background, onPress triggers onClose)
-- [ ] T045 [US3] Add empty state to JournalDrawer.tsx ("Aucune entrée pour le moment" in French)
-- [ ] T046 [US3] Sort journal entries by timestamp descending in JournalDrawer.tsx (newest first)
-- [ ] T047 [US3] Add burger menu button to app/(tabs)/_layout.tsx headerRight (Menu icon from lucide-react-native)
-- [ ] T048 [US3] Add drawer state management in app/(tabs)/_layout.tsx (useState for isOpen)
-- [ ] T049 [US3] Wire burger button onPress to setDrawerOpen(true) in app/(tabs)/_layout.tsx
-- [ ] T050 [US3] Mount JournalDrawer component in app/(tabs)/_layout.tsx with drawer state props
-- [ ] T051 [US3] Pass gameState.journal to JournalDrawer entries prop
-- [ ] T052 [P] [US3] [i18n] Add French UI text to JournalDrawer.tsx ("Journal S.I.C.", empty state text)
-- [ ] T053 [P] [US3] [i18n] Verify French timestamp formatting in dateFormatters.ts (<24h relative, ≥24h absolute with month abbreviations)
-- [ ] T054 [P] [US3] [a11y] Add 44×44pt minimum touch target to burger menu button
-- [ ] T055 [P] [US3] [a11y] Add accessibilityLabel="Ouvrir le journal S.I.C." and accessibilityRole="button" to burger button
-- [ ] T056 [P] [US3] [a11y] Add accessibilityRole="menu" to JournalDrawer component
-- [ ] T057 [P] [US3] [a11y] Add accessibilityLabel to each JournalEntry (type + timestamp + text)
+- [X] T035 [P] [US3] Create components/JournalEntry.tsx component (fixed 80pt height, type indicator, timestamp, text display)
+- [X] T036 [P] [US3] Implement entry styling by type in JournalEntry.tsx (blue for sic, red for non-conformity, purple for narrative-hint unrevealed)
+- [X] T037 [P] [US3] Add timestamp display in JournalEntry.tsx using formatTimestampFrench() from utils/dateFormatters.ts
+- [X] T038 [P] [US3] Implement text truncation in JournalEntry.tsx (numberOfLines={3}, ellipsizeMode="tail")
+- [X] T039 [US3] Wrap JournalEntry in React.memo for performance optimization
+- [X] T040 [P] [US3] Create components/JournalDrawer.tsx component with full-height drawer layout
+- [X] T041 [P] [US3] Implement slide animation in JournalDrawer.tsx (useSharedValue + withTiming, 300ms from right)
+- [X] T042 [US3] Add FlatList to JournalDrawer.tsx with virtualization props (windowSize: 10, initialNumToRender: 25)
+- [X] T043 [US3] Implement getItemLayout in JournalDrawer.tsx FlatList (fixed 80pt height for performance)
+- [X] T044 [US3] Add overlay dismiss in JournalDrawer.tsx (semi-transparent background, onPress triggers onClose)
+- [X] T045 [US3] Add empty state to JournalDrawer.tsx ("Aucune entrée pour le moment" in French)
+- [X] T046 [US3] Sort journal entries by timestamp descending in JournalDrawer.tsx (newest first)
+- [X] T047 [US3] Add burger menu button to app/(tabs)/_layout.tsx headerRight (Menu icon from lucide-react-native)
+- [X] T048 [US3] Add drawer state management in app/(tabs)/_layout.tsx (useState for isOpen)
+- [X] T049 [US3] Wire burger button onPress to setDrawerOpen(true) in app/(tabs)/_layout.tsx
+- [X] T050 [US3] Mount JournalDrawer component in app/(tabs)/_layout.tsx with drawer state props
+- [X] T051 [US3] Pass gameState.journal to JournalDrawer entries prop
+- [X] T052 [P] [US3] [i18n] Add French UI text to JournalDrawer.tsx ("Journal S.I.C.", empty state text)
+- [X] T053 [P] [US3] [i18n] Verify French timestamp formatting in dateFormatters.ts (<24h relative, ≥24h absolute with month abbreviations)
+- [X] T054 [P] [US3] [a11y] Add 44×44pt minimum touch target to burger menu button
+- [X] T055 [P] [US3] [a11y] Add accessibilityLabel="Ouvrir le journal S.I.C." and accessibilityRole="button" to burger button
+- [X] T056 [P] [US3] [a11y] Add accessibilityRole="menu" to JournalDrawer component
+- [X] T057 [P] [US3] [a11y] Add accessibilityLabel to each JournalEntry (type + timestamp + text)
 - [ ] T058 [P] [US3] [perf] Verify drawer animation runs at 60fps using Performance Monitor
 - [ ] T059 [P] [US3] [perf] Verify journal scroll performance with 500 entries at 60fps
 
