@@ -2,20 +2,34 @@ import { Tabs } from 'expo-router';
 import { Platform, View, Pressable } from 'react-native';
 import { useFonts, ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { Building as BuildingOffice2, Users, ChartBar, Settings, Menu } from 'lucide-react-native';
+import { Building as BuildingOffice2, Users, ChartBar, Settings, Menu, ScrollText } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { SplashScreen } from 'expo-router';
 import { useGameState } from '@/context/GameStateContext';
 import NotificationBadge from '@/components/NotificationBadge';
 import ToastContainer from '@/components/ToastContainer';
 import JournalDrawer from '@/components/JournalDrawer';
+import MenuBottomSheet, { MenuItem } from '@/components/MenuBottomSheet';
+import Colors from '@/constants/Colors';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function TabLayout() {
   const { gameState, canUnlockAdministration, canPurchaseAgent } = useGameState();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
+
+  // Menu items — add new entries here as features grow
+  const menuItems: MenuItem[] = [
+    {
+      id: 'journal',
+      icon: <ScrollText size={20} color={Colors.resourceTampons} />,
+      label: 'Journal S.I.C.',
+      description: 'Messages du Service Inconnu de Coordination',
+      onPress: () => setJournalOpen(true),
+    },
+  ];
   const [fontsLoaded, fontError] = useFonts({
     'ArchivoBlack-Regular': ArchivoBlack_400Regular,
     'Inter-Regular': Inter_400Regular,
@@ -51,10 +65,17 @@ export default function TabLayout() {
       {/* Toast notifications - visible on all tabs */}
       <ToastContainer />
       
-      {/* Journal drawer */}
+      {/* Menu bottom sheet */}
+      <MenuBottomSheet
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        items={menuItems}
+      />
+
+      {/* Journal modal — full-screen, opened from menu */}
       <JournalDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        isOpen={journalOpen}
+        onClose={() => setJournalOpen(false)}
         entries={gameState.journal}
       />
       
@@ -88,20 +109,20 @@ export default function TabLayout() {
         },
         headerTitle: 'BUREAUCRACY++',
         headerTitleAlign: 'center',
-        headerRight: () => (
+        headerLeft: () => (
           <Pressable
-            onPress={() => setDrawerOpen(true)}
+            onPress={() => setMenuOpen(true)}
             style={{
-              marginRight: 16,
+              marginLeft: 16,
               width: 44,
               height: 44,
               alignItems: 'center',
               justifyContent: 'center',
             }}
             accessibilityRole="button"
-            accessibilityLabel="Ouvrir le journal S.I.C."
+            accessibilityLabel="Ouvrir le menu"
           >
-            <Menu size={24} color="#4b6c8c" />
+            <Menu size={24} color={Colors.title} />
           </Pressable>
         ),
       }}
