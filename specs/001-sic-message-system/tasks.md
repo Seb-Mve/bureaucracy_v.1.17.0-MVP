@@ -76,13 +76,13 @@
 
 ### Implementation for User Story 2
 
-- [ ] T028 [P] [US2] Update Toast.tsx styling for type='non-conformity' (dark red background #3D2C2C, red border #E74C3C)
-- [ ] T029 [US2] Wire showToast() calls in GameStateContext when non-conformity triggers (shouldTriggerNonConformity check)
-- [ ] T030 [US2] Wire addJournalEntry('non-conformity') calls in GameStateContext when non-conformity triggers
-- [ ] T031 [US2] Update GameStateContext to persist nonConformityLastTriggerTime in messageSystem state
-- [ ] T032 [US2] Verify rate limiting (max 1 per 10 minutes) in GameStateContext non-conformity logic
-- [ ] T033 [P] [US2] [i18n] Verify "Tampon non conforme détecté" text uses authentic French bureaucratic terminology
-- [ ] T034 [P] [US2] [a11y] Ensure red border is not sole indicator (verify text mentions "non conforme")
+- [X] T028 [P] [US2] Update Toast.tsx styling for type='non-conformity' (dark red background #3D2C2C, red border #E74C3C)
+- [X] T029 [US2] Wire showToast() calls in GameStateContext when non-conformity triggers (shouldTriggerNonConformity check)
+- [X] T030 [US2] Wire addJournalEntry('non-conformity') calls in GameStateContext when non-conformity triggers
+- [X] T031 [US2] Update GameStateContext to persist nonConformityLastTriggerTime in messageSystem state
+- [X] T032 [US2] Verify rate limiting (max 1 per 10 minutes) in GameStateContext non-conformity logic
+- [X] T033 [P] [US2] [i18n] Verify "Tampon non conforme détecté" text uses authentic French bureaucratic terminology
+- [X] T034 [P] [US2] [a11y] Ensure red border is not sole indicator (verify text mentions "non conforme")
 
 **Checkpoint**: User Stories 1 AND 2 complete - Both S.I.C. messages and non-conformity alerts display correctly
 
