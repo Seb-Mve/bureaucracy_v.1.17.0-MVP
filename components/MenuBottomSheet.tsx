@@ -1,13 +1,13 @@
 /**
- * Menu Bottom Sheet
+ * Menu Side Drawer
  *
- * Mobile-native bottom sheet that slides up from screen bottom.
+ * Left-side drawer that slides in from the left, opened by the ☰ burger button.
  * Acts as the main menu layer — each item navigates to its own screen/modal.
  * New items can be added here without touching the journal or other features.
  */
 
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -31,24 +31,25 @@ interface MenuBottomSheetProps {
   items: MenuItem[];
 }
 
-const SHEET_HEIGHT = 320;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DRAWER_WIDTH = Math.min(300, SCREEN_WIDTH * 0.78);
 
 export default function MenuBottomSheet({ isOpen, onClose, items }: MenuBottomSheetProps) {
-  const translateY = useSharedValue(SHEET_HEIGHT);
+  const translateX = useSharedValue(-DRAWER_WIDTH);
   const overlayOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (isOpen) {
       overlayOpacity.value = withTiming(1, { duration: 250 });
-      translateY.value = withSpring(0, { mass: 0.8, damping: 14, stiffness: 120 });
+      translateX.value = withSpring(0, { mass: 0.8, damping: 16, stiffness: 140 });
     } else {
       overlayOpacity.value = withTiming(0, { duration: 200 });
-      translateY.value = withTiming(SHEET_HEIGHT, { duration: 220 });
+      translateX.value = withTiming(-DRAWER_WIDTH, { duration: 220 });
     }
-  }, [isOpen, translateY, overlayOpacity]);
+  }, [isOpen, translateX, overlayOpacity]);
 
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+  const drawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
   }));
 
   const overlayStyle = useAnimatedStyle(() => ({
@@ -69,12 +70,12 @@ export default function MenuBottomSheet({ isOpen, onClose, items }: MenuBottomSh
         />
       </Animated.View>
 
-      {/* Bottom sheet */}
-      <Animated.View style={[styles.sheet, sheetStyle]}>
-        <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-          {/* Drag handle */}
-          <View style={styles.handleContainer}>
-            <View style={styles.handle} />
+      {/* Left side drawer */}
+      <Animated.View style={[styles.drawer, drawerStyle]}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'bottom']}>
+          {/* Header */}
+          <View style={styles.drawerHeader}>
+            <Text style={styles.drawerTitle}>Menu</Text>
           </View>
 
           {/* Menu items */}
@@ -89,8 +90,7 @@ export default function MenuBottomSheet({ isOpen, onClose, items }: MenuBottomSh
                 ]}
                 onPress={() => {
                   onClose();
-                  // Small delay so the sheet closes before the next modal opens
-                  setTimeout(item.onPress, 180);
+                  setTimeout(item.onPress, 200);
                 }}
                 accessibilityRole="menuitem"
                 accessibilityLabel={item.label}
@@ -117,40 +117,42 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
     zIndex: 998,
   },
-  sheet: {
+  drawer: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
-    right: 0,
+    bottom: 0,
+    width: DRAWER_WIDTH,
     backgroundColor: Colors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     zIndex: 999,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset: { width: 4, height: 0 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 20,
+    borderRightWidth: 1,
+    borderRightColor: Colors.border,
   },
   safeArea: {
-    paddingBottom: 8,
+    flex: 1,
   },
-  handleContainer: {
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 8,
+  drawerHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.border,
+  drawerTitle: {
+    fontFamily: 'ArchivoBlack-Regular',
+    fontSize: 20,
+    color: Colors.title,
+    letterSpacing: 0.5,
   },
   itemList: {
-    marginHorizontal: 16,
-    marginTop: 8,
+    marginTop: 12,
+    marginHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.border,
     overflow: 'hidden',
@@ -159,8 +161,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     minHeight: 64,
+    backgroundColor: Colors.background,
   },
   itemBorder: {
     borderBottomWidth: 1,
@@ -176,20 +179,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.sicBackground,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 14,
+  },
+  itemText: {
+    flex: 1,
   },
   itemLabel: {
     fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.text,
   },
   itemDescription: {
     fontFamily: 'Inter-Regular',
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textLight,
     marginTop: 2,
-  },
-  itemText: {
-    flex: 1,
   },
 });
