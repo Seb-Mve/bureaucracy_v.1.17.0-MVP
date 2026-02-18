@@ -24,27 +24,30 @@ import { GameState } from '@/types/game';
  * // Corrupted save
  * migrateGameState(null) // → Throws error, caller should fallback to initialGameState
  */
-export function migrateGameState(loaded: any): GameState {
+export function migrateGameState(loaded: unknown): GameState {
+  // Cast once — this function exists specifically to handle untyped deserialized JSON
+  const s = loaded as Record<string, unknown>;
   try {
     // Detect version (assume v1 if no version field)
-    const version = loaded.version || 1;
-    
+    const version = (s.version as number | undefined) || 1;
+    const conformite = s.conformite as Record<string, unknown> | undefined;
+
     // V2 with missing new fields → V2 updated
-    if (version === 2 && loaded.conformite && !loaded.conformite.hasOwnProperty('isActivated')) {
+    if (version === 2 && conformite && !Object.prototype.hasOwnProperty.call(conformite, 'isActivated')) {
       console.log('[Migration] v2→v2: Adding isActivated and accumulatedFormulaires');
       return {
-        ...loaded,
+        ...s,
         conformite: {
-          ...loaded.conformite,
+          ...conformite,
           isActivated: false,
           accumulatedFormulaires: 0
         }
-      };
+      } as GameState;
     }
     
     // Already at current version
     if (version >= 2) {
-      return loaded as GameState;
+      return s as unknown as GameState;
     }
     
     // V1 → V2 Migration: Add conformité and message systems
@@ -52,11 +55,12 @@ export function migrateGameState(loaded: any): GameState {
       console.log('[Migration] v1→v2: Adding conformité aléatoire system');
       
       // Extract current resource counts for initialization
-      const currentFormulaires = loaded.resources?.formulaires || 0;
-      const currentTampons = loaded.resources?.tampons || 0;
+      const resources = s.resources as Record<string, number> | undefined;
+      const currentFormulaires = resources?.formulaires || 0;
+      const currentTampons = resources?.tampons || 0;
       
       return {
-        ...loaded,
+        ...s,
         version: 2,
         conformite: {
           percentage: 0,
@@ -87,7 +91,7 @@ export function migrateGameState(loaded: any): GameState {
     
     // Unknown version - return as-is and hope for the best
     console.warn(`[Migration] Unknown version ${version}, attempting to load as-is`);
-    return loaded as GameState;
+    return s as unknown as GameState;
     
   } catch (error) {
     console.error('[Migration] Failed to migrate game state:', error);
@@ -102,23 +106,26 @@ export function migrateGameState(loaded: any): GameState {
  * @param state - State to validate
  * @returns True if valid, false otherwise
  */
-export function isValidGameState(state: any): boolean {
+export function isValidGameState(state: unknown): boolean {
   try {
+    const s = state as Record<string, unknown>;
+    const resources = s.resources as Record<string, unknown> | undefined;
+
     // Check required top-level fields
-    if (!state.version || !state.resources || !state.production || !state.administrations) {
+    if (!s.version || !s.resources || !s.production || !s.administrations) {
       return false;
     }
     
     // Check required resource fields
-    if (typeof state.resources.dossiers !== 'number' ||
-        typeof state.resources.tampons !== 'number' ||
-        typeof state.resources.formulaires !== 'number') {
+    if (typeof resources?.dossiers !== 'number' ||
+        typeof resources?.tampons !== 'number' ||
+        typeof resources?.formulaires !== 'number') {
       return false;
     }
     
     // Check conformité fields (optional in v1, required in v2+)
-    if (state.version >= 2) {
-      if (!state.conformite || !state.messageSystem) {
+    if ((s.version as number) >= 2) {
+      if (!s.conformite || !s.messageSystem) {
         return false;
       }
     }

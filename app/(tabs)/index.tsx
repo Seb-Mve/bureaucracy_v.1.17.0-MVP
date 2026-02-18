@@ -8,6 +8,7 @@ import ConformiteDisplay from '@/components/ConformiteDisplay';
 import ToastContainer from '@/components/ToastContainer';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
+import { Administration } from '@/types/game';
 import { File, Stamp, ClipboardList, Battery } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -58,10 +59,10 @@ export default function BureauScreen() {
     }
   };
 
-  const renderAgentInfo = (administration: any) => {
+  const renderAgentInfo = (administration: Administration) => {
     if (!administration.isUnlocked) return null;
 
-    return administration.agents.map((agent: any) => (
+    return administration.agents.map((agent) => (
       <View key={agent.id} style={styles.agentRow}>
         <View style={styles.agentInfo}>
           <Text style={styles.agentName}>{agent.name}</Text>

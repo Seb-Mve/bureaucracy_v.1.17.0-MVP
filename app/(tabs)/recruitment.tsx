@@ -6,6 +6,7 @@ import AgentItem from '@/components/AgentItem';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
 import { Lock } from 'lucide-react-native';
+import { Administration } from '@/types/game';
 
 export default function RecruitmentScreen() {
   const { gameState, setActiveAdministration, canUnlockAdministration, unlockAdministration, formatNumber } = useGameState();
@@ -19,7 +20,7 @@ export default function RecruitmentScreen() {
     setActiveAdministration(administrationId);
   };
 
-  const renderUnlockCost = (administration: any) => {
+  const renderUnlockCost = (administration: Administration) => {
     return Object.entries(administration.unlockCost).map(([resource, amount]) => (
       <Text key={resource} style={[
         styles.costText,
