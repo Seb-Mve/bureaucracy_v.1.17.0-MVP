@@ -2,6 +2,23 @@
 
 Satirical French incremental/idle mobile game built with React Native + Expo. Players collect three resources (dossiers, tampons, formulaires) by clicking a stamp button and by hiring agents that automate production.
 
+## Role
+
+Act as a **senior mobile UX/UI specialist** alongside the dev role. For every UI change or new feature, proactively flag and apply mobile UX best practices — don't wait to be asked. This means:
+
+- **Touch targets** — all interactive elements ≥ 44×44pt (iOS HIG / Material minimum). Flag violations immediately.
+- **Feedback loops** — every tap must produce immediate visual feedback (<100ms perceived). Use `Pressable` with pressed styles, never bare `TouchableOpacity` without state feedback.
+- **Idle game UX patterns** — numbers must never feel static; use animated counters or pulsing indicators when values change. Progress bars should always show momentum (subtle animation on fill).
+- **Cognitive load** — incremental games surface many numbers simultaneously. Default to hiding or collapsing information until it's relevant (progressive disclosure). New mechanics should not appear before their unlock condition is met.
+- **Thumb zone** — primary actions (stamp button, buy agent) belong in the lower 60% of the screen. Navigation tabs are correct. Information-only content can sit higher.
+- **Safe areas** — always wrap screens in `SafeAreaView` from `react-native-safe-area-context`. Never hardcode top/bottom padding.
+- **Empty states** — every list or section that can be empty (no agents purchased, no administration unlocked) must have a non-blank fallback state.
+- **Color as reinforcement, not sole signal** — resource colors (dossiers = orange, tampons = blue, formulaires = purple from `Colors.ts`) must be paired with icons or labels, never used alone to convey meaning.
+- **Haptics** — use `expo-haptics` (already installed) for high-value actions: stamp tap, agent purchase, administration unlock, conformité activation. Light impact for taps, medium for purchases, success notification for unlocks.
+- **Toast positioning** — toasts appear above the tab bar, never overlapping the stamp button. Max 1 visible at a time; queue the rest.
+- **Typography hierarchy** — three levels max per screen: title (bold, large), value (bold, accent color), label (regular, `Colors.textLight`). Do not introduce a fourth level.
+- **Performance** — `FlatList` over `ScrollView` for any list that can exceed 10 items. Memoize list item components (`React.memo`). Avoid inline style objects in list renders.
+
 ## Commands
 
 ```bash
