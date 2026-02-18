@@ -1,18 +1,21 @@
 import { Tabs } from 'expo-router';
-import { Platform, View } from 'react-native';
+import { Platform, View, Pressable } from 'react-native';
 import { useFonts, ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { Building as BuildingOffice2, Users, ChartBar, Settings } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { Building as BuildingOffice2, Users, ChartBar, Settings, Menu } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { SplashScreen } from 'expo-router';
 import { useGameState } from '@/context/GameStateContext';
 import NotificationBadge from '@/components/NotificationBadge';
+import ToastContainer from '@/components/ToastContainer';
+import JournalDrawer from '@/components/JournalDrawer';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function TabLayout() {
   const { gameState, canUnlockAdministration, canPurchaseAgent } = useGameState();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     'ArchivoBlack-Regular': ArchivoBlack_400Regular,
     'Inter-Regular': Inter_400Regular,
@@ -44,8 +47,19 @@ export default function TabLayout() {
   const tabBarPaddingBottom = Platform.OS === 'ios' ? 30 : 10;
 
   return (
-    <Tabs
-      screenOptions={{
+    <>
+      {/* Toast notifications - visible on all tabs */}
+      <ToastContainer />
+      
+      {/* Journal drawer */}
+      <JournalDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        entries={gameState.journal}
+      />
+      
+      <Tabs
+        screenOptions={{
         tabBarActiveTintColor: '#4b6c8c',
         tabBarInactiveTintColor: '#888888',
         tabBarStyle: {
@@ -74,6 +88,22 @@ export default function TabLayout() {
         },
         headerTitle: 'BUREAUCRACY++',
         headerTitleAlign: 'center',
+        headerRight: () => (
+          <Pressable
+            onPress={() => setDrawerOpen(true)}
+            style={{
+              marginRight: 16,
+              width: 44,
+              height: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Ouvrir le journal S.I.C."
+          >
+            <Menu size={24} color="#4b6c8c" />
+          </Pressable>
+        ),
       }}
     >
       <Tabs.Screen
@@ -119,5 +149,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }

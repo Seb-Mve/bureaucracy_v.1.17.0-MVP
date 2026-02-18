@@ -1,13 +1,24 @@
 /**
  * Toast Notification Component
  * 
- * Displays ephemeral notifications with slide-in/fade-out animations.
+ * Displays ephemeral notifications with slide-in + micro-bounce animations.
  * Used for S.I.C. messages, non-conformity alerts, and Phase 2 notifications.
+ * 
+ * IMPORTANT: Uses react-native-reanimated v3 for 60fps animations on UI thread.
  */
 
-import React, { useEffect, useRef } from 'react';
-import { Animated, Text, Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { Text, StyleSheet, View } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  withSpring,
+  runOnJS
+} from 'react-native-reanimated';
 import { ToastMessage } from '@/types/game';
+import Colors from '@/constants/Colors';
+import * as Haptics from 'expo-haptics';
 
 interface ToastProps {
   toast: ToastMessage;
@@ -15,64 +26,50 @@ interface ToastProps {
 }
 
 export default function Toast({ toast, onDismiss }: ToastProps) {
-  const slideAnim = useRef(new Animated.Value(-100)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useSharedValue(-100);
+  const scale = useSharedValue(0.9);
+  const opacity = useSharedValue(0);
   
   useEffect(() => {
-    // Slide-in and fade-in animation
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true, // GPU acceleration for 60fps
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Trigger haptic feedback for S.I.C. messages only
+    if (toast.type === 'sic') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     
-    // Auto-dismiss animation
+    // Phase 1: Slide in from top (200ms)
+    translateY.value = withTiming(0, { duration: 200 });
+    opacity.value = withTiming(1, { duration: 200 });
+    
+    // Phase 2: Micro-bounce "stamp" effect (200ms spring)
+    scale.value = withSpring(1, {
+      mass: 0.8,
+      damping: 10,
+      stiffness: 100
+    });
+    
+    // Auto-dismiss after duration
     const dismissTimer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: -100,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        onDismiss(toast.id);
+      // Slide out animation
+      translateY.value = withTiming(-100, { duration: 200 }, (finished) => {
+        if (finished) {
+          runOnJS(onDismiss)(toast.id);
+        }
       });
-    }, toast.duration - 250); // Start exit animation 250ms before duration ends
+      opacity.value = withTiming(0, { duration: 200 });
+    }, toast.duration);
     
     return () => {
       clearTimeout(dismissTimer);
     };
-  }, [toast.id, toast.duration, slideAnim, opacityAnim, onDismiss]);
+  }, [toast.id, toast.duration, toast.type, translateY, scale, opacity, onDismiss]);
   
-  const handlePress = () => {
-    // Manual dismiss
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: -100,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onDismiss(toast.id);
-    });
-  };
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value },
+      { scale: scale.value }
+    ],
+    opacity: opacity.value,
+  }));
   
   // Style based on toast type
   const getToastStyle = () => {
@@ -89,26 +86,25 @@ export default function Toast({ toast, onDismiss }: ToastProps) {
     }
   };
   
+  // Type prefix for accessibility (color alone must not be sole indicator — AR-008)
+  const getTypePrefix = () => {
+    switch (toast.type) {
+      case 'sic': return 'S.I.C. — ';
+      case 'non-conformity': return '⚠ NON-CONFORMITÉ — ';
+      default: return '';
+    }
+  };
+
   return (
     <Animated.View
-      style={[
-        styles.toastContainer,
-        {
-          transform: [{ translateY: slideAnim }],
-          opacity: opacityAnim,
-        },
-      ]}
+      style={[styles.toastContainer, animatedStyle]}
+      pointerEvents="none"
       accessibilityLiveRegion="polite"
-      accessibilityLabel={toast.text}
+      accessibilityLabel={`${getTypePrefix()}${toast.text}`}
     >
-      <Pressable
-        onPress={handlePress}
-        style={[styles.toast, getToastStyle()]}
-        accessibilityRole="button"
-        accessibilityHint="Appuyez pour fermer cette notification"
-      >
-        <Text style={styles.toastText}>{toast.text}</Text>
-      </Pressable>
+      <View style={[styles.toast, getToastStyle()]}>
+        <Text style={styles.toastText}>{getTypePrefix()}{toast.text}</Text>
+      </View>
     </Animated.View>
   );
 }
@@ -132,29 +128,30 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   toastSIC: {
-    backgroundColor: '#2C3E50',
+    backgroundColor: Colors.sicBackground,
     borderLeftWidth: 4,
-    borderLeftColor: '#3498DB',
+    borderLeftColor: Colors.resourceTampons,
   },
   toastNonConformity: {
-    backgroundColor: '#3D2C2C',
+    backgroundColor: Colors.nonConformityBackground,
     borderLeftWidth: 4,
-    borderLeftColor: '#E74C3C',
+    borderLeftColor: Colors.error,
   },
   toastPhase2: {
-    backgroundColor: '#2C3E2C',
+    backgroundColor: Colors.phase2Background,
     borderLeftWidth: 4,
-    borderLeftColor: '#27AE60',
+    borderLeftColor: Colors.phase2Border,
   },
   toastSystem: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: Colors.journalBackground,
     borderLeftWidth: 4,
-    borderLeftColor: '#95A5A6',
+    borderLeftColor: Colors.systemBorder,
   },
   toastText: {
-    color: '#FFFFFF',
+    color: Colors.toastText,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
   },
 });
+

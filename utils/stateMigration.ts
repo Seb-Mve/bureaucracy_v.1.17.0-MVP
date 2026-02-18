@@ -32,27 +32,39 @@ export function migrateGameState(loaded: unknown): GameState {
     const version = (s.version as number | undefined) || 1;
     const conformite = s.conformite as Record<string, unknown> | undefined;
 
-    // V2 with missing new fields → V2 updated
-    if (version === 2 && conformite && !Object.prototype.hasOwnProperty.call(conformite, 'isActivated')) {
-      console.log('[Migration] v2→v2: Adding isActivated and accumulatedFormulaires');
+    // V2 → V3 Migration: Add journal system
+    if (version === 2) {
+      console.log('[Migration] v2→v3: Adding journal system');
       return {
         ...s,
+        version: 3,
+        journal: [] // Empty journal for existing V2 saves
+      } as GameState;
+    }
+
+    // V2 with missing new fields → V2 updated (legacy path)
+    if (version === 2 && conformite && !Object.prototype.hasOwnProperty.call(conformite, 'isActivated')) {
+      console.log('[Migration] v2→v2: Adding isActivated and accumulatedFormulaires, then migrating to v3');
+      return {
+        ...s,
+        version: 3,
         conformite: {
           ...conformite,
           isActivated: false,
           accumulatedFormulaires: 0
-        }
+        },
+        journal: [] // Also add journal when fixing V2 conformité
       } as GameState;
     }
     
-    // Already at current version
-    if (version >= 2) {
+    // Already at current version or newer
+    if (version >= 3) {
       return s as unknown as GameState;
     }
     
-    // V1 → V2 Migration: Add conformité and message systems
+    // V1 → V3 Migration: Add conformité, message systems, and journal
     if (version === 1) {
-      console.log('[Migration] v1→v2: Adding conformité aléatoire system');
+      console.log('[Migration] v1→v3: Adding conformité aléatoire, message system, and journal');
       
       // Extract current resource counts for initialization
       const resources = s.resources as Record<string, number> | undefined;
@@ -61,7 +73,7 @@ export function migrateGameState(loaded: unknown): GameState {
       
       return {
         ...s,
-        version: 2,
+        version: 3,
         conformite: {
           percentage: 0,
           isUnlocked: false,
@@ -82,12 +94,13 @@ export function migrateGameState(loaded: unknown): GameState {
             tampons: 0,
             formulaires: 0
           }
-        }
+        },
+        journal: [] // Empty journal for V1→V3 migration
       };
     }
     
     // Future migrations would go here
-    // if (version === 2) { ... migrate v2→v3 ... }
+    // if (version === 3) { ... migrate v3→v4 ... }
     
     // Unknown version - return as-is and hope for the best
     console.warn(`[Migration] Unknown version ${version}, attempting to load as-is`);
@@ -123,10 +136,46 @@ export function isValidGameState(state: unknown): boolean {
       return false;
     }
     
-    // Check conformité fields (optional in v1, required in v2+)
+    // Check conformité and message system fields (required in v2+)
     if ((s.version as number) >= 2) {
       if (!s.conformite || !s.messageSystem) {
         return false;
+      }
+    }
+    
+    // Check journal field (required in v3+)
+    if ((s.version as number) >= 3) {
+      const journal = s.journal as unknown[];
+      
+      // Journal must be an array (can be empty)
+      if (!Array.isArray(journal)) {
+        console.error('[Validation] journal field is not an array');
+        return false;
+      }
+      
+      // Validate each entry structure
+      for (const entry of journal) {
+        const e = entry as Record<string, unknown>;
+        
+        // Required fields
+        if (!e.id || !e.type || !e.text || typeof e.timestamp !== 'number') {
+          console.error('[Validation] Invalid journal entry (missing required fields)');
+          return false;
+        }
+        
+        // Type must be valid
+        if (!['sic', 'non-conformity', 'narrative-hint'].includes(e.type as string)) {
+          console.error('[Validation] Invalid journal entry type:', e.type);
+          return false;
+        }
+        
+        // Narrative hints require additional fields
+        if (e.type === 'narrative-hint') {
+          if (typeof e.isRevealed !== 'boolean' || !e.revealedText || !e.targetId) {
+            console.error('[Validation] Narrative hint missing required fields');
+            return false;
+          }
+        }
       }
     }
     

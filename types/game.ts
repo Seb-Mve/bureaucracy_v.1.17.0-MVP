@@ -105,6 +105,30 @@ export interface ToastMessage {
   timestamp: number;
 }
 
+// Journal entry structure (for S.I.C. message system)
+export interface JournalEntry {
+  /** Unique identifier (timestamp-based: `${Date.now()}_${Math.random()}`) */
+  id: string;
+  
+  /** Entry type for styling and categorization */
+  type: 'sic' | 'non-conformity' | 'narrative-hint';
+  
+  /** Displayed message text (French bureaucratic language) */
+  text: string;
+  
+  /** Creation timestamp (Date.now()) */
+  timestamp: number;
+  
+  /** Whether narrative hint is revealed (only for type='narrative-hint') */
+  isRevealed?: boolean;
+  
+  /** Full unredacted text (only for type='narrative-hint') */
+  revealedText?: string;
+  
+  /** Target administration/system ID for narrative hints (e.g., 'ministere-affaires-obscures', 'conformite') */
+  targetId?: string;
+}
+
 // Game state structure
 export interface GameState {
   /** Schema version for migration support */
@@ -121,4 +145,7 @@ export interface GameState {
   
   /** Message system state */
   messageSystem?: MessageSystemState;
+  
+  /** Journal entries (max 500, FIFO rotation) - V3 addition */
+  journal: JournalEntry[];
 }
