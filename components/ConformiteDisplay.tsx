@@ -16,7 +16,8 @@ export default function ConformiteDisplay() {
     gameState, 
     shouldShowConformite,
     canActivateConformite,
-    activateConformite
+    activateConformite,
+    isPhase2ButtonActive,
   } = useGameState();
   
   const conformite = gameState.conformite;
@@ -83,7 +84,7 @@ export default function ConformiteDisplay() {
         </Text>
       )}
       
-      {percentage >= 100 && (
+      {percentage >= 100 && isPhase2ButtonActive() && (
         <Pressable
           style={({ pressed }) => [
             styles.reaffectationButton,
@@ -164,14 +165,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   testButtonTextDisabled: {
-    color: '#AAA',
-  },
-  testButtonCost: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    opacity: 0.8,
-  },
-  testButtonCostDisabled: {
     color: '#AAA',
   },
   progressInfo: {
