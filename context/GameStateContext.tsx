@@ -550,7 +550,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   
   /**
    * Show a toast notification
-   * Max 3 toasts displayed simultaneously
+   * Enforces max 3 active toasts (overflow silently dropped)
    * 
    * @param message - Message text (French)
    * @param type - Message type for styling
@@ -561,21 +561,22 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     type: ToastMessage['type'],
     duration: number = 4000
   ): void => {
-    const newToast: ToastMessage = {
-      id: `${Date.now()}_${Math.random()}`,
-      text: message,
-      type,
-      duration,
-      timestamp: Date.now()
-    };
-    
-    // Add to queue, keep max 3 toasts (evict oldest)
-    setToastQueue(prev => [...prev, newToast].slice(-3));
-    
-    // Auto-dismiss after duration
-    setTimeout(() => {
-      dismissToast(newToast.id);
-    }, duration);
+    // Silently drop if already at max 3 toasts
+    setToastQueue(prev => {
+      if (prev.length >= 3) {
+        return prev; // Drop overflow
+      }
+      
+      const newToast: ToastMessage = {
+        id: `${Date.now()}_${Math.random()}`,
+        text: message,
+        type,
+        duration,
+        timestamp: Date.now()
+      };
+      
+      return [...prev, newToast];
+    });
   }, []);
 
   /**

@@ -47,21 +47,21 @@
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Refactor components/Toast.tsx to use react-native-reanimated v3 (replace Animated API with useSharedValue + useAnimatedStyle)
-- [ ] T013 [P] [US1] Implement slide-in animation in Toast.tsx (withTiming 200ms for translateY)
-- [ ] T014 [P] [US1] Implement micro-bounce "stamp" effect in Toast.tsx (withSpring 200ms, mass: 0.8, damping: 10, stiffness: 100)
-- [ ] T015 [US1] Remove manual dismiss from Toast.tsx (make toasts passive, non-interactive, pointerEvents="none")
-- [ ] T016 [US1] Update Toast.tsx styling for type='sic' (dark background #2C3E50, blue left border #3498DB)
-- [ ] T017 [US1] Update Toast.tsx to auto-dismiss after 5000ms with slide-out animation
-- [ ] T018 [US1] Modify components/ToastContainer.tsx to enforce max 3 active toasts (drop overflow silently)
-- [ ] T019 [US1] Move ToastContainer mount point from Bureau screen to app/(tabs)/_layout.tsx (visible on all tabs)
-- [ ] T020 [US1] Update ToastContainer.tsx to use absolute positioning with zIndex: 1000 (above drawer)
-- [ ] T021 [US1] Implement vertical stacking in ToastContainer.tsx (10pt offset between toasts)
-- [ ] T022 [US1] Wire showToast() calls in GameStateContext when S.I.C. message triggers
-- [ ] T023 [US1] Wire addJournalEntry('sic') calls in GameStateContext when S.I.C. message triggers
-- [ ] T024 [P] [US1] [i18n] Verify all S.I.C. messages in data/messageSystem.ts are in French with proper accents
-- [ ] T025 [P] [US1] [a11y] Add accessibilityLiveRegion="polite" to Toast.tsx for screen reader announcements
-- [ ] T026 [P] [US1] [a11y] Add accessibilityLabel to Toast.tsx matching message text
+- [X] T012 [P] [US1] Refactor components/Toast.tsx to use react-native-reanimated v3 (replace Animated API with useSharedValue + useAnimatedStyle)
+- [X] T013 [P] [US1] Implement slide-in animation in Toast.tsx (withTiming 200ms for translateY)
+- [X] T014 [P] [US1] Implement micro-bounce "stamp" effect in Toast.tsx (withSpring 200ms, mass: 0.8, damping: 10, stiffness: 100)
+- [X] T015 [US1] Remove manual dismiss from Toast.tsx (make toasts passive, non-interactive, pointerEvents="none")
+- [X] T016 [US1] Update Toast.tsx styling for type='sic' (dark background #2C3E50, blue left border #3498DB)
+- [X] T017 [US1] Update Toast.tsx to auto-dismiss after 5000ms with slide-out animation
+- [X] T018 [US1] Modify components/ToastContainer.tsx to enforce max 3 active toasts (drop overflow silently)
+- [X] T019 [US1] Move ToastContainer mount point from Bureau screen to app/(tabs)/_layout.tsx (visible on all tabs)
+- [X] T020 [US1] Update ToastContainer.tsx to use absolute positioning with zIndex: 1000 (above drawer)
+- [X] T021 [US1] Implement vertical stacking in ToastContainer.tsx (10pt offset between toasts)
+- [X] T022 [US1] Wire showToast() calls in GameStateContext when S.I.C. message triggers
+- [X] T023 [US1] Wire addJournalEntry('sic') calls in GameStateContext when S.I.C. message triggers
+- [X] T024 [P] [US1] [i18n] Verify all S.I.C. messages in data/messageSystem.ts are in French with proper accents
+- [X] T025 [P] [US1] [a11y] Add accessibilityLiveRegion="polite" to Toast.tsx for screen reader announcements
+- [X] T026 [P] [US1] [a11y] Add accessibilityLabel to Toast.tsx matching message text
 - [ ] T027 [P] [US1] [perf] Verify toast animations run at 60fps using React Native Performance Monitor
 
 **Checkpoint**: User Story 1 complete - S.I.C. toasts display on all screens at production milestones

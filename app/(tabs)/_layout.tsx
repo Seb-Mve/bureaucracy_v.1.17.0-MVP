@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { SplashScreen } from 'expo-router';
 import { useGameState } from '@/context/GameStateContext';
 import NotificationBadge from '@/components/NotificationBadge';
+import ToastContainer from '@/components/ToastContainer';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -44,8 +45,12 @@ export default function TabLayout() {
   const tabBarPaddingBottom = Platform.OS === 'ios' ? 30 : 10;
 
   return (
-    <Tabs
-      screenOptions={{
+    <>
+      {/* Toast notifications - visible on all tabs */}
+      <ToastContainer />
+      
+      <Tabs
+        screenOptions={{
         tabBarActiveTintColor: '#4b6c8c',
         tabBarInactiveTintColor: '#888888',
         tabBarStyle: {
@@ -119,5 +124,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }

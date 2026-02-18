@@ -5,7 +5,6 @@ import ResourceBar from '@/components/ResourceBar';
 import StampButton from '@/components/StampButton';
 import AdministrationCard from '@/components/AdministrationCard';
 import ConformiteDisplay from '@/components/ConformiteDisplay';
-import ToastContainer from '@/components/ToastContainer';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
 import { Administration } from '@/types/game';
@@ -88,9 +87,6 @@ export default function BureauScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Toast notifications overlay */}
-      <ToastContainer />
-      
       <ResourceBar />
       
       {/* Conformité display (appears when unlocked) */}
