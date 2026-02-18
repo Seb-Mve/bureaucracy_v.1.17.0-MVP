@@ -19,6 +19,34 @@ Act as a **senior mobile UX/UI specialist** alongside the dev role. For every UI
 - **Typography hierarchy** — three levels max per screen: title (bold, large), value (bold, accent color), label (regular, `Colors.textLight`). Do not introduce a fourth level.
 - **Performance** — `FlatList` over `ScrollView` for any list that can exceed 10 items. Memoize list item components (`React.memo`). Avoid inline style objects in list renders.
 
+Act as a **senior React Native / Expo frontend specialist**. Apply these patterns proactively on every code change:
+
+### React Native specifics
+- **Never use `View`/`Text` from `react-native` for interactive elements** — use `Pressable` (not `TouchableOpacity`, not `TouchableHighlight`). `TouchableOpacity` is legacy.
+- **`StyleSheet.create` always** — never inline style objects (`style={{ color: 'red' }}`). Inline objects are re-created on every render and break memoization.
+- **Platform differences** — shadow properties differ: iOS uses `shadow*` props, Android uses `elevation`. Always set both when adding shadows.
+- **`KeyboardAvoidingView`** — wrap any screen with text input in `KeyboardAvoidingView` with `behavior={Platform.OS === 'ios' ? 'padding' : 'height'}`.
+- **Images** — use `require()` for local assets (already used in `gameData.ts`). Always specify explicit `width`/`height`; never rely on intrinsic size on Android.
+
+### Expo specifics
+- **`expo-haptics`** — `Haptics.impactAsync(ImpactFeedbackStyle.Light/Medium/Heavy)` and `Haptics.notificationAsync(NotificationFeedbackType.Success/Warning/Error)`. Import from `expo-haptics`.
+- **`expo-linear-gradient`** (installed) — use for backgrounds and progress bars instead of flat colors where depth is needed.
+- **`expo-blur`** (installed) — use `BlurView` for overlay modals/toasts instead of semi-transparent backgrounds.
+- **Fonts** — `@expo-google-fonts/inter` and `@expo-google-fonts/archivo-black` are loaded. Use `Inter_400Regular`, `Inter_600SemiBold`, `ArchivoBlack_400Regular`. Check `hooks/useFrameworkReady.ts` for the font loading pattern.
+
+### Performance patterns
+- **`useCallback` / `useMemo`** — wrap every function passed as prop and every derived value that involves array iteration. The game loop fires every 100ms; unnecessary re-renders are critical to avoid.
+- **`React.memo`** — wrap all list item components (`AgentItem`, `AdministrationCard`). Wrap any component that receives stable props but lives inside a frequently-updating parent.
+- **Game loop discipline** — the `setInterval` at 100ms in `GameStateContext` is the hot path. Never call `setState` inside it without a meaningful value change. Use `useRef` for values the loop reads but the UI doesn't need to re-render for.
+- **`InteractionManager.runAfterInteractions`** — defer heavy initialization (loading AsyncStorage, computing initial production) until after the first render completes.
+- **Animated API** — prefer `react-native-reanimated` (installed, v3) over the core `Animated` API. Use `useSharedValue` + `useAnimatedStyle` for 60fps animations that run on the UI thread. Never animate with `setState`.
+
+### Architecture patterns specific to this codebase
+- **No business logic in components** — if a component computes anything beyond formatting for display, it belongs in `GameStateContext` or a `data/` pure function.
+- **Context consumption** — always destructure exactly what you need from `useGameState()`. Don't spread the whole context into a variable.
+- **`useRef` for game loop values** — values read by the game loop but not displayed (timestamps, caches, pending updates) live in `useRef`, never in `useState`.
+
+
 ## Commands
 
 ```bash
