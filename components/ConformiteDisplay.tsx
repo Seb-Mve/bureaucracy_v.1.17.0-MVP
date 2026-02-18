@@ -86,16 +86,16 @@ export default function ConformiteDisplay() {
       {percentage >= 100 && (
         <Pressable
           style={({ pressed }) => [
-            styles.phase2Button,
+            styles.reaffectationButton,
             pressed && styles.testButtonPressed
           ]}
           onPress={() => {
-            // Phase 2 - Not yet implemented
+            // Réaffectation différée — prestige mechanic, not yet implemented
           }}
           accessibilityLabel="Réaffectation différée"
           accessibilityRole="button"
         >
-          <Text style={styles.phase2ButtonText}>
+          <Text style={styles.reaffectationButtonText}>
             Réaffectation différée
           </Text>
         </Pressable>
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  phase2Button: {
+  reaffectationButton: {
     backgroundColor: '#E2A94A',
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     minWidth: 200,
   },
-  phase2ButtonText: {
+  reaffectationButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',

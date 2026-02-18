@@ -296,6 +296,10 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     productionCacheRef.current = null;
   }, [gameState.administrations]);
 
+  /**
+   * Add resources to the current totals (used by the stamp button and game loop).
+   * Also tracks lifetime formulaires for conformité progression.
+   */
   const incrementResource = useCallback((resource: ResourceType, amount: number) => {
     setGameState(prevState => ({
       ...prevState,
@@ -306,6 +310,10 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     }));
   }, []);
 
+  /**
+   * Purchase one unit of an agent, deducting its cost from current resources.
+   * @returns true if purchase succeeded, false if insufficient resources or agent not found
+   */
   const purchaseAgent = useCallback((administrationId: string, agentId: string): boolean => {
     const administration = gameState.administrations.find(a => a.id === administrationId);
     if (!administration || !administration.isUnlocked) return false;
@@ -340,6 +348,10 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return true;
   }, [gameState.administrations, canAfford]);
 
+  /**
+   * Unlock an administration, deducting its unlockCost and switching the active view to it.
+   * @returns true if unlock succeeded, false if already unlocked or insufficient resources
+   */
   const unlockAdministration = useCallback((administrationId: string): boolean => {
     const administration = gameState.administrations.find(a => a.id === administrationId);
     if (!administration || administration.isUnlocked) return false;
@@ -367,6 +379,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return true;
   }, [gameState.administrations, canAfford]);
 
+  /** Switch the currently displayed administration tab. */
   const setActiveAdministration = useCallback((administrationId: string) => {
     setGameState(prevState => ({
       ...prevState,
@@ -378,6 +391,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return formatNumberFrench(value);
   }, []);
 
+  /** Returns true if the player currently has enough resources to buy the given agent. */
   const canPurchaseAgent = useCallback((administrationId: string, agentId: string): boolean => {
     const administration = gameState.administrations.find(a => a.id === administrationId);
     if (!administration || !administration.isUnlocked) return false;
@@ -388,6 +402,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return canAfford(agent.cost);
   }, [gameState.administrations, canAfford]);
 
+  /** Returns true if the player currently has enough resources to unlock the given administration. */
   const canUnlockAdministration = useCallback((administrationId: string): boolean => {
     const administration = gameState.administrations.find(a => a.id === administrationId);
     if (!administration || administration.isUnlocked) return false;
@@ -409,8 +424,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   }, [gameState.conformite]);
 
   /**
-   * Check if Phase 2 transition button should be active
-   * Requires 100% conformité
+   * Check if the "Réaffectation différée" button (post-conformité prestige mechanic) should be active.
+   * Distinct from the conformité system itself — this is the Phase 2 transition triggered at 100% conformité.
+   * @returns true when conformité percentage reaches 100%
    */
   const isPhase2ButtonActive = useMemo(() => {
     return () => {
