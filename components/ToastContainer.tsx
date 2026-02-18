@@ -15,7 +15,7 @@ export default function ToastContainer() {
   
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {toastQueue.map((toast, index) => (
+      {toastQueue.slice(0, 3).map((toast, index) => (
         <View
           key={toast.id}
           style={[styles.toastWrapper, { top: 20 + index * 10 }]}

@@ -12,6 +12,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { JournalEntry as JournalEntryType } from '@/types/game';
 import { formatTimestampFrench } from '@/utils/dateFormatters';
 import { AlertTriangle, Info, Eye } from 'lucide-react-native';
+import Colors from '@/constants/Colors';
 
 interface JournalEntryProps {
   entry: JournalEntryType;
@@ -37,13 +38,13 @@ function JournalEntry({ entry }: JournalEntryProps) {
     const size = 20;
     switch (entry.type) {
       case 'sic':
-        return <Info size={size} color="#3498DB" />;
+        return <Info size={size} color={Colors.resourceTampons} />;
       case 'non-conformity':
-        return <AlertTriangle size={size} color="#E74C3C" />;
+        return <AlertTriangle size={size} color={Colors.error} />;
       case 'narrative-hint':
-        return <Eye size={size} color={entry.isRevealed ? "#27AE60" : "#9B59B6"} />;
+        return <Eye size={size} color={entry.isRevealed ? Colors.phase2Border : Colors.resourceFormulaires} />;
       default:
-        return <Info size={size} color="#3498DB" />;
+        return <Info size={size} color={Colors.resourceTampons} />;
     }
   };
 
@@ -84,7 +85,7 @@ function JournalEntry({ entry }: JournalEntryProps) {
       
       <Text 
         style={styles.text}
-        numberOfLines={3}
+        numberOfLines={2}
         ellipsizeMode="tail"
       >
         {entry.text}
@@ -99,23 +100,23 @@ export default React.memo(JournalEntry);
 const styles = StyleSheet.create({
   container: {
     height: 80,
-    paddingVertical: 12,
+    paddingVertical: 10,  // 80 - 20 = 60pt content: header(24) + gap(4) + 2 lines text(32) ✓
     paddingHorizontal: 16,
     borderLeftWidth: 4,
-    backgroundColor: '#2C2C2C',
+    backgroundColor: Colors.journalBackground,
     marginBottom: 8,
   },
   entrySIC: {
-    borderLeftColor: '#3498DB',
+    borderLeftColor: Colors.resourceTampons,
   },
   entryNonConformity: {
-    borderLeftColor: '#E74C3C',
+    borderLeftColor: Colors.error,
   },
   entryNarrativeUnrevealed: {
-    borderLeftColor: '#9B59B6',
+    borderLeftColor: Colors.resourceFormulaires,
   },
   entryNarrativeRevealed: {
-    borderLeftColor: '#27AE60',
+    borderLeftColor: Colors.phase2Border,
   },
   header: {
     flexDirection: 'row',
@@ -126,21 +127,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   typeLabel: {
-    color: '#FFFFFF',
+    color: Colors.toastText,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
     flex: 1,
   },
   timestamp: {
-    color: '#999999',
+    color: Colors.journalTimestamp,
     fontSize: 11,
     fontWeight: '400',
   },
   text: {
-    color: '#DDDDDD',
+    color: Colors.journalText,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 16,
     fontWeight: '400',
   },
 });

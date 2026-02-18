@@ -15,4 +15,15 @@ export default {
   success: '#2ecc71',
   warning: '#f1c40f',
   error: '#e74c3c',
+
+  // S.I.C. Journal & Toast
+  sicBackground: '#2C3E50',
+  nonConformityBackground: '#3D2C2C',
+  phase2Background: '#2C3E2C',
+  phase2Border: '#27AE60',
+  systemBorder: '#95A5A6',
+  journalBackground: '#2C2C2C',
+  journalText: '#DDDDDD',
+  journalTimestamp: '#999999',
+  toastText: '#FFFFFF',
 };

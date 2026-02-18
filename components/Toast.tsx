@@ -17,6 +17,7 @@ import Animated, {
   runOnJS
 } from 'react-native-reanimated';
 import { ToastMessage } from '@/types/game';
+import Colors from '@/constants/Colors';
 import * as Haptics from 'expo-haptics';
 
 interface ToastProps {
@@ -85,18 +86,24 @@ export default function Toast({ toast, onDismiss }: ToastProps) {
     }
   };
   
+  // Type prefix for accessibility (color alone must not be sole indicator — AR-008)
+  const getTypePrefix = () => {
+    switch (toast.type) {
+      case 'sic': return 'S.I.C. — ';
+      case 'non-conformity': return '⚠ NON-CONFORMITÉ — ';
+      default: return '';
+    }
+  };
+
   return (
     <Animated.View
-      style={[
-        styles.toastContainer,
-        animatedStyle
-      ]}
+      style={[styles.toastContainer, animatedStyle]}
       pointerEvents="none"
       accessibilityLiveRegion="polite"
-      accessibilityLabel={toast.text}
+      accessibilityLabel={`${getTypePrefix()}${toast.text}`}
     >
       <View style={[styles.toast, getToastStyle()]}>
-        <Text style={styles.toastText}>{toast.text}</Text>
+        <Text style={styles.toastText}>{getTypePrefix()}{toast.text}</Text>
       </View>
     </Animated.View>
   );
@@ -121,27 +128,27 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   toastSIC: {
-    backgroundColor: '#2C3E50',
+    backgroundColor: Colors.sicBackground,
     borderLeftWidth: 4,
-    borderLeftColor: '#3498DB',
+    borderLeftColor: Colors.resourceTampons,
   },
   toastNonConformity: {
-    backgroundColor: '#3D2C2C',
+    backgroundColor: Colors.nonConformityBackground,
     borderLeftWidth: 4,
-    borderLeftColor: '#E74C3C',
+    borderLeftColor: Colors.error,
   },
   toastPhase2: {
-    backgroundColor: '#2C3E2C',
+    backgroundColor: Colors.phase2Background,
     borderLeftWidth: 4,
-    borderLeftColor: '#27AE60',
+    borderLeftColor: Colors.phase2Border,
   },
   toastSystem: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: Colors.journalBackground,
     borderLeftWidth: 4,
-    borderLeftColor: '#95A5A6',
+    borderLeftColor: Colors.systemBorder,
   },
   toastText: {
-    color: '#FFFFFF',
+    color: Colors.toastText,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',

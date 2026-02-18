@@ -101,7 +101,7 @@ export default function JournalDrawer({ isOpen, onClose, entries }: JournalDrawe
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>Aucune entrée pour le moment</Text>
               <Text style={styles.emptySubtext}>
-                Les messages S.I.C. apparaîtront ici au fil de votre progression.
+                Les messages S.I.C. apparaîtraient ici au fil de votre progression.
               </Text>
             </View>
           ) : (
