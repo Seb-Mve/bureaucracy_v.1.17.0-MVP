@@ -222,7 +222,7 @@ Définis dans `data/gameData.ts`.
 |---|----|----|-------------------|
 | 1 | `administration-centrale` | Bureau des Documents Obsolètes | — (déverrouillée par défaut) |
 | 2 | `service-tampons` | Service des Tampons Tamponnés | 500 tampons |
-| 3 | `cellule-verification` | Cellule de Vérification des Vérifications | *(voir gameData)* |
+| 3 | `cellule-verification` | Cellule de Vérification des Vérifications | 1 000 tampons |
 | 4 | `division-archivage` | Division de l'Archivage Physique | 1 000 formulaires |
 | 5 | `agence-redondance` | Agence de Redondance Non Justifiée | 5 000 formulaires |
 
@@ -298,9 +298,7 @@ Logique pure dans `data/storageLogic.ts` :
 Système de méta-progression visible après que la 5e administration est débloquée.
 
 #### Déverrouillage (affichage)
-Conditions (vérifiées en boucle de jeu) :
-- `highestEverTampons >= 1 000` ET
-- `highestEverFormulaires >= 100` ET
+Condition (vérifiée en boucle de jeu) :
 - Administration `agence-redondance` débloquée
 
 #### Activation (one-time)
@@ -331,8 +329,6 @@ Apparaît quand `conformite.percentage >= 100`. Mécanique prestige (Phase 2, no
 #### Seuils & constantes (`data/conformiteLogic.ts`)
 
 ```ts
-UNLOCK_TAMPONS = 1_000
-UNLOCK_FORMULAIRES = 100
 ACTIVATION_COST_TAMPONS = 40_000
 ACTIVATION_COST_FORMULAIRES = 10_000
 MAX_PERCENTAGE = 100
