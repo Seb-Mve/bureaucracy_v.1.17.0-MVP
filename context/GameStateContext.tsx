@@ -156,11 +156,15 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   // Fonction optimisée pour appliquer les mises à jour en batch
   const applyPendingUpdates = useCallback(() => {
     if (Object.keys(pendingUpdatesRef.current).length > 0) {
+      // Snapshot before clearing: React's updater function runs asynchronously
+      // (after the current call stack), so pendingUpdatesRef.current would be
+      // {} by the time the updater is called if we cleared it first.
+      const snapshot = { ...pendingUpdatesRef.current };
+      pendingUpdatesRef.current = {};
       setGameState(prev => ({
         ...prev,
-        ...pendingUpdatesRef.current,
+        ...snapshot,
       }));
-      pendingUpdatesRef.current = {};
     }
   }, []);
 
