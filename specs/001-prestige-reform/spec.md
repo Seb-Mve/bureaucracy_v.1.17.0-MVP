@@ -52,7 +52,7 @@ Après avoir effectué une Réforme Administrative, le joueur possède 50 Trombo
 
 **Acceptance Scenarios**:
 
-1. **Given** le joueur a 50 Trombones en banque, **When** il achète "Optimisation des Flux" (50 Trombones), **Then** son solde passe à 0 Trombones et le bouton de l'amélioration affiche "ACTIF" et est grisé
+1. **Given** le joueur a 50 Trombones en banque, **When** il achète "Optimisation des Flux" (50 Trombones), **Then** son solde passe à 0 Trombones, le bouton de l'amélioration affiche "ACTIF" et est grisé, et un toast "Amélioration achetée : Optimisation des Flux" s'affiche avec animation de déduction des Trombones
 2. **Given** le joueur a 30 Trombones en banque, **When** il tente d'acheter "Optimisation des Flux" (50 Trombones), **Then** le bouton est désactivé ou affiche un message d'erreur "Trombones insuffisants"
 3. **Given** le joueur a acheté "Optimisation des Flux", **When** il tente de la racheter dans le même run, **Then** le bouton reste grisé et l'achat est impossible (non cumulable)
 4. **Given** le joueur a acheté "Tampon Double Flux" (10 Trombones), **When** il clique sur le bouton TAMPONNER, **Then** il génère 2 Dossiers au lieu de 1 et un feedback visuel "+2" s'affiche
@@ -102,7 +102,7 @@ Le joueur a débloqué la Strate Nationale dans un run précédent. Après une R
 
 - **Achat simultané d'améliorations** : Si le joueur clique très rapidement sur plusieurs améliorations, le système doit gérer correctement les transactions séquentielles et éviter les achats en double ou les déductions incorrectes de Trombones.
 
-- **Persistance après crash** : Si l'application crashe pendant le prestige (après le reset mais avant la sauvegarde des Trombones), le système doit garantir que soit (a) le prestige est annulé complètement, soit (b) les Trombones sont crédités. Aucune perte de données ne doit survenir.
+- **Persistance après crash** : Si l'application crashe pendant le prestige (après le reset mais avant la sauvegarde des Trombones), le système implémente un two-phase commit avec un flag `prestigeInProgress=true`. Au redémarrage, si ce flag est détecté, le système récupère l'opération en cours : soit finalise le crédit des Trombones, soit annule complètement le prestige. Aucune perte de données ne doit survenir.
 
 - **Migration de schéma AsyncStorage** : Lors de la migration v4 → v5, si un joueur a un état corrompu ou incomplet, le système doit appliquer des valeurs par défaut sûres (ex: Trombones = 0, améliorations désactivées) plutôt que de crasher.
 
@@ -150,7 +150,7 @@ Le joueur a débloqué la Strate Nationale dans un run précédent. Après une R
 
 **Boutique de Prestige**
 
-- **FR-019**: Le système DOIT fournir une interface de "Boutique de Prestige" accessible depuis l'onglet Options (ou un onglet dédié)
+- **FR-019**: Le système DOIT fournir une interface de "Boutique de Prestige" accessible via une nouvelle entrée dans le burger menu (au même niveau que le journal S.I.C.)
 - **FR-020**: La boutique DOIT afficher les 5 améliorations disponibles avec leurs noms, coûts en Trombones, et descriptions des effets
 - **FR-021**: Le système DOIT permettre l'achat d'une amélioration si le joueur possède suffisamment de Trombones
 - **FR-022**: Le système DOIT déduire le coût en Trombones du solde du joueur immédiatement après l'achat
@@ -170,6 +170,7 @@ Le joueur a débloqué la Strate Nationale dans un run précédent. Après une R
 - **FR-030**: Le système DOIT afficher un feedback visuel "+2" ou deux "+1" flottants lorsque "Tampon Double Flux" est actif et que le joueur clique sur TAMPONNER
 - **FR-031**: Le système DOIT afficher le solde de Trombones actuel du joueur dans la boutique de prestige
 - **FR-032**: Le système DOIT indiquer clairement quelles améliorations sont actives durant le run courant
+- **FR-033**: Lors de l'achat d'une amélioration de prestige, le système DOIT afficher un toast notification contenant le texte "Amélioration achetée : [Nom de l'amélioration]" accompagné d'une animation visuelle montrant la déduction des Trombones du solde
 
 **Catalogue des Améliorations**
 
@@ -281,8 +282,9 @@ Les 5 améliorations disponibles sont :
   - `totalAdministrativeValue`: Valeur Administrative Totale accumulée depuis le dernier prestige (integer, valeur par défaut 0)
   - `prestigeUpgrades`: objet/dictionnaire des améliorations actives (ex: `{ prestige_01: true, prestige_02: false, ... }`)
   - `currentTier`: strate actuelle (string, valeurs possibles : "local", "national", "global", par défaut "local" si non existant en v4)
+  - `prestigeInProgress`: flag de transaction two-phase commit (boolean, valeur par défaut false, utilisé pour la récupération après crash)
 - **TC-003**: La migration v4 → v5 doit préserver toutes les données existantes et initialiser les nouveaux champs avec des valeurs par défaut sûres
-- **TC-004**: La sauvegarde AsyncStorage doit être déclenchée immédiatement après le prestige pour minimiser le risque de perte de données
+- **TC-004**: La sauvegarde AsyncStorage doit implémenter une transaction atomique en deux phases : (1) écriture d'un flag `prestigeInProgress=true` + snapshot de l'état pré-prestige, (2) exécution du reset et crédit des Trombones, (3) écriture finale et suppression du flag. Au redémarrage, si `prestigeInProgress=true` est détecté, le système complète ou annule l'opération selon l'état intermédiaire.
 
 ### Performance
 
@@ -290,11 +292,18 @@ Les 5 améliorations disponibles sont :
 - **TC-006**: La mise à jour de la jauge "Potentiel de Réforme" doit être throttled ou debounced si la Valeur Administrative change très rapidement (ex: toutes les 500ms maximum)
 - **TC-007**: Le dialogue de confirmation du prestige doit s'afficher en moins de 200ms après le clic sur le bouton
 
+### Logging & Observability
+
+- **TC-016**: Les opérations de prestige (calcul de Trombones, reset des ressources, sauvegarde) DOIVENT logger les étapes critiques via console.log en mode développement uniquement
+- **TC-017**: Les logs de production DOIVENT être désactivés pour éviter la pollution de la console en environnement release
+- **TC-018**: Les logs de développement DOIVENT inclure : (1) Valeur Administrative avant prestige, (2) Trombones calculés, (3) Confirmation du reset des ressources, (4) Succès de la sauvegarde AsyncStorage
+
 ### UI/UX Constraints
 
-- **TC-008**: La boutique de prestige doit être accessible depuis l'onglet Options OU depuis un nouvel onglet dédié (décision à prendre lors de la planification)
+- **TC-008**: La boutique de prestige doit être accessible via une nouvelle entrée dans le burger menu, au même niveau que le journal S.I.C. (pas un onglet de navigation principal)
 - **TC-009**: Le renommage du bouton "Réinitialiser le jeu" → "Réforme Administrative" doit être cohérent dans tous les contextes (titre du bouton, dialogue de confirmation, messages d'erreur)
 - **TC-010**: Le feedback visuel "+2" pour "Tampon Double Flux" doit être immédiatement perceptible et ne pas se superposer de manière illisible si le joueur clique rapidement
+- **TC-019**: La nouvelle entrée "Boutique de Prestige" dans le burger menu NE DOIT PAS afficher de badge, notification, ou indicateur visuel pour encourager sa découverte. Le joueur doit la découvrir par exploration pure du menu
 
 ### Codebase Architecture
 
@@ -303,6 +312,16 @@ Les 5 améliorations disponibles sont :
 - **TC-013**: Les types TypeScript pour les nouvelles entités (Trombone, Amélioration de Prestige, Coefficient de Phase) doivent être ajoutés dans `types/game.ts`
 - **TC-014**: Le Context API (`GameStateContext.tsx`) doit exposer les fonctions : `performPrestige()`, `buyPrestigeUpgrade(upgradeId)`, `getPrestigePotential()`
 - **TC-015**: Le reset des ressources et infrastructures doit réutiliser les fonctions existantes de reset (si disponibles) pour éviter la duplication de code
+
+## Clarifications
+
+### Session 2026-02-20
+
+- Q: Comment garantir l'atomicité du prestige en cas de crash pendant l'opération (après reset des ressources mais avant sauvegarde des Trombones) ? → A: Two-phase commit avec flag `prestigeInProgress=true`, récupération au redémarrage si crash.
+- Q: Quelle profondeur de logging doit être utilisée pour les opérations de prestige et de calcul de Trombones ? → A: Logging détaillé en mode dev uniquement (console.log des étapes critiques, mais désactivé en production pour éviter la pollution).
+- Q: Quel feedback visuel doit être affiché lors de l'achat d'une amélioration de prestige ? → A: Toast "Amélioration achetée : [Nom]" + animation déduction Trombones.
+- Q: Où la Boutique de Prestige doit-elle être accessible dans l'interface utilisateur ? → A: Une nouvelle entrée dans le burger menu (avec le journal S.I.C.) — la boutique de prestige est accessible via le menu burger, au même niveau que le journal S.I.C., pas un onglet de navigation principal.
+- Q: Comment la Boutique de Prestige doit-elle être signalée ou découverte par le joueur la première fois ? → A: Aucun signal, découverte par exploration pure (pas de badge, notification, ou indicateur visuel).
 
 ## Out of Scope
 
