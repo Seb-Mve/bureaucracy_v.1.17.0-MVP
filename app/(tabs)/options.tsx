@@ -1,15 +1,59 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
-import { Save, Trash2, Volume2, Vibrate } from 'lucide-react-native';
+import { Save, Trash2, Volume2, Vibrate, RefreshCw } from 'lucide-react-native';
+import PrestigeGauge from '@/components/PrestigeGauge';
 
 export default function OptionsScreen() {
-  const { gameState } = useGameState();
+  const { performPrestige, getPrestigePotentialLive, formatNumber } = useGameState();
   const [soundEnabled, setSoundEnabled] = React.useState(true);
   const [hapticsEnabled, setHapticsEnabled] = React.useState(true);
+  
+  const handlePrestige = async () => {
+    const potential = getPrestigePotentialLive();
+    
+    // Block if gain is 0
+    if (!potential.isAvailable || potential.paperclipsGain === 0) {
+      Alert.alert(
+        'Réforme Administrative impossible',
+        `VAT insuffisante. Minimum requis : ${formatNumber(potential.minVAT)}`,
+        [{ text: 'Compris', style: 'cancel' }]
+      );
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmPrestige = async () => {
+      const success = await performPrestige();
+      if (!success) {
+        console.warn('[Options] Prestige failed');
+      }
+    };
+    
+    if (Platform.OS === 'web') {
+      if (window.confirm(
+        `Confirmer la Réforme Administrative ?\n\nVous gagnerez ${formatNumber(potential.paperclipsGain)} Trombone${potential.paperclipsGain > 1 ? 's' : ''}.\n\nToutes vos ressources et infrastructures seront réinitialisées.`
+      )) {
+        confirmPrestige();
+      }
+    } else {
+      Alert.alert(
+        'Réforme Administrative',
+        `Confirmer la Réforme Administrative ?\n\nVous gagnerez ${formatNumber(potential.paperclipsGain)} Trombone${potential.paperclipsGain > 1 ? 's' : ''}.\n\nToutes vos ressources et infrastructures seront réinitialisées.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Confirmer', 
+            onPress: confirmPrestige,
+            style: 'default'
+          }
+        ]
+      );
+    }
+  };
   
   const handleResetGame = async () => {
     const confirmReset = () => {
@@ -82,6 +126,22 @@ export default function OptionsScreen() {
       
       <View style={styles.settingGroup}>
         <Text style={styles.settingGroupTitle}>Jeu</Text>
+        
+        {/* Prestige Gauge - Shows potential Trombones gain */}
+        <PrestigeGauge />
+        
+        <Pressable 
+          style={({ pressed }) => [
+            styles.button, 
+            styles.prestigeButton,
+            pressed && styles.buttonPressed
+          ]}
+          onPress={handlePrestige}
+          accessibilityLabel="Réforme Administrative - Effectuer un prestige pour gagner des Trombones"
+        >
+          <RefreshCw size={18} color="white" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Réforme Administrative</Text>
+        </Pressable>
         
         <TouchableOpacity style={styles.button}>
           <Save size={18} color="white" style={styles.buttonIcon} />
@@ -169,6 +229,13 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginVertical: 10,
+    minHeight: 44, // Accessibility: minimum touch target
+  },
+  buttonPressed: {
+    opacity: 0.7,
+  },
+  prestigeButton: {
+    backgroundColor: Colors.success,
   },
   resetButton: {
     backgroundColor: Colors.error,
