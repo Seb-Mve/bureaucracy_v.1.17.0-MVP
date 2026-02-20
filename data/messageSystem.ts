@@ -12,9 +12,8 @@ export const MILESTONE_FORMULAIRES = 25;
 
 // Probability constants
 const BASE_PROBABILITY = 0.125; // 12.5% base chance
-const COOLDOWN_PROBABILITY = 0.02; // 2% if within 5 minutes
 const BOOSTED_PROBABILITY = 0.20; // 20% if 30+ minutes
-const COOLDOWN_THRESHOLD_SECONDS = 300; // 5 minutes
+const COOLDOWN_THRESHOLD_SECONDS = 120; // 2 minutes hard cooldown (no messages)
 const BOOST_THRESHOLD_SECONDS = 1800; // 30 minutes
 
 // Non-conformity constants
@@ -49,16 +48,16 @@ export function getRandomSICMessage(): string {
 
 /**
  * Calculate S.I.C. message trigger probability based on cooldown
- * - Base: 12.5% if no recent message
- * - Reduced: 2% if within 5 minutes
+ * - Blocked: 0% if within 2 minutes (hard cooldown)
+ * - Base: 12.5% between 2–30 minutes
  * - Boosted: 20% if 30+ minutes without message
- * 
+ *
  * @param sicLastTriggerTime - Timestamp of last S.I.C. message (null if never)
  * @returns Probability value (0-1)
- * 
+ *
  * @example
  * calculateSICProbability(null) // → 0.125 (base)
- * calculateSICProbability(Date.now() - 60000) // → 0.02 (cooldown, 1 min ago)
+ * calculateSICProbability(Date.now() - 60000) // → 0 (hard cooldown, 1 min ago)
  * calculateSICProbability(Date.now() - 2000000) // → 0.20 (boosted, 33+ min ago)
  */
 export function calculateSICProbability(sicLastTriggerTime: number | null): number {
@@ -70,13 +69,13 @@ export function calculateSICProbability(sicLastTriggerTime: number | null): numb
   const timeSinceLastSeconds = (now - sicLastTriggerTime) / 1000;
   
   if (timeSinceLastSeconds < COOLDOWN_THRESHOLD_SECONDS) {
-    // Less than 5 minutes ago: reduce to 2%
-    return COOLDOWN_PROBABILITY;
+    // Less than 2 minutes ago: hard block
+    return 0;
   } else if (timeSinceLastSeconds > BOOST_THRESHOLD_SECONDS) {
     // More than 30 minutes: increase to 20%
     return BOOSTED_PROBABILITY;
   } else {
-    // Between 5-30 minutes: base 12.5%
+    // Between 2–30 minutes: base 12.5%
     return BASE_PROBABILITY;
   }
 }
