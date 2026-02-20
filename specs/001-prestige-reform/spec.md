@@ -170,7 +170,7 @@ Le joueur a débloqué la Strate Nationale dans un run précédent. Après une R
 - **FR-030**: Le système DOIT afficher un feedback visuel "+2" ou deux "+1" flottants lorsque "Tampon Double Flux" est actif et que le joueur clique sur TAMPONNER
 - **FR-031**: Le système DOIT afficher le solde de Trombones actuel du joueur dans la boutique de prestige
 - **FR-032**: Le système DOIT indiquer clairement quelles améliorations sont actives durant le run courant
-- **FR-033**: Lors de l'achat d'une amélioration de prestige, le système DOIT afficher un toast notification contenant le texte "Amélioration achetée : [Nom de l'amélioration]" accompagné d'une animation visuelle montrant la déduction des Trombones du solde
+- **FR-033**: Lors de l'achat d'une amélioration de prestige, le système DOIT afficher un toast notification contenant le texte "Amélioration achetée : [Nom de l'amélioration]". Le solde de Trombones se met à jour immédiatement dans l'interface de la boutique (pas d'animation décrémentale de compteur).
 
 **Catalogue des Améliorations**
 
@@ -256,7 +256,7 @@ Les 5 améliorations disponibles sont :
 
 ### Dependencies
 
-- **Dependency 1**: Le système de strates (Locale, Nationale, Mondiale) doit être déjà implémenté et fonctionnel dans la version v4 du schéma AsyncStorage, avec un champ `currentTier` ou équivalent.
+- **Dependency 1**: Le système de strates (Locale, Nationale, Mondiale) **n'existe PAS dans la codebase v4 actuelle**. Il sera implémenté dans cette feature (User Story 5, Phase 7 de tasks.md) avec un champ `currentTier` ajouté au schéma v5.
 
 - **Dependency 2**: Le tracking des ressources produites (Dossiers, Tampons, Formulaires) doit être accessible pour calculer la Valeur Administrative Totale. Si ce tracking n'existe pas actuellement, il devra être ajouté.
 
