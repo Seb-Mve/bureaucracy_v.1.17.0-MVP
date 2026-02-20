@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { GameState, ResourceType, Resources, Production, ToastMessage, JournalEntry, Upgrade } from '@/types/game';
-import { initialGameState, storageUpgrades } from '@/data/gameData';
+import { GameState, ResourceType, Resources, Production, ToastMessage, JournalEntry, Upgrade, PrestigeUpgrade, PrestigeTransaction } from '@/types/game';
+import { initialGameState, storageUpgrades, prestigeUpgrades, administrations } from '@/data/gameData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatNumberFrench } from '@/utils/formatters';
 import { migrateGameState, isValidGameState } from '@/utils/stateMigration';
+import * as Haptics from 'expo-haptics';
 import { 
   calculateConformitePercentage, 
   shouldUnlockConformite, 
@@ -32,6 +33,14 @@ import {
   getStorageCapAfterUpgrade,
   isStorageBlocked
 } from '@/data/storageLogic';
+import {
+  getPrestigePotential,
+  applyPrestigeMultipliers,
+  applyPrestigeStorageBonus,
+  getClickMultiplier,
+  calculatePrestigePaperclips,
+  canPurchasePrestigeUpgrade
+} from '@/data/prestigeLogic';
 
 interface GameContextType {
   gameState: GameState;
@@ -71,11 +80,26 @@ interface GameContextType {
     }
   ) => void;
   revealNarrativeHint: (targetId: string) => void;
+  
+  // Prestige system methods
+  getPrestigePotentialLive: () => {
+    paperclipsGain: number;
+    isAvailable: boolean;
+    minVAT: number;
+    currentVAT: number;
+    tierName: 'local' | 'national' | 'global';
+  };
+  performPrestige: () => Promise<boolean>;
+  buyPrestigeUpgrade: (upgradeId: string) => boolean;
+  hasPrestigeUpgrade: (upgradeId: string) => boolean;
+  getActivePrestigeUpgrades: () => string[];
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'bureaucracy_game_state';
+const PRESTIGE_TRANSACTION_KEY = 'prestige_transaction';
+const PRESTIGE_TRANSACTION_TIMEOUT = 30000; // 30 seconds
 const UPDATE_INTERVAL = 100; // Plus fréquent pour une meilleure réactivité
 const SAVE_INTERVAL = 5000; // Sauvegarde toutes les 5 secondes
 
@@ -144,7 +168,14 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       });
     }
 
-    return newProduction;
+    // Apply prestige production multipliers (T050)
+    const finalProduction = applyPrestigeMultipliers(
+      newProduction,
+      state.prestigeUpgrades,
+      prestigeUpgrades
+    );
+
+    return finalProduction;
   }, []);
 
   const canAfford = useCallback((cost: Partial<Resources>): boolean => {
@@ -173,6 +204,50 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
     const loadGameState = async () => {
       try {
+        // Check for incomplete prestige transaction first
+        const transactionData = await AsyncStorage.getItem(PRESTIGE_TRANSACTION_KEY);
+        if (transactionData) {
+          const transaction: PrestigeTransaction = JSON.parse(transactionData);
+          const transactionAge = Date.now() - transaction.timestamp;
+          
+          if (transactionAge > PRESTIGE_TRANSACTION_TIMEOUT) {
+            // Transaction too old (>30s) - rollback (ignore transaction)
+            console.warn('[Prestige Recovery] Transaction too old, performing rollback (ignoring transaction)');
+            await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
+          } else {
+            // Transaction recent - attempt to complete prestige
+            console.log('[Prestige Recovery] Found recent incomplete transaction, attempting to complete...');
+            
+            // Load current state
+            const storedState = await AsyncStorage.getItem(STORAGE_KEY);
+            if (storedState) {
+              const parsedState = JSON.parse(storedState);
+              const migratedState = migrateGameState(parsedState);
+              
+              // If prestigeInProgress flag is still true, complete the prestige
+              if (migratedState.prestigeInProgress) {
+                console.log('[Prestige Recovery] Completing interrupted prestige transaction');
+                
+                // Credit Paperclips from transaction
+                migratedState.paperclips = (migratedState.paperclips || 0) + transaction.paperclipsGained;
+                
+                // Clear flag
+                migratedState.prestigeInProgress = false;
+                
+                // Save completed state
+                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migratedState));
+                await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
+                
+                console.log('[Prestige Recovery] Transaction completed successfully');
+              } else {
+                // Flag already cleared, just remove transaction log
+                await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
+              }
+            }
+          }
+        }
+        
+        // Now load normal game state
         const storedState = await AsyncStorage.getItem(STORAGE_KEY);
         if (storedState && isMountedRef.current) {
           const parsedState = JSON.parse(storedState);
@@ -338,10 +413,17 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         newResources[resourceKey] += currentProduction[resourceKey as keyof Production] * deltaTime;
       });
       
+      // Apply prestige storage bonus (T051)
+      const effectiveStorageCap = applyPrestigeStorageBonus(
+        gameState.currentStorageCap,
+        gameState.prestigeUpgrades,
+        prestigeUpgrades
+      );
+      
       // Apply storage cap to formulaires (strict enforcement)
       newResources.formulaires = applyStorageCap(
         newResources.formulaires,
-        gameState.currentStorageCap
+        effectiveStorageCap
       );
 
       // Update conformité system
@@ -431,13 +513,20 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         }
       }
 
+      // Increment totalAdministrativeValue (VAT) for prestige calculation
+      // VAT tracks ALL resources produced (dossiers + tampons + formulaires)
+      const totalProduced = currentProduction.dossiers * deltaTime + 
+                           currentProduction.tampons * deltaTime + 
+                           currentProduction.formulaires * deltaTime;
+
       pendingUpdatesRef.current = {
         ...pendingUpdatesRef.current,
         resources: newResources,
         production: currentProduction,
         lastTimestamp: currentTime,
         conformite: newConformite,
-        messageSystem: newMessageSystem
+        messageSystem: newMessageSystem,
+        totalAdministrativeValue: gameState.totalAdministrativeValue + totalProduced
       };
 
       applyPendingUpdates();
@@ -459,17 +548,27 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
   /**
    * Add resources to the current totals (used by the stamp button and game loop).
-   * Also tracks lifetime formulaires for conformité progression.
+   * Also tracks lifetime formulaires for conformité progression and VAT for prestige.
+   * Applies prestige click multiplier for manual dossier production (T052).
    */
   const incrementResource = useCallback((resource: ResourceType, amount: number) => {
+    // Apply click multiplier for dossiers (prestige_01: Tampon Double Flux)
+    const clickMultiplier = resource === 'dossiers' 
+      ? getClickMultiplier(gameState.prestigeUpgrades, prestigeUpgrades)
+      : 1;
+    
+    const finalAmount = amount * clickMultiplier;
+    
     setGameState(prevState => ({
       ...prevState,
       resources: {
         ...prevState.resources,
-        [resource]: prevState.resources[resource] + amount
-      }
+        [resource]: prevState.resources[resource] + finalAmount
+      },
+      // Track manual production in totalAdministrativeValue for prestige
+      totalAdministrativeValue: prevState.totalAdministrativeValue + finalAmount
     }));
-  }, []);
+  }, [gameState.prestigeUpgrades]);
 
   /**
    * Purchase one unit of an agent, deducting its cost from current resources.
@@ -763,9 +862,207 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     
     // Reveal any narrative hint for conformité system
     revealNarrativeHint('conformite');
-    
     return true;
   }, [gameState.resources, gameState.conformite, revealNarrativeHint]);
+
+  /**
+   * Get real-time prestige potential for UI display
+   */
+  const getPrestigePotentialLive = useCallback(() => {
+    const potential = getPrestigePotential(gameState);
+    return {
+      paperclipsGain: potential.paperclipsGain,
+      isAvailable: potential.canPrestige,
+      minVAT: potential.minVATRequired,
+      currentVAT: potential.currentVAT,
+      tierName: gameState.currentTier,
+    };
+  }, [gameState.totalAdministrativeValue, gameState.currentTier]);
+
+  /**
+   * Buy a prestige upgrade with Paperclips
+   * Deducts cost and activates upgrade for current run
+   * 
+   * @param upgradeId - ID of upgrade to purchase
+   * @returns true if purchase succeeded, false if blocked
+   */
+  const buyPrestigeUpgrade = useCallback((upgradeId: string): boolean => {
+    const validation = canPurchasePrestigeUpgrade(
+      upgradeId,
+      gameState.paperclips,
+      gameState.prestigeUpgrades,
+      prestigeUpgrades
+    );
+    
+    if (!validation.canPurchase) {
+      if (validation.error) {
+        showToast(validation.error, 'error', 2000);
+      }
+      return false;
+    }
+    
+    // Find upgrade to get cost and name
+    const upgrade = prestigeUpgrades.find(u => u.id === upgradeId);
+    if (!upgrade) {
+      console.error('[Prestige] Upgrade not found:', upgradeId);
+      return false;
+    }
+    
+    // Deduct cost and activate upgrade
+    setGameState(prevState => ({
+      ...prevState,
+      paperclips: prevState.paperclips - upgrade.cost,
+      prestigeUpgrades: [...prevState.prestigeUpgrades, upgradeId]
+    }));
+    
+    // Haptic feedback (Light for purchase)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Show success toast
+    showToast(`Amélioration achetée : ${upgrade.name}`, 'success', 3000);
+    
+    return true;
+  }, [gameState.paperclips, gameState.prestigeUpgrades, showToast]);
+  
+  /**
+   * Check if a prestige upgrade is currently active
+   */
+  const hasPrestigeUpgrade = useCallback((upgradeId: string): boolean => {
+    return gameState.prestigeUpgrades.includes(upgradeId);
+  }, [gameState.prestigeUpgrades]);
+  
+  /**
+   * Get list of all active prestige upgrade IDs
+   */
+  const getActivePrestigeUpgrades = useCallback((): string[] => {
+    return gameState.prestigeUpgrades;
+  }, [gameState.prestigeUpgrades]);
+
+  /**
+   * Perform prestige (Réforme Administrative)
+   * Two-phase commit for transaction safety:
+   * 1. Write transaction log to separate AsyncStorage key
+   * 2. Reset game state (resources, agents, upgrades)
+   * 3. Credit Paperclips
+   * 4. Commit to AsyncStorage
+   * 5. Clear transaction log
+   * 
+   * @returns Promise<boolean> - true if prestige succeeded, false if blocked
+   */
+  const performPrestige = useCallback(async (): Promise<boolean> => {
+    // Calculate potential gain
+    const paperclipsGain = calculatePrestigePaperclips(
+      gameState.totalAdministrativeValue,
+      gameState.currentTier
+    );
+    
+    // Block prestige if gain is 0
+    if (paperclipsGain === 0) {
+      showToast('VAT insuffisante pour une Réforme Administrative', 'error', 3000);
+      return false;
+    }
+    
+    // Block if prestige already in progress
+    if (gameState.prestigeInProgress) {
+      console.warn('[Prestige] Transaction already in progress, blocking duplicate prestige');
+      return false;
+    }
+    
+    try {
+      // Phase 1: Write transaction log (BEFORE any state changes)
+      const transaction: PrestigeTransaction = {
+        timestamp: Date.now(),
+        paperclipsGained: paperclipsGain,
+        totalAdministrativeValue: gameState.totalAdministrativeValue,
+        currentTier: gameState.currentTier
+      };
+      
+      await AsyncStorage.setItem(PRESTIGE_TRANSACTION_KEY, JSON.stringify(transaction));
+      console.log('[Prestige] Transaction logged:', transaction);
+      
+      // Set prestigeInProgress flag
+      await new Promise<void>((resolve) => {
+        setGameState(prevState => ({
+          ...prevState,
+          prestigeInProgress: true
+        }));
+        // Wait for state update
+        setTimeout(resolve, 50);
+      });
+      
+      // Phase 2: Reset game state
+      const resetState: GameState = {
+        ...initialGameState,
+        version: 5, // Keep current version
+        // PERSISTENT: Paperclips, currentTier
+        paperclips: gameState.paperclips + paperclipsGain,
+        currentTier: gameState.currentTier,
+        // PERSISTENT: Conformité unlock status (but reset activation)
+        conformite: gameState.conformite ? {
+          ...initialGameState.conformite!,
+          isUnlocked: gameState.conformite.isUnlocked,
+          highestEverTampons: gameState.conformite.highestEverTampons,
+          highestEverFormulaires: gameState.conformite.highestEverFormulaires
+        } : initialGameState.conformite,
+        // RESET: Resources, VAT, agents, upgrades, administrations (except centrale)
+        resources: { dossiers: 0, tampons: 0, formulaires: 0 },
+        totalAdministrativeValue: 0,
+        prestigeUpgrades: [], // Reset active upgrades
+        administrations: administrations.map((admin, index) => ({
+          ...admin,
+          isUnlocked: index === 0, // Only centrale unlocked
+          agents: admin.agents.map(agent => ({ ...agent, owned: 0 }))
+        })),
+        activeAdministrationId: 'administration-centrale',
+        currentStorageCap: 983, // Reset to initial cap
+        messageSystem: initialGameState.messageSystem,
+        journal: [], // Clear journal on prestige
+        lastTimestamp: null,
+        prestigeInProgress: true // Keep flag until commit
+      };
+      
+      // Phase 3: Apply reset state
+      setGameState(resetState);
+      
+      // Phase 4: Save to AsyncStorage (debounced save will happen, but force immediate save)
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(resetState));
+      console.log('[Prestige] State reset complete, Paperclips credited:', paperclipsGain);
+      
+      // Phase 5: Clear transaction flag and log
+      await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
+      setGameState(prevState => ({
+        ...prevState,
+        prestigeInProgress: false
+      }));
+      
+      // Haptic feedback (Medium impact for major action)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // Show success toast
+      showToast(
+        `Réforme Administrative réussie ! +${formatNumberFrench(paperclipsGain)} Trombone${paperclipsGain > 1 ? 's' : ''}`,
+        'success',
+        4000
+      );
+      
+      console.log('[Prestige] Transaction complete and cleaned up');
+      return true;
+      
+    } catch (error) {
+      console.error('[Prestige] Error during prestige operation:', error);
+      
+      // Attempt to clear transaction flag
+      try {
+        await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
+        setGameState(prevState => ({ ...prevState, prestigeInProgress: false }));
+      } catch (cleanupError) {
+        console.error('[Prestige] Failed to cleanup after error:', cleanupError);
+      }
+      
+      showToast('Erreur lors de la Réforme Administrative', 'error', 3000);
+      return false;
+    }
+  }, [gameState, showToast, formatNumberFrench]);
 
   return (
     <GameContext.Provider value={{
@@ -791,6 +1088,11 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       getActiveToasts,
       addJournalEntry,
       revealNarrativeHint,
+      getPrestigePotentialLive,
+      performPrestige,
+      buyPrestigeUpgrade,
+      hasPrestigeUpgrade,
+      getActivePrestigeUpgrades,
     }}>
       {children}
     </GameContext.Provider>
