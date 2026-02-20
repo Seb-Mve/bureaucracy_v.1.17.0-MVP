@@ -869,10 +869,14 @@ export default function GameStateProvider({ children }: { children: React.ReactN
    * Get real-time prestige potential for UI display
    */
   const getPrestigePotentialLive = useCallback(() => {
-    return getPrestigePotential(
-      gameState.totalAdministrativeValue,
-      gameState.currentTier
-    );
+    const potential = getPrestigePotential(gameState);
+    return {
+      paperclipsGain: potential.paperclipsGain,
+      isAvailable: potential.canPrestige,
+      minVAT: potential.minVATRequired,
+      currentVAT: potential.currentVAT,
+      tierName: gameState.currentTier,
+    };
   }, [gameState.totalAdministrativeValue, gameState.currentTier]);
 
   /**
