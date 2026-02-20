@@ -150,34 +150,35 @@ export function getPrestigePotential(state: GameState): PrestigePotential {
 
 /**
  * Check if a prestige upgrade can be purchased
- * 
- * @param state - Current game state
- * @param upgrades - Array of all prestige upgrades
+ *
  * @param upgradeId - ID of the upgrade to check
- * @returns true if upgrade can be purchased, false otherwise
- * 
- * Validates:
- * 1. Upgrade exists in catalog
- * 2. Player has enough paperclips
- * 3. Upgrade is not already active in current run
- * 
+ * @param paperclips - Current paperclip balance
+ * @param activeUpgrades - Array of already purchased upgrade IDs
+ * @param allUpgrades - Array of all prestige upgrades
+ * @returns { canPurchase, error? }
+ *
  * @example
- * canPurchasePrestigeUpgrade(gameState, prestigeUpgrades, 'prestige_01')
- * // Returns: true if player has >= 10 paperclips and upgrade not active
+ * canPurchasePrestigeUpgrade('prestige_01', 15, [], prestigeUpgrades)
+ * // Returns: { canPurchase: true }
  */
 export function canPurchasePrestigeUpgrade(
-  state: GameState,
-  upgrades: PrestigeUpgrade[],
-  upgradeId: string
-): boolean {
-  const upgrade = upgrades.find(u => u.id === upgradeId);
-  if (!upgrade) return false;
-  
-  if (state.paperclips < upgrade.cost) return false;
-  
-  if (state.prestigeUpgrades[upgradeId] === true) return false;
-  
-  return true;
+  upgradeId: string,
+  paperclips: number,
+  activeUpgrades: string[],
+  allUpgrades: PrestigeUpgrade[]
+): { canPurchase: boolean; error?: string } {
+  const upgrade = allUpgrades.find(u => u.id === upgradeId);
+  if (!upgrade) return { canPurchase: false, error: 'Amélioration introuvable.' };
+
+  if (activeUpgrades.includes(upgradeId)) {
+    return { canPurchase: false, error: 'Amélioration déjà active.' };
+  }
+
+  if (paperclips < upgrade.cost) {
+    return { canPurchase: false, error: `Trombones insuffisants (${upgrade.cost} requis).` };
+  }
+
+  return { canPurchase: true };
 }
 
 // ============================================================================
