@@ -32,18 +32,32 @@ export function migrateGameState(loaded: unknown): GameState {
     const version = (s.version as number | undefined) || 1;
     const conformite = s.conformite as Record<string, unknown> | undefined;
 
-    // V3 → V4 Migration: Add storage cap system
-    if (version === 3) {
-      console.log('[Migration] v3→v4: Adding storage cap system');
+    // V4 → V5 Migration: Add prestige system
+    if (version === 4) {
+      console.log('[Migration] v4→v5: Adding prestige system');
       return {
         ...s,
-        version: 4,
-        currentStorageCap: s.currentStorageCap ?? 983 // Default initial cap
+        version: 5,
+        paperclips: 0,
+        totalAdministrativeValue: 0,
+        currentTier: 'local',
+        prestigeUpgrades: {}, // Record<string, boolean> not array
+        prestigeInProgress: false
       } as GameState;
     }
 
+    // V3 → V4 Migration: Add storage cap system
+    if (version === 3) {
+      console.log('[Migration] v3→v4: Adding storage cap system, then migrating to v5');
+      return migrateGameState({
+        ...s,
+        version: 4,
+        currentStorageCap: s.currentStorageCap ?? 983 // Default initial cap
+      }); // Chain migration to v5
+    }
+
     // Already at current version or newer
-    if (version >= 4) {
+    if (version >= 5) {
       return s as unknown as GameState;
     }
     
@@ -194,6 +208,35 @@ export function isValidGameState(state: unknown): boolean {
       // currentStorageCap must be number or null
       if (s.currentStorageCap !== null && typeof s.currentStorageCap !== 'number') {
         console.error('[Validation] currentStorageCap must be number or null');
+        return false;
+      }
+    }
+    
+    // Check prestige fields (required in v5+)
+    if ((s.version as number) >= 5) {
+      if (typeof s.paperclips !== 'number') {
+        console.error('[Validation] paperclips must be a number');
+        return false;
+      }
+      
+      if (typeof s.totalAdministrativeValue !== 'number') {
+        console.error('[Validation] totalAdministrativeValue must be a number');
+        return false;
+      }
+      
+      if (s.currentTier !== 'local' && s.currentTier !== 'national' && s.currentTier !== 'global') {
+        console.error('[Validation] currentTier must be local/national/global');
+        return false;
+      }
+      
+      // prestigeUpgrades must be an object (Record<string, boolean>)
+      if (typeof s.prestigeUpgrades !== 'object' || s.prestigeUpgrades === null || Array.isArray(s.prestigeUpgrades)) {
+        console.error('[Validation] prestigeUpgrades must be an object');
+        return false;
+      }
+      
+      if (typeof s.prestigeInProgress !== 'boolean') {
+        console.error('[Validation] prestigeInProgress must be a boolean');
         return false;
       }
     }
