@@ -1,4 +1,4 @@
-import { Administration, GameState, Upgrade } from '@/types/game';
+import { Administration, GameState, Upgrade, PrestigeUpgrade } from '@/types/game';
 
 // Storage upgrades data
 export const storageUpgrades: Upgrade[] = [
@@ -61,6 +61,55 @@ export const storageUpgrades: Upgrade[] = [
       requiredUpgradeId: 'storage_upgrade_3',
       sequenceIndex: 3
     }
+  }
+];
+
+// Prestige upgrades catalog (V5)
+export const prestigeUpgrades: PrestigeUpgrade[] = [
+  {
+    id: 'prestige_01',
+    name: 'Tampon Double Flux',
+    description: 'Le bouton TAMPONNER génère 2 dossiers au lieu de 1',
+    cost: 10,
+    effectType: 'click_multiplier',
+    effectTarget: 'dossiers',
+    effectValue: 2 // Multiplicateur de clic
+  },
+  {
+    id: 'prestige_02',
+    name: 'Optimisation des Flux',
+    description: 'Augmente la production de Dossiers de 10%',
+    cost: 50,
+    effectType: 'production_multiplier',
+    effectTarget: 'dossiers',
+    effectValue: 10 // Pourcentage
+  },
+  {
+    id: 'prestige_03',
+    name: 'Encre Haute Densité',
+    description: 'Augmente la production de Tampons de 5%',
+    cost: 200,
+    effectType: 'production_multiplier',
+    effectTarget: 'tampons',
+    effectValue: 5
+  },
+  {
+    id: 'prestige_04',
+    name: 'Extension des Classeurs',
+    description: 'Augmente la capacité de stockage de Formulaires de 20%',
+    cost: 500,
+    effectType: 'storage_capacity',
+    effectTarget: 'formulaires',
+    effectValue: 20 // Pourcentage
+  },
+  {
+    id: 'prestige_05',
+    name: 'Synergie Administrative',
+    description: 'Augmente la production globale de 10%',
+    cost: 1500,
+    effectType: 'production_multiplier',
+    effectTarget: 'all',
+    effectValue: 10
   }
 ];
 
@@ -450,7 +499,7 @@ export const administrations: Administration[] = [
 
 // Initial game state
 export const initialGameState: GameState = {
-  version: 4,
+  version: 5, // Updated to v5 for prestige system
   resources: {
     dossiers: 0,
     tampons: 0,
@@ -484,5 +533,11 @@ export const initialGameState: GameState = {
       formulaires: 0
     }
   },
-  journal: []
+  journal: [],
+  // Prestige system (V5)
+  paperclips: 0,
+  totalAdministrativeValue: 0,
+  currentTier: 'local',
+  prestigeUpgrades: {},
+  prestigeInProgress: false
 };

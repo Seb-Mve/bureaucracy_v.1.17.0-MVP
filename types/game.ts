@@ -148,6 +148,88 @@ export interface Upgrade {
   };
 }
 
+// Prestige system types (V5 addition)
+export type Tier = 'local' | 'national' | 'global';
+
+/**
+ * Effect type for prestige upgrades
+ */
+export type PrestigeEffectType = 
+  | 'click_multiplier'      // Modifie le gain des clics manuels
+  | 'production_multiplier' // Augmente la production passive
+  | 'storage_capacity';     // Augmente la capacité de stockage
+
+/**
+ * Effect target for prestige upgrades
+ */
+export type PrestigeEffectTarget = 'dossiers' | 'tampons' | 'formulaires' | 'all';
+
+/**
+ * Prestige Upgrade definition (static data)
+ */
+export interface PrestigeUpgrade {
+  /** Unique identifier (format: prestige_01, prestige_02, ...) */
+  id: string;
+  
+  /** Display name (French bureaucratic language) */
+  name: string;
+  
+  /** Description of the effect */
+  description: string;
+  
+  /** Cost in Paperclips */
+  cost: number;
+  
+  /** Type of effect applied */
+  effectType: PrestigeEffectType;
+  
+  /** Resource(s) affected by the effect */
+  effectTarget: PrestigeEffectTarget;
+  
+  /** Effect magnitude (percentage for multipliers, absolute for click) */
+  effectValue: number;
+}
+
+/**
+ * Prestige Transaction (for two-phase commit)
+ */
+export interface PrestigeTransaction {
+  /** Transaction in progress flag */
+  prestigeInProgress: boolean;
+  
+  /** Transaction start timestamp (Date.now()) */
+  timestampStart: number | null;
+  
+  /** Expected paperclips gain */
+  expectedGain: number | null;
+  
+  /** Pre-prestige snapshot for rollback */
+  prePrestigeSnapshot: {
+    paperclips: number;
+    totalAdministrativeValue: number;
+  } | null;
+}
+
+/**
+ * Prestige Potential calculation result
+ */
+export interface PrestigePotential {
+  /** Number of paperclips that would be gained */
+  paperclipsGain: number;
+  
+  /** Current total administrative value */
+  currentVAT: number;
+  
+  /** Current tier coefficient */
+  tierCoefficient: number;
+  
+  /** Minimum VAT required to gain 1 paperclip */
+  minVATRequired: number;
+  
+  /** Whether prestige is currently allowed (gain >= 1) */
+  canPrestige: boolean;
+}
+
 // Game state structure
 export interface GameState {
   /** Schema version for migration support */
@@ -170,4 +252,11 @@ export interface GameState {
   
   /** Journal entries (max 500, FIFO rotation) - V3 addition */
   journal: JournalEntry[];
+  
+  /** Prestige system (V5 addition) */
+  paperclips: number;
+  totalAdministrativeValue: number;
+  currentTier: Tier;
+  prestigeUpgrades: Record<string, boolean>; // upgradeId → isActive in current run
+  prestigeInProgress: boolean; // Transaction safety flag
 }
