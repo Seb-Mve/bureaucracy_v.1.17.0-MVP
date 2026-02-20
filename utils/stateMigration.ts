@@ -41,7 +41,7 @@ export function migrateGameState(loaded: unknown): GameState {
         paperclips: 0,
         totalAdministrativeValue: 0,
         currentTier: 'local',
-        prestigeUpgrades: {}, // Record<string, boolean> not array
+        prestigeUpgrades: [], // string[] of active upgrade IDs
         prestigeInProgress: false
       } as GameState;
     }
@@ -229,9 +229,9 @@ export function isValidGameState(state: unknown): boolean {
         return false;
       }
       
-      // prestigeUpgrades must be an object (Record<string, boolean>)
-      if (typeof s.prestigeUpgrades !== 'object' || s.prestigeUpgrades === null || Array.isArray(s.prestigeUpgrades)) {
-        console.error('[Validation] prestigeUpgrades must be an object');
+      // prestigeUpgrades must be an array
+      if (!Array.isArray(s.prestigeUpgrades)) {
+        console.error('[Validation] prestigeUpgrades must be an array');
         return false;
       }
       

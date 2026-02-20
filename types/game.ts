@@ -257,6 +257,6 @@ export interface GameState {
   paperclips: number;
   totalAdministrativeValue: number;
   currentTier: Tier;
-  prestigeUpgrades: Record<string, boolean>; // upgradeId → isActive in current run
+  prestigeUpgrades: string[]; // upgradeId[] actifs dans le run courant
   prestigeInProgress: boolean; // Transaction safety flag
 }

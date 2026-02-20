@@ -538,6 +538,6 @@ export const initialGameState: GameState = {
   paperclips: 0,
   totalAdministrativeValue: 0,
   currentTier: 'local',
-  prestigeUpgrades: {},
+  prestigeUpgrades: [],
   prestigeInProgress: false
 };
