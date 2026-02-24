@@ -116,7 +116,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const isMountedRef = useRef(false);
   const productionCacheRef = useRef<Production | null>(null);
-  const pendingUpdatesRef = useRef<Partial<GameState>>({});
+  const pendingUpdatesRef = useRef<Partial<GameState> & { _resourcesDelta?: Resources; _formulairesGainedDelta?: number; _vatDelta?: number }>({});
 
   // Memoized production calculation
   const calculateProduction = useCallback((state: GameState): Production => {
@@ -187,15 +187,67 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   // Fonction optimisée pour appliquer les mises à jour en batch
   const applyPendingUpdates = useCallback(() => {
     if (Object.keys(pendingUpdatesRef.current).length > 0) {
-      // Snapshot before clearing: React's updater function runs asynchronously
-      // (after the current call stack), so pendingUpdatesRef.current would be
-      // {} by the time the updater is called if we cleared it first.
+      // Snapshot before clearing (React's updater runs asynchronously).
       const snapshot = { ...pendingUpdatesRef.current };
       pendingUpdatesRef.current = {};
-      setGameState(prev => ({
-        ...prev,
-        ...snapshot,
-      }));
+      setGameState(prev => {
+        // Apply resource delta to latest state (not stale closure) — prevents
+        // overwriting concurrent modifications such as activateConformite deductions.
+        const delta = snapshot._resourcesDelta;
+        const effectiveStorageCap = prev.currentStorageCap === null
+          ? null
+          : applyPrestigeStorageBonus(prev.currentStorageCap, prev.prestigeUpgrades, prestigeUpgrades);
+        const newResources: Resources = delta ? {
+          dossiers: prev.resources.dossiers + delta.dossiers,
+          tampons: prev.resources.tampons + delta.tampons,
+          formulaires: applyStorageCap(
+            prev.resources.formulaires + delta.formulaires,
+            effectiveStorageCap
+          ),
+        } : prev.resources;
+
+        // Update conformite using prev — never reset isActivated/isUnlocked via stale snapshot.
+        const formulairesGainedDelta = snapshot._formulairesGainedDelta ?? 0;
+        let newConformite = prev.conformite;
+        if (prev.conformite) {
+          const lastAdmin = prev.administrations.find(a => a.id === 'agence-redondance');
+          const isUnlocked = prev.conformite.isUnlocked || shouldUnlockConformite(
+            Math.max(prev.conformite.highestEverTampons, newResources.tampons),
+            Math.max(prev.conformite.highestEverFormulaires, newResources.formulaires),
+            lastAdmin?.isUnlocked ?? false
+          );
+          const newAccumulated = prev.conformite.isActivated
+            ? prev.conformite.accumulatedFormulaires + formulairesGainedDelta
+            : prev.conformite.accumulatedFormulaires;
+          newConformite = {
+            ...prev.conformite,
+            lifetimeFormulaires: prev.conformite.lifetimeFormulaires + formulairesGainedDelta,
+            highestEverTampons: Math.max(prev.conformite.highestEverTampons, newResources.tampons),
+            highestEverFormulaires: Math.max(prev.conformite.highestEverFormulaires, newResources.formulaires),
+            isUnlocked,
+            // isActivated: NEVER reset by the game loop — only set by activateConformite
+            accumulatedFormulaires: newAccumulated,
+            percentage: prev.conformite.isActivated
+              ? calculateConformitePercentageNew(0, newAccumulated)
+              : prev.conformite.percentage,
+          };
+        }
+
+        // Destructure out delta fields and fields we compute ourselves to avoid
+        // spreading stale/undefined values over prev.
+        const {
+          _resourcesDelta, _formulairesGainedDelta, _vatDelta,
+          resources: _r, conformite: _c, totalAdministrativeValue: _v,
+          ...safeRest
+        } = snapshot;
+        return {
+          ...prev,
+          ...safeRest,
+          resources: newResources,
+          conformite: newConformite,
+          totalAdministrativeValue: prev.totalAdministrativeValue + (_vatDelta ?? 0),
+        };
+      });
     }
   }, []);
 
@@ -405,93 +457,47 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       const currentProduction = productionCacheRef.current || calculateProduction(gameState);
       productionCacheRef.current = currentProduction;
 
-      const newResources = { ...gameState.resources };
       const formulairesGained = currentProduction.formulaires * deltaTime;
-      
-      Object.keys(currentProduction).forEach(resource => {
-        const resourceKey = resource as keyof Resources;
-        newResources[resourceKey] += currentProduction[resourceKey as keyof Production] * deltaTime;
-      });
-      
-      // Apply prestige storage bonus (T051)
-      const effectiveStorageCap = applyPrestigeStorageBonus(
-        gameState.currentStorageCap,
-        gameState.prestigeUpgrades,
-        prestigeUpgrades
-      );
-      
-      // Apply storage cap to formulaires (strict enforcement)
-      newResources.formulaires = applyStorageCap(
-        newResources.formulaires,
-        effectiveStorageCap
-      );
+      // Compute production delta — applied to prev.resources in applyPendingUpdates
+      // to prevent overwriting concurrent state changes (e.g. activation costs).
+      const resourcesDelta: Resources = {
+        dossiers: currentProduction.dossiers * deltaTime,
+        tampons: currentProduction.tampons * deltaTime,
+        formulaires: formulairesGained,
+      };
 
-      // Update conformité system
-      let newConformite = gameState.conformite ? { ...gameState.conformite } : undefined;
-      
-      if (newConformite) {
-        // Track lifetime formulaires for passive progression
-        newConformite.lifetimeFormulaires += formulairesGained;
-        
-        // Update highest-ever counts for unlock tracking
-        newConformite.highestEverTampons = Math.max(
-          newConformite.highestEverTampons,
-          newResources.tampons
-        );
-        newConformite.highestEverFormulaires = Math.max(
-          newConformite.highestEverFormulaires,
-          newResources.formulaires
-        );
-        
-        // Check if conformité should unlock (old logic - kept for compatibility)
-        if (!newConformite.isUnlocked) {
-          const lastAdmin = gameState.administrations.find(a => a.id === 'agence-redondance');
-          const isLastAdminUnlocked = lastAdmin?.isUnlocked ?? false;
-          
-          if (shouldUnlockConformite(
-            newConformite.highestEverTampons,
-            newConformite.highestEverFormulaires,
-            isLastAdminUnlocked
-          )) {
-            newConformite.isUnlocked = true;
-          }
-        }
-        
-        // NEW: Calculate passive conformité progression (exponential formula)
-        if (newConformite.isActivated) {
-          newConformite.accumulatedFormulaires += formulairesGained;
-          newConformite.percentage = calculateConformitePercentageNew(
-            0,
-            newConformite.accumulatedFormulaires
-          );
-        }
-      }
+      // Approximate resource totals for milestone detection (stale base + delta is sufficient).
+      const approxNewResources = {
+        dossiers: gameState.resources.dossiers + resourcesDelta.dossiers,
+        tampons: gameState.resources.tampons + resourcesDelta.tampons,
+        formulaires: gameState.resources.formulaires + resourcesDelta.formulaires,
+      };
 
       // Check for milestone crossings and trigger S.I.C. messages
       let newMessageSystem = gameState.messageSystem ? { ...gameState.messageSystem } : undefined;
-      
+
       if (newMessageSystem) {
         const { lastProductionMilestone } = newMessageSystem;
         let milestoneTriggered = false;
-        
+
         // Check dossiers milestone (every 100)
-        if (hasCrossedMilestone(newResources.dossiers, lastProductionMilestone.dossiers, MILESTONE_DOSSIERS)) {
+        if (hasCrossedMilestone(approxNewResources.dossiers, lastProductionMilestone.dossiers, MILESTONE_DOSSIERS)) {
           milestoneTriggered = true;
-          newMessageSystem.lastProductionMilestone.dossiers = newResources.dossiers;
+          newMessageSystem.lastProductionMilestone.dossiers = approxNewResources.dossiers;
         }
-        
+
         // Check tampons milestone (every 50)
-        if (hasCrossedMilestone(newResources.tampons, lastProductionMilestone.tampons, MILESTONE_TAMPONS)) {
+        if (hasCrossedMilestone(approxNewResources.tampons, lastProductionMilestone.tampons, MILESTONE_TAMPONS)) {
           milestoneTriggered = true;
-          newMessageSystem.lastProductionMilestone.tampons = newResources.tampons;
+          newMessageSystem.lastProductionMilestone.tampons = approxNewResources.tampons;
         }
-        
+
         // Check formulaires milestone (every 25)
-        if (hasCrossedMilestone(newResources.formulaires, lastProductionMilestone.formulaires, MILESTONE_FORMULAIRES)) {
+        if (hasCrossedMilestone(approxNewResources.formulaires, lastProductionMilestone.formulaires, MILESTONE_FORMULAIRES)) {
           milestoneTriggered = true;
-          newMessageSystem.lastProductionMilestone.formulaires = newResources.formulaires;
+          newMessageSystem.lastProductionMilestone.formulaires = approxNewResources.formulaires;
         }
-        
+
         // If any milestone crossed, check if we should trigger a message
         if (milestoneTriggered) {
           // Check non-conformity first (rarer, higher priority)
@@ -513,20 +519,19 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         }
       }
 
-      // Increment totalAdministrativeValue (VAT) for prestige calculation
-      // VAT tracks ALL resources produced (dossiers + tampons + formulaires)
-      const totalProduced = currentProduction.dossiers * deltaTime + 
-                           currentProduction.tampons * deltaTime + 
-                           currentProduction.formulaires * deltaTime;
+      // VAT delta — applied to prev.totalAdministrativeValue in applyPendingUpdates.
+      const vatDelta = currentProduction.dossiers * deltaTime +
+                       currentProduction.tampons * deltaTime +
+                       currentProduction.formulaires * deltaTime;
 
       pendingUpdatesRef.current = {
         ...pendingUpdatesRef.current,
-        resources: newResources,
+        _resourcesDelta: resourcesDelta,
+        _formulairesGainedDelta: formulairesGained,
+        _vatDelta: vatDelta,
         production: currentProduction,
         lastTimestamp: currentTime,
-        conformite: newConformite,
         messageSystem: newMessageSystem,
-        totalAdministrativeValue: gameState.totalAdministrativeValue + totalProduced
       };
 
       applyPendingUpdates();
