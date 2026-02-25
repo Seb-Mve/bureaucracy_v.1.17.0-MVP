@@ -46,12 +46,12 @@ export const storageUpgrades: Upgrade[] = [
     name: 'Rayonnage Vertical Optimisé',
     description: 'Une réorganisation spatiale permettant d\'exploiter la hauteur sous plafond.',
     cost: { formulaires: 1983 },
-    effect: 'Augmente la capacité de stockage à 4 583 formulaires',
+    effect: 'Augmente la capacité de stockage à 5 583 formulaires',
     type: 'storage',
     isPurchased: false,
     administrationId: 3,
     storageConfig: {
-      newCap: 4583,
+      newCap: 5583,
       requiredUpgradeId: 'storage_upgrade_1',
       sequenceIndex: 1
     }
