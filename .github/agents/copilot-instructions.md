@@ -13,6 +13,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-12
 - AsyncStorage, clé `'bureaucracy_game_state'`, JSON, schéma versionné → migration v5→v6 (003-admin-rebalance)
 - TypeScript 5.x (strict mode) + React Native, Expo ~53.0.0, `lucide-react-native`, `react-native-reanimated` (001-agent-cap-display)
 - N/A (changement purement présentatiel, aucune persistance) (001-agent-cap-display)
+- TypeScript 5 / React Native (Expo SDK ~53) + React Native `Modal`, `Animated` (core RN), `react-native-reanimated` (déjà présent — non utilisé pour cette feature) (004-reaffectation-modal)
+- AsyncStorage via GameStateContext (existant) — `conformite.percentage` + `accumulatedFormulaires` modifiés au refus (004-reaffectation-modal)
 
 - (001-conformite-narrative)
 
@@ -33,9 +35,9 @@ tests/
 : Follow standard conventions
 
 ## Recent Changes
+- 004-reaffectation-modal: Added TypeScript 5 / React Native (Expo SDK ~53) + React Native `Modal`, `Animated` (core RN), `react-native-reanimated` (déjà présent — non utilisé pour cette feature)
 - 001-agent-cap-display: Added TypeScript 5.x (strict mode) + React Native, Expo ~53.0.0, `lucide-react-native`, `react-native-reanimated`
 - 003-admin-rebalance: Added TypeScript 5 (strict mode) / React Native 0.76 / Expo SDK 53 + React Context (state), AsyncStorage (persistence), react-native-reanimated v3 (animations), expo-haptics (retours haptiques)
-- 001-prestige-reform: Added TypeScript 5.8.3 avec React 19.0.0 et React Native 0.79.1 + Expo SDK 53.0.0 (Expo Router, AsyncStorage, Haptics), Lucide React Native (icônes)
 
 
 <!-- MANUAL ADDITIONS START -->
