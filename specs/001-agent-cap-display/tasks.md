@@ -22,11 +22,11 @@
 
 **Independent Test**: Ouvrir l'onglet Recrutement → carte Directeur de pôle affiche `x0/10` (dénominateur grisé) → carte Stagiaire administratif affiche `x0` (inchangé).
 
-- [ ] T001 [US1] Dans `components/AgentItem.tsx`, ajouter dans `StyleSheet.create({...})` les deux nouveaux styles : `ownedRow: { flexDirection: 'row', alignItems: 'center' }` et `ownedCap: { fontFamily: 'Inter-Bold', fontSize: 14, color: Colors.textLight }` — voir data-model.md §Rendu du compteur
+- [x] T001 [US1] Dans `components/AgentItem.tsx`, ajouter dans `StyleSheet.create({...})` les deux nouveaux styles : `ownedRow: { flexDirection: 'row', alignItems: 'center' }` et `ownedCap: { fontFamily: 'Inter-Bold', fontSize: 14, color: Colors.textLight }` — voir data-model.md §Rendu du compteur
 
-- [ ] T002 [US1] Dans `components/AgentItem.tsx`, dans le JSX de `return`, remplacer `<Text style={styles.ownedText}>x{agent.owned}</Text>` (dans `<View style={styles.header}>`) par le bloc conditionnel : si `agent.maxOwned !== undefined` → `<View style={styles.ownedRow}><Text style={styles.ownedText}>x{agent.owned}</Text><Text style={styles.ownedCap}>/{agent.maxOwned}</Text></View>` ; sinon → `<Text style={styles.ownedText}>x{agent.owned}</Text>` (inchangé) — voir data-model.md §Rendu du compteur
+- [x] T002 [US1] Dans `components/AgentItem.tsx`, dans le JSX de `return`, remplacer `<Text style={styles.ownedText}>x{agent.owned}</Text>` (dans `<View style={styles.header}>`) par le bloc conditionnel : si `agent.maxOwned !== undefined` → `<View style={styles.ownedRow}><Text style={styles.ownedText}>x{agent.owned}</Text><Text style={styles.ownedCap}>/{agent.maxOwned}</Text></View>` ; sinon → `<Text style={styles.ownedText}>x{agent.owned}</Text>` (inchangé) — voir data-model.md §Rendu du compteur
 
-- [ ] T003 [P] [US1] [a11y] [i18n] Dans `components/AgentItem.tsx`, dans `getAccessibilityLabel()`, conditionner le fragment `Possédé` en fin de chaîne de retour : si `agent.maxOwned !== undefined` → `` `Possédé : ${agent.owned} sur ${agent.maxOwned}` `` ; sinon → `` `Possédé: ${agent.owned}` `` — voir data-model.md §getAccessibilityLabel
+- [x] T003 [P] [US1] [a11y] [i18n] Dans `components/AgentItem.tsx`, dans `getAccessibilityLabel()`, conditionner le fragment `Possédé` en fin de chaîne de retour : si `agent.maxOwned !== undefined` → `` `Possédé : ${agent.owned} sur ${agent.maxOwned}` `` ; sinon → `` `Possédé: ${agent.owned}` `` — voir data-model.md §getAccessibilityLabel
 
 **Checkpoint US1**: Directeur de pôle → `x0/10` (grisé). Stagiaire → `x0`. Acheter 3 → `x3/10`. À 10/10 → bouton désactivé. VoiceOver → « Possédé : 0 sur 10 ».
 
@@ -36,7 +36,7 @@
 
 **Purpose**: Lint et validation manuelle des scénarios de `quickstart.md`.
 
-- [ ] T004 Exécuter `npm run lint` depuis la racine du repo et corriger toute erreur TypeScript ou ESLint introduite par T001–T003
+- [x] T004 Exécuter `npm run lint` depuis la racine du repo et corriger toute erreur TypeScript ou ESLint introduite par T001–T003
 
 ---
 
