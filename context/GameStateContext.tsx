@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { GameState, ResourceType, Resources, Production, ToastMessage, JournalEntry, Upgrade, PrestigeUpgrade, PrestigeTransaction } from '@/types/game';
-import { initialGameState, storageUpgrades, prestigeUpgrades, administrations } from '@/data/gameData';
+import { initialGameState, storageUpgrades, prestigeUpgrades, administrations, getEscalatedAgentCost } from '@/data/gameData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatNumberFrench } from '@/utils/formatters';
 import { migrateGameState, isValidGameState } from '@/utils/stateMigration';
@@ -118,64 +118,80 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const productionCacheRef = useRef<Production | null>(null);
   const pendingUpdatesRef = useRef<Partial<GameState> & { _resourcesDelta?: Resources; _formulairesGainedDelta?: number; _vatDelta?: number }>({});
 
-  // Memoized production calculation
+  // Memoized production calculation — 2-pass algorithm:
+  // Pass 1 (per-admin): base production + local bonuses scoped to each admin only.
+  // Pass 2 (global): accumulate global multipliers, apply to total, then apply prestige.
+  // This correctly scopes isGlobal:false bonuses (including target:'all') to their admin.
   const calculateProduction = useCallback((state: GameState): Production => {
-    const newProduction: Production = { dossiers: 0, tampons: 0, formulaires: 0 };
-    const bonusMultipliers: { [key: string]: number } = {
+    const total: Production = { dossiers: 0, tampons: 0, formulaires: 0 };
+    const globalMultipliers: { [key: string]: number } = {
       dossiers: 1,
       tampons: 1,
       formulaires: 1,
-      all: 1
+      all: 1,
     };
 
     state.administrations.forEach(admin => {
       if (!admin.isUnlocked) return;
 
+      // Step 1: Sum base production for this admin
+      const adminBase: Production = { dossiers: 0, tampons: 0, formulaires: 0 };
       admin.agents.forEach(agent => {
         if (agent.owned === 0) return;
-
         if (agent.baseProduction) {
           Object.entries(agent.baseProduction).forEach(([resource, amount]) => {
-            newProduction[resource as keyof Production] += amount * agent.owned;
+            adminBase[resource as keyof Production] += amount * agent.owned;
           });
         }
+      });
 
-        if (agent.productionBonus) {
-          const { target, value, isPercentage, isGlobal } = agent.productionBonus;
-          
-          if (isGlobal) {
-            if (isPercentage) {
-              bonusMultipliers[target] += (value / 100) * agent.owned;
-            }
-          } else if (target !== 'all') {
-            if (isPercentage) {
-              newProduction[target as keyof Production] *= (1 + (value / 100) * agent.owned);
-            } else {
-              newProduction[target as keyof Production] += value * agent.owned;
-            }
+      // Step 2: Apply local bonuses to this admin's base only
+      let localAllMultiplier = 1;
+      admin.agents.forEach(agent => {
+        if (agent.owned === 0 || !agent.productionBonus) return;
+        const { target, value, isPercentage, isGlobal } = agent.productionBonus;
+
+        if (isGlobal) {
+          // Accumulate global multipliers — applied after all admins processed
+          if (isPercentage) {
+            globalMultipliers[target] += (value / 100) * agent.owned;
           }
+        } else if (target === 'all') {
+          // Local all-resource multiplier — scoped to this admin only
+          localAllMultiplier += (value / 100) * agent.owned;
+        } else if (isPercentage) {
+          // Local per-resource multiplier — scoped to this admin only
+          adminBase[target as keyof Production] *= (1 + (value / 100) * agent.owned);
+        } else {
+          adminBase[target as keyof Production] += value * agent.owned;
         }
+      });
+
+      // Step 3: Apply local-all multiplier to this admin's entire output
+      (Object.keys(adminBase) as Array<keyof Production>).forEach(r => {
+        adminBase[r] *= localAllMultiplier;
+      });
+
+      // Step 4: Accumulate into global total
+      (Object.keys(total) as Array<keyof Production>).forEach(r => {
+        total[r] += adminBase[r];
       });
     });
 
-    Object.keys(newProduction).forEach(resource => {
-      newProduction[resource as keyof Production] *= bonusMultipliers[resource];
+    // Step 5: Apply per-resource global multipliers
+    (Object.keys(total) as Array<keyof Production>).forEach(r => {
+      total[r] *= globalMultipliers[r] ?? 1;
     });
 
-    if (bonusMultipliers.all > 1) {
-      Object.keys(newProduction).forEach(resource => {
-        newProduction[resource as keyof Production] *= bonusMultipliers.all;
+    // Step 6: Apply global 'all' multiplier (stacks on top of per-resource)
+    if (globalMultipliers.all > 1) {
+      (Object.keys(total) as Array<keyof Production>).forEach(r => {
+        total[r] *= globalMultipliers.all;
       });
     }
 
-    // Apply prestige production multipliers (T050)
-    const finalProduction = applyPrestigeMultipliers(
-      newProduction,
-      state.prestigeUpgrades,
-      prestigeUpgrades
-    );
-
-    return finalProduction;
+    // Step 7: Apply prestige production multipliers
+    return applyPrestigeMultipliers(total, state.prestigeUpgrades, prestigeUpgrades);
   }, []);
 
   const canAfford = useCallback((cost: Partial<Resources>): boolean => {
