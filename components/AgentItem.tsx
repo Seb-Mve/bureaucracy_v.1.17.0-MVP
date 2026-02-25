@@ -130,14 +130,24 @@ export default function AgentItem({ agent, administrationId }: AgentItemProps) {
       production = `Augmente ${target} de ${formatNumber(value)}${isPercentage ? ' pourcent' : ''}`;
     }
     
-    return `${agent.name}. ${agent.description}. ${production}. Coût: ${formatNumber(amount || 0)} ${resourceLabel}. Possédé: ${agent.owned}`;
+    const ownedLabel = agent.maxOwned !== undefined
+      ? `Possédé : ${agent.owned} sur ${agent.maxOwned}`
+      : `Possédé: ${agent.owned}`;
+    return `${agent.name}. ${agent.description}. ${production}. Coût: ${formatNumber(amount || 0)} ${resourceLabel}. ${ownedLabel}`;
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.name}>{agent.name}</Text>
-        <Text style={styles.ownedText}>x{agent.owned}</Text>
+        {agent.maxOwned !== undefined ? (
+          <View style={styles.ownedRow}>
+            <Text style={styles.ownedText}>x{agent.owned}</Text>
+            <Text style={styles.ownedCap}>/{agent.maxOwned}</Text>
+          </View>
+        ) : (
+          <Text style={styles.ownedText}>x{agent.owned}</Text>
+        )}
       </View>
       
       <Text style={styles.description}>{agent.description}</Text>
@@ -190,6 +200,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     fontSize: 14,
     color: Colors.title,
+  },
+  ownedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ownedCap: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 14,
+    color: Colors.textLight,
   },
   description: {
     fontFamily: 'Inter-Regular',
