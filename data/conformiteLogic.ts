@@ -219,3 +219,25 @@ export function calculateConformitePercentageNew(
   
   return Math.min(currentPercent, MAX_PERCENTAGE);
 }
+
+/**
+ * Génère un seuil de réinitialisation aléatoire pour le refus de réaffectation.
+ * @returns Entier aléatoire dans [23, 65]
+ */
+export function getReaffectationResetPercentage(): number {
+  return Math.floor(Math.random() * 43) + 23;
+}
+
+/**
+ * Calcule accumulatedFormulaires pour un pourcentage cible donné.
+ * Résultat = somme des coûts de 0 % à targetPct−1 % (le joueur repart du début du Nème pourcent).
+ * @param targetPct - Pourcentage cible (0-100)
+ * @returns Total de formulaires accumulés correspondant
+ */
+export function getAccumulatedFormulairesForPercentage(targetPct: number): number {
+  let accumulated = 0;
+  for (let p = 0; p < targetPct; p++) {
+    accumulated += getFormulairesRequiredForNextPercent(p);
+  }
+  return accumulated;
+}

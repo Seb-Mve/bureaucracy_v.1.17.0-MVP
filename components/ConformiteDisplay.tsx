@@ -1,15 +1,16 @@
 /**
  * Conformité Display Component
- * 
+ *
  * Shows the "Conformité aléatoire" system:
  * - Appears after unlocking 5th administration
  * - Activation button (mystery mechanic - no costs shown)
  * - Progress bar showing passive progression
  */
 
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
+import ReaffectationModal from './ReaffectationModal';
 
 export default function ConformiteDisplay() {
   const {
@@ -19,26 +20,56 @@ export default function ConformiteDisplay() {
     activateConformite,
     isPhase2ButtonActive,
     conformiteDisplayPercentage,
+    refuseReaffectation,
   } = useGameState();
-  
+
+  // All hooks must be called unconditionally before any early return
+  const [modalVisible, setModalVisible] = useState(false);
+  const animatedBarWidth = useRef(new Animated.Value(0)).current;
+  const isAnimatingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isAnimatingRef.current) {
+      animatedBarWidth.setValue(conformiteDisplayPercentage);
+    }
+    // animatedBarWidth is a stable Animated.Value ref, safe to omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conformiteDisplayPercentage]);
+
   const conformite = gameState.conformite;
-  
+
   // Don't render if 5th admin not unlocked
   if (!shouldShowConformite || !conformite) {
     return null;
   }
-  
+
   const isActivated = conformite.isActivated;
   const percentageInt = conformite.percentage;
   const percentageDisplay = conformiteDisplayPercentage.toLocaleString('fr-FR', {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
-  
+
+  const handleRefuse = () => {
+    setModalVisible(false);
+    const newPct = refuseReaffectation();
+    isAnimatingRef.current = true;
+    animatedBarWidth.setValue(100);
+    Animated.timing(animatedBarWidth, {
+      toValue: newPct,
+      duration: 300,
+      useNativeDriver: false,
+    }).start(() => { isAnimatingRef.current = false; });
+  };
+
+  const handleAccept = () => {
+    setModalVisible(false);
+  };
+
   const handleActivate = () => {
     activateConformite();
   };
-  
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -49,18 +80,23 @@ export default function ConformiteDisplay() {
           Conformité aléatoire : {percentageDisplay} %
         </Text>
       </View>
-      
+
       <View style={styles.progressContainer}>
         <View style={styles.progressBarBackground}>
-          <View 
+          <Animated.View
             style={[
               styles.progressBarFill,
-              { width: `${conformiteDisplayPercentage}%` }
+              {
+                width: animatedBarWidth.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: ['0%', '100%'],
+                }),
+              },
             ]}
           />
         </View>
       </View>
-      
+
       {!isActivated && (
         <Pressable
           style={({ pressed }) => [
@@ -82,22 +118,20 @@ export default function ConformiteDisplay() {
           </Text>
         </Pressable>
       )}
-      
+
       {isActivated && percentageInt < 100 && (
         <Text style={styles.progressInfo}>
           Progression passive en cours...
         </Text>
       )}
-      
+
       {percentageInt >= 100 && isPhase2ButtonActive() && (
         <Pressable
           style={({ pressed }) => [
             styles.reaffectationButton,
             pressed && styles.testButtonPressed
           ]}
-          onPress={() => {
-            // Réaffectation différée — prestige mechanic, not yet implemented
-          }}
+          onPress={() => setModalVisible(true)}
           accessibilityLabel="Réaffectation différée"
           accessibilityRole="button"
         >
@@ -106,6 +140,12 @@ export default function ConformiteDisplay() {
           </Text>
         </Pressable>
       )}
+
+      <ReaffectationModal
+        visible={modalVisible}
+        onAccept={handleAccept}
+        onRefuse={handleRefuse}
+      />
     </View>
   );
 }

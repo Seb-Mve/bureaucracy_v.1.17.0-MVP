@@ -13,6 +13,8 @@ import {
   calculateConformitePercentageNew,
   getFormulairesRequiredForNextPercent,
   getConformiteProgressFraction,
+  getReaffectationResetPercentage,
+  getAccumulatedFormulairesForPercentage,
   ACTIVATION_COST_TAMPONS,
   ACTIVATION_COST_FORMULAIRES,
   TEST_COST,
@@ -68,6 +70,8 @@ interface GameContextType {
   isConformiteUnlocked: () => boolean;
   isPhase2ButtonActive: () => boolean;
   performConformiteTest: () => boolean;
+  /** Refuse la réaffectation : réinitialise la conformité à [23,65] et retourne le nouveau %. */
+  refuseReaffectation: () => number;
   
   // Toast system methods
   toastQueue: ToastMessage[];
@@ -928,6 +932,20 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return true;
   }, [gameState.resources, gameState.conformite, revealNarrativeHint]);
 
+  const refuseReaffectation = useCallback((): number => {
+    const newPct = getReaffectationResetPercentage();
+    const newAccumulated = getAccumulatedFormulairesForPercentage(newPct);
+    setGameState(prev => ({
+      ...prev,
+      conformite: prev.conformite ? {
+        ...prev.conformite,
+        percentage: newPct,
+        accumulatedFormulaires: newAccumulated,
+      } : prev.conformite,
+    }));
+    return newPct;
+  }, []);
+
   /**
    * Get real-time prestige potential for UI display
    */
@@ -1147,6 +1165,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       isConformiteUnlocked,
       isPhase2ButtonActive,
       performConformiteTest,
+      refuseReaffectation,
       toastQueue,
       showToast,
       dismissToast,
