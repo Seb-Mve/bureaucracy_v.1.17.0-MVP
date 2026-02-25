@@ -152,13 +152,45 @@ export function getFormulairesRequiredForNextPercent(currentPercent: number): nu
 }
 
 /**
+ * Calculates the fractional progress toward the next percentage point.
+ * Used for decimal display (e.g., "5,3 %" instead of "5 %").
+ *
+ * @param accumulatedFormulaires - Formulaires accumulated since activation
+ * @param currentPercentage - Current integer conformité percentage (0-100)
+ * @returns Fraction [0, 1) of progress toward next percent (0 if at max)
+ *
+ * @example
+ * // At 0%, with 5000 out of 10000 formulaires for next 1%
+ * getConformiteProgressFraction(5000, 0) // → 0.5
+ *
+ * @example
+ * getConformiteProgressFraction(0, 100) // → 0 (already at max)
+ */
+export function getConformiteProgressFraction(
+  accumulatedFormulaires: number,
+  currentPercentage: number
+): number {
+  if (currentPercentage >= MAX_PERCENTAGE) return 0;
+
+  // Total formulaires consumed to reach currentPercentage
+  let consumed = 0;
+  for (let p = 0; p < currentPercentage; p++) {
+    consumed += getFormulairesRequiredForNextPercent(p);
+  }
+
+  const progress = accumulatedFormulaires - consumed;
+  const costForNext = getFormulairesRequiredForNextPercent(currentPercentage);
+  return Math.min(Math.max(progress / costForNext, 0), 1);
+}
+
+/**
  * Calculate new conformité percentage using exponential progression
  * 1000 × (1.1)^bracket formulaires per 1%
- * 
+ *
  * @param startingPercent - Starting percentage (usually 0 after activation)
  * @param formulairesProduced - Total formulaires produced since activation
  * @returns New conformité percentage (0-100, capped)
- * 
+ *
  * @example
  * calculateConformitePercentageNew(0, 0) // → 0
  * calculateConformitePercentageNew(0, 1000) // → 1 (first %)

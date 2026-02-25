@@ -12,6 +12,7 @@ import {
   canActivateConformite as canActivateConformiteCheck,
   calculateConformitePercentageNew,
   getFormulairesRequiredForNextPercent,
+  getConformiteProgressFraction,
   ACTIVATION_COST_TAMPONS,
   ACTIVATION_COST_FORMULAIRES,
   TEST_COST,
@@ -62,6 +63,8 @@ interface GameContextType {
   shouldShowConformite: boolean;
   canActivateConformite: boolean;
   activateConformite: () => boolean;
+  /** Decimal percentage for display, e.g. 5.3 (use with toLocaleString for French comma) */
+  conformiteDisplayPercentage: number;
   isConformiteUnlocked: () => boolean;
   isPhase2ButtonActive: () => boolean;
   performConformiteTest: () => boolean;
@@ -875,6 +878,22 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   }, [gameState.resources.tampons, gameState.resources.formulaires, gameState.conformite]);
 
   /**
+   * Decimal display percentage including fractional progress within current bracket.
+   * e.g. 5.3 when 30% of the way from 5% to 6%.
+   */
+  const conformiteDisplayPercentage = useMemo(() => {
+    const conformite = gameState.conformite;
+    if (!conformite || !conformite.isActivated) {
+      return conformite?.percentage ?? 0;
+    }
+    const fraction = getConformiteProgressFraction(
+      conformite.accumulatedFormulaires,
+      conformite.percentage
+    );
+    return conformite.percentage + fraction;
+  }, [gameState.conformite]);
+
+  /**
    * Activate conformité system (one-time action)
    * Also reveals any narrative hint for conformité system.
    */
@@ -1124,6 +1143,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       shouldShowConformite,
       canActivateConformite,
       activateConformite,
+      conformiteDisplayPercentage,
       isConformiteUnlocked,
       isPhase2ButtonActive,
       performConformiteTest,

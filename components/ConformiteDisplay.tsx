@@ -12,12 +12,13 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
 
 export default function ConformiteDisplay() {
-  const { 
-    gameState, 
+  const {
+    gameState,
     shouldShowConformite,
     canActivateConformite,
     activateConformite,
     isPhase2ButtonActive,
+    conformiteDisplayPercentage,
   } = useGameState();
   
   const conformite = gameState.conformite;
@@ -28,7 +29,11 @@ export default function ConformiteDisplay() {
   }
   
   const isActivated = conformite.isActivated;
-  const percentage = Math.floor(conformite.percentage);
+  const percentageInt = conformite.percentage;
+  const percentageDisplay = conformiteDisplayPercentage.toLocaleString('fr-FR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
   
   const handleActivate = () => {
     activateConformite();
@@ -37,11 +42,11 @@ export default function ConformiteDisplay() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text 
+        <Text
           style={styles.title}
-          accessibilityLabel={`Conformité aléatoire : ${percentage} pourcent`}
+          accessibilityLabel={`Conformité aléatoire : ${percentageDisplay} pourcent`}
         >
-          Conformité aléatoire : {percentage}%
+          Conformité aléatoire : {percentageDisplay} %
         </Text>
       </View>
       
@@ -49,9 +54,9 @@ export default function ConformiteDisplay() {
         <View style={styles.progressBarBackground}>
           <View 
             style={[
-              styles.progressBarFill, 
-              { width: `${conformite.percentage}%` }
-            ]} 
+              styles.progressBarFill,
+              { width: `${conformiteDisplayPercentage}%` }
+            ]}
           />
         </View>
       </View>
@@ -78,13 +83,13 @@ export default function ConformiteDisplay() {
         </Pressable>
       )}
       
-      {isActivated && percentage < 100 && (
+      {isActivated && percentageInt < 100 && (
         <Text style={styles.progressInfo}>
           Progression passive en cours...
         </Text>
       )}
       
-      {percentage >= 100 && isPhase2ButtonActive() && (
+      {percentageInt >= 100 && isPhase2ButtonActive() && (
         <Pressable
           style={({ pressed }) => [
             styles.reaffectationButton,
