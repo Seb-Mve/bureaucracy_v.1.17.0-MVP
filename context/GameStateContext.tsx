@@ -606,6 +606,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     const agent = administration.agents.find(a => a.id === agentId);
     if (!agent) return false;
 
+    if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false;
+
     if (!canAfford(agent.cost)) return false;
 
     setGameState(prevState => {
@@ -687,6 +689,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
     const agent = administration.agents.find(a => a.id === agentId);
     if (!agent) return false;
+
+    if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false;
 
     return canAfford(agent.cost);
   }, [gameState.administrations, canAfford]);
