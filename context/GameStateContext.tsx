@@ -51,7 +51,9 @@ interface GameContextType {
   formatNumber: (value: number) => string;
   canPurchaseAgent: (administrationId: string, agentId: string) => boolean;
   canUnlockAdministration: (administrationId: string) => boolean;
-  
+  /** Returns the current (escalated) cost of an agent for UI display */
+  getAgentCurrentCost: (administrationId: string, agentId: string) => Partial<Resources>;
+
   // Storage cap system methods
   purchaseStorageUpgrade: (upgradeId: string) => boolean;
   isStorageBlocked: boolean;
@@ -671,6 +673,18 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return true;
   }, [gameState.administrations, canAfford, revealNarrativeHint]);
 
+  /**
+   * Returns the current (escalated) cost of an agent for UI display.
+   * Applies formula: ceil(coût_base × 1,09^floor(owned / 10))
+   * Returns {} if the administration or agent is not found.
+   */
+  const getAgentCurrentCost = useCallback((administrationId: string, agentId: string): Partial<Resources> => {
+    const admin = gameState.administrations.find(a => a.id === administrationId);
+    const agent = admin?.agents.find(a => a.id === agentId);
+    if (!agent) return {};
+    return getEscalatedAgentCost(agent);
+  }, [gameState.administrations]);
+
   /** Switch the currently displayed administration tab. */
   const setActiveAdministration = useCallback((administrationId: string) => {
     setGameState(prevState => ({
@@ -1104,6 +1118,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       formatNumber,
       canPurchaseAgent,
       canUnlockAdministration,
+      getAgentCurrentCost,
       purchaseStorageUpgrade,
       isStorageBlocked: isStorageBlockedValue,
       shouldShowConformite,
