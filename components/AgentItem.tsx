@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Agent, ResourceType } from '@/types/game';
+import { Agent } from '@/types/game';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
 import { File, Stamp, ClipboardList, Battery, Zap } from 'lucide-react-native';
