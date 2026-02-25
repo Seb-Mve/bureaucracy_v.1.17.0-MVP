@@ -256,7 +256,7 @@ export const administrations: Administration[] = [
           target: 'tampons',
           value: 5,
           isPercentage: true,
-          isGlobal: false
+          isGlobal: true
         },
         owned: 0,
         maxOwned: 10,
