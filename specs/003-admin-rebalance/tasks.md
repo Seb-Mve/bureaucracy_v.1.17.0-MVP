@@ -21,7 +21,7 @@
 
 **Purpose**: Ajouter le champ `maxOwned` au type `Agent` — prérequis pour les phases 2 et 5.
 
-- [ ] T001 Ajouter `maxOwned?: number` (champ optionnel, `undefined` = illimité) à l'interface `Agent` après `owned: number` dans `types/game.ts`
+- [x] T001 Ajouter `maxOwned?: number` (champ optionnel, `undefined` = illimité) à l'interface `Agent` après `owned: number` dans `types/game.ts`
 
 ---
 
@@ -31,9 +31,9 @@
 
 **⚠️ CRITIQUE**: T003 dépend de T002 (la migration importe `administrations` depuis `gameData.ts`).
 
-- [ ] T002 Dans `data/gameData.ts` : (1) exporter la fonction pure `getEscalatedAgentCost(agent: Agent): Partial<Resources>` avec la formule `ceil(coût_base × 1,09^floor(owned/10))` — voir data-model.md §getEscalatedAgentCost ; (2) réécrire les 5 objets dans le tableau `administrations[]` avec les coûts, productions, bonus et `maxOwned` exacts du data-model.md §Tableau complet des agents ; (3) corriger les 4 `unlockCost` (service-tampons: 1000 tampons, cellule-verification: 15000 tampons, division-archivage: 5000 formulaires, agence-redondance: 10000 formulaires) ; (4) changer `version: 5` → `version: 6` dans `initialGameState`
+- [x] T002 Dans `data/gameData.ts` : (1) exporter la fonction pure `getEscalatedAgentCost(agent: Agent): Partial<Resources>` avec la formule `ceil(coût_base × 1,09^floor(owned/10))` — voir data-model.md §getEscalatedAgentCost ; (2) réécrire les 5 objets dans le tableau `administrations[]` avec les coûts, productions, bonus et `maxOwned` exacts du data-model.md §Tableau complet des agents ; (3) corriger les 4 `unlockCost` (service-tampons: 1000 tampons, cellule-verification: 15000 tampons, division-archivage: 5000 formulaires, agence-redondance: 10000 formulaires) ; (4) changer `version: 5` → `version: 6` dans `initialGameState`
 
-- [ ] T003 Dans `utils/stateMigration.ts` : (1) importer `administrations` depuis `@/data/gameData` (déjà importé ou à ajouter) ; (2) ajouter le bloc `if (version === 5)` AVANT le bloc `if (version >= 5)` (qui devient `if (version >= 6)`) — la migration mappe chaque admin du nouveau `gameData.administrations` en préservant `isUnlocked` et `agents[].owned` du save chargé via `s.administrations` ; (3) chaîner avec un appel récursif `return migrateGameState({ ...s, version: 6, administrations: freshAdmins })` ; voir data-model.md §Migration V5→V6 pour le code complet
+- [x] T003 Dans `utils/stateMigration.ts` : (1) importer `administrations` depuis `@/data/gameData` (déjà importé ou à ajouter) ; (2) ajouter le bloc `if (version === 5)` AVANT le bloc `if (version >= 5)` (qui devient `if (version >= 6)`) — la migration mappe chaque admin du nouveau `gameData.administrations` en préservant `isUnlocked` et `agents[].owned` du save chargé via `s.administrations` ; (3) chaîner avec un appel récursif `return migrateGameState({ ...s, version: 6, administrations: freshAdmins })` ; voir data-model.md §Migration V5→V6 pour le code complet
 
 **Checkpoint Phase 2**: Nouvelle partie → Bureau des Documents Obsolètes avec agents corrects. Save existant migré → version 6 avec nouveaux coûts.
 
@@ -45,7 +45,7 @@
 
 **Independent Test**: Nouvelle partie → acheter Directeur de pôle (x1, 100 formulaires) → observer que la production de tout le Bureau des Documents Obsolètes augmente de 5% et que les autres admins ne sont pas affectées. Débloquer Service-Tampons avec exactement 1 000 tampons.
 
-- [ ] T004 [US1] [perf] Dans `context/GameStateContext.tsx`, réécrire la fonction `calculateProduction` avec l'algorithme 2 passes documenté dans `data-model.md §calculateProduction` : pour chaque admin déverrouillée, (1) calculer `adminBase` (somme des `baseProduction × owned`), (2) appliquer les bonus locaux sur `adminBase` uniquement (`isGlobal: false, target: 'all'` → `localAllMultiplier`, `isGlobal: false, target: X` → `adminBase[X] *=`), (3) accumuler les bonus globaux dans `globalMultipliers`, (4) additionner `adminBase` au total global, puis (5) appliquer `globalMultipliers` (dossiers/tampons/formulaires puis all) et `applyPrestigeMultipliers` — l'import de `getEscalatedAgentCost` depuis `@/data/gameData` peut être ajouté ici pour les prochaines phases
+- [x] T004 [US1] [perf] Dans `context/GameStateContext.tsx`, réécrire la fonction `calculateProduction` avec l'algorithme 2 passes documenté dans `data-model.md §calculateProduction` : pour chaque admin déverrouillée, (1) calculer `adminBase` (somme des `baseProduction × owned`), (2) appliquer les bonus locaux sur `adminBase` uniquement (`isGlobal: false, target: 'all'` → `localAllMultiplier`, `isGlobal: false, target: X` → `adminBase[X] *=`), (3) accumuler les bonus globaux dans `globalMultipliers`, (4) additionner `adminBase` au total global, puis (5) appliquer `globalMultipliers` (dossiers/tampons/formulaires puis all) et `applyPrestigeMultipliers` — l'import de `getEscalatedAgentCost` depuis `@/data/gameData` peut être ajouté ici pour les prochaines phases
 
 **Checkpoint US1**: Les 5 admins se débloquent aux bons seuils. Le Directeur de pôle booste uniquement son admin. Le Coordinateur qualité (+10% global) booste toutes les admins.
 
@@ -57,9 +57,9 @@
 
 **Independent Test**: Activer la conformité → remplir le stockage à 100% → observer que le `percentage` n'augmente plus. Vider le stockage → produire 10 000 formulaires → observer `percentage = 1%`.
 
-- [ ] T005 [P] [US4] Dans `data/conformiteLogic.ts`, modifier `getFormulairesRequiredForNextPercent` : changer `Math.floor(currentPercent / 10)` → `Math.floor(currentPercent / 5)` et `1000` → `10000` — mettre à jour le JSDoc (exemples : 0% → 10 000, 5% → 11 000, 50% → ~25 937, total 100% → ~2 863 745)
+- [x] T005 [P] [US4] Dans `data/conformiteLogic.ts`, modifier `getFormulairesRequiredForNextPercent` : changer `Math.floor(currentPercent / 10)` → `Math.floor(currentPercent / 5)` et `1000` → `10000` — mettre à jour le JSDoc (exemples : 0% → 10 000, 5% → 11 000, 50% → ~25 937, total 100% → ~2 863 745)
 
-- [ ] T006 [P] [US4] Dans `context/GameStateContext.tsx`, dans la fonction `applyPendingUpdates`, remplacer l'usage de `formulairesGainedDelta` pour `newAccumulated` par `actualFormulairesStored` calculé ainsi : `const actualFormulairesStored = newFormulaires - prev.resources.formulaires` (où `newFormulaires` est déjà le résultat de `applyStorageCap(prev.formulaires + delta.formulaires, effectiveStorageCap)`) — cette valeur est toujours ∈ [0, delta.formulaires] et reflète exactement ce qui a été stocké ; l'ancienne variable `formulairesGainedDelta` reste utilisée uniquement pour `lifetimeFormulaires`
+- [x] T006 [P] [US4] Dans `context/GameStateContext.tsx`, dans la fonction `applyPendingUpdates`, remplacer l'usage de `formulairesGainedDelta` pour `newAccumulated` par `actualFormulairesStored` calculé ainsi : `const actualFormulairesStored = newFormulaires - prev.resources.formulaires` (où `newFormulaires` est déjà le résultat de `applyStorageCap(prev.formulaires + delta.formulaires, effectiveStorageCap)`) — cette valeur est toujours ∈ [0, delta.formulaires] et reflète exactement ce qui a été stocké ; l'ancienne variable `formulairesGainedDelta` reste utilisée uniquement pour `lifetimeFormulaires`
 
 **Checkpoint US4**: Débloquer la 5ème admin → widget conformité visible. Activer avec 40k tampons + 10k formulaires → progression démarre. Avec stockage plein → progression stoppe.
 
@@ -71,7 +71,7 @@
 
 **Independent Test**: Acheter 10 Superviseurs de section (maxOwned = 10) → au 10ème achat, le bouton se désactive immédiatement. Tenter un 11ème achat → retourne `false`.
 
-- [ ] T007 [US2] Dans `context/GameStateContext.tsx`, dans `canPurchaseAgent` : ajouter AVANT `return canAfford(agent.cost)` la garde `if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false` ; dans `purchaseAgent` : ajouter AVANT `if (!canAfford(agent.cost)) return false` la même garde `if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false`
+- [x] T007 [US2] Dans `context/GameStateContext.tsx`, dans `canPurchaseAgent` : ajouter AVANT `return canAfford(agent.cost)` la garde `if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false` ; dans `purchaseAgent` : ajouter AVANT `if (!canAfford(agent.cost)) return false` la même garde `if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false`
 
 **Checkpoint US2**: Acheter un agent plafonné jusqu'au maximum → bouton `disabled` et `accessibilityState={{ disabled: true }}` (déjà géré par `canPurchaseAgent` dans `AgentItem`).
 
@@ -83,11 +83,11 @@
 
 **Independent Test**: Acheter 10 Stagiaires administratifs (base 50 dossiers) → le coût affiché passe à 55 dossiers (ceil(50 × 1,09)). `canPurchaseAgent` retourne `false` si ressources insuffisantes pour le coût escaladé.
 
-- [ ] T008 [US3] Dans `context/GameStateContext.tsx` : (1) s'assurer que `getEscalatedAgentCost` est importé depuis `@/data/gameData` (déjà fait si ajouté en T004 sinon l'ajouter maintenant) ; (2) dans `canPurchaseAgent`, remplacer `return canAfford(agent.cost)` par `const escalatedCost = getEscalatedAgentCost(agent); return canAfford(escalatedCost)` (la garde maxOwned de T007 reste avant) ; (3) dans `purchaseAgent`, remplacer `if (!canAfford(agent.cost)) return false` par `const escalatedCost = getEscalatedAgentCost(agent); if (!canAfford(escalatedCost)) return false` ET remplacer la boucle de déduction des ressources pour utiliser `escalatedCost` au lieu de `agent.cost`
+- [x] T008 [US3] Dans `context/GameStateContext.tsx` : (1) s'assurer que `getEscalatedAgentCost` est importé depuis `@/data/gameData` (déjà fait si ajouté en T004 sinon l'ajouter maintenant) ; (2) dans `canPurchaseAgent`, remplacer `return canAfford(agent.cost)` par `const escalatedCost = getEscalatedAgentCost(agent); return canAfford(escalatedCost)` (la garde maxOwned de T007 reste avant) ; (3) dans `purchaseAgent`, remplacer `if (!canAfford(agent.cost)) return false` par `const escalatedCost = getEscalatedAgentCost(agent); if (!canAfford(escalatedCost)) return false` ET remplacer la boucle de déduction des ressources pour utiliser `escalatedCost` au lieu de `agent.cost`
 
-- [ ] T009 [US3] Dans `context/GameStateContext.tsx` : (1) ajouter `getAgentCurrentCost: (administrationId: string, agentId: string) => Partial<Resources>` à l'interface `GameContextType` ; (2) implémenter avec `useCallback` : trouver l'admin et l'agent dans `gameState.administrations`, retourner `getEscalatedAgentCost(agent)` ou `{}` si non trouvé, deps: `[gameState.administrations]` ; (3) ajouter `getAgentCurrentCost` dans la valeur du `GameContext.Provider`
+- [x] T009 [US3] Dans `context/GameStateContext.tsx` : (1) ajouter `getAgentCurrentCost: (administrationId: string, agentId: string) => Partial<Resources>` à l'interface `GameContextType` ; (2) implémenter avec `useCallback` : trouver l'admin et l'agent dans `gameState.administrations`, retourner `getEscalatedAgentCost(agent)` ou `{}` si non trouvé, deps: `[gameState.administrations]` ; (3) ajouter `getAgentCurrentCost` dans la valeur du `GameContext.Provider`
 
-- [ ] T010 [P] [US3] [a11y] Dans `components/AgentItem.tsx` : (1) ajouter `getAgentCurrentCost` au destructuring de `useGameState()` ; (2) calculer `const currentCost = getAgentCurrentCost(administrationId, agent.id)` en haut du composant (après les autres hooks) ; (3) dans `getCostDisplay()`, remplacer `Object.entries(agent.cost)[0]` par `Object.entries(currentCost)[0] ?? ['dossiers', 0]` ; (4) dans `getAccessibilityLabel()`, remplacer de même `Object.entries(agent.cost)[0]` par `Object.entries(currentCost)[0] ?? ['dossiers', 0]`
+- [x] T010 [P] [US3] [a11y] Dans `components/AgentItem.tsx` : (1) ajouter `getAgentCurrentCost` au destructuring de `useGameState()` ; (2) calculer `const currentCost = getAgentCurrentCost(administrationId, agent.id)` en haut du composant (après les autres hooks) ; (3) dans `getCostDisplay()`, remplacer `Object.entries(agent.cost)[0]` par `Object.entries(currentCost)[0] ?? ['dossiers', 0]` ; (4) dans `getAccessibilityLabel()`, remplacer de même `Object.entries(agent.cost)[0]` par `Object.entries(currentCost)[0] ?? ['dossiers', 0]`
 
 **Checkpoint US3**: Acheter 10 unités d'un agent → le coût affiché dans le bouton augmente. `canPurchaseAgent` reflète le coût réel.
 
@@ -97,7 +97,7 @@
 
 **Purpose**: Lint, vérification qualité, et validation manuelle des 8 scénarios de `quickstart.md`.
 
-- [ ] T011 [i18n] Exécuter `npm run lint` depuis la racine du repo et corriger toutes les erreurs TypeScript et ESLint introduites par T001–T010 ; vérifier visuellement dans `data/gameData.ts` que tous les accents français sont corrects dans les noms et descriptions des 25 agents (è, é, ê, à, â, î, ô, û, ç, œ)
+- [x] T011 [i18n] Exécuter `npm run lint` depuis la racine du repo et corriger toutes les erreurs TypeScript et ESLint introduites par T001–T010 ; vérifier visuellement dans `data/gameData.ts` que tous les accents français sont corrects dans les noms et descriptions des 25 agents (è, é, ê, à, â, î, ô, û, ç, œ)
 
 ---
 
