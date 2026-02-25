@@ -34,7 +34,7 @@ Un joueur qui consulte l'onglet Recrutement voit, pour chaque agent doté d'une 
 
 ### Functional Requirements
 
-- **FR-001**: Pour tout agent dont un plafond d'achat est défini, le compteur d'unités possédées DOIT afficher « x{possédés}/{plafond} » (ex. « x3/10 »).
+- **FR-001**: Pour tout agent dont un plafond d'achat est défini, le compteur d'unités possédées DOIT afficher « x{possédés}/{plafond} » (ex. « x3/10 »), où le numérateur (« x3 ») est rendu dans la couleur normale du titre et le dénominateur (« /10 ») dans une couleur atténuée (ton plus clair), constituant deux éléments textuels inline distincts.
 - **FR-002**: Pour tout agent sans plafond d'achat, le compteur DOIT continuer d'afficher « x{possédés} » (ex. « x7 ») — aucune modification visible.
 - **FR-003**: L'indicateur de plafond DOIT être visible en permanence sur la carte de l'agent, sans interaction supplémentaire de la part du joueur.
 - **FR-004**: Le compteur DOIT se mettre à jour immédiatement après chaque achat, reflétant le nouvel état possédés/plafond.
@@ -73,4 +73,11 @@ Un joueur qui consulte l'onglet Recrutement voit, pour chaque agent doté d'une 
 
 - Le plafond (`maxOwned`) est défini statiquement dans les données du jeu et ne varie pas en cours de partie.
 - Le format visuel retenu est « x{owned}/{maxOwned} » (barre oblique, sans espace), cohérent avec le style existant « x{owned} ».
-- Un style visuellement distinct pour le dénominateur (ex. couleur atténuée) est hors périmètre de cette spec mais non exclu en planification.
+- Le dénominateur « /N » est rendu dans une couleur atténuée (ton plus clair que le numérateur « x{owned} »), conformément à la clarification Q1 du 2026-02-25.
+
+## Clarifications
+
+### Session 2026-02-25
+
+- Q: Le dénominateur « /N » doit-il avoir un style visuel distinct du numérateur « x{owned} » ? → A: Oui — dénominateur atténué (Option B) : « x3 » en couleur normale (`Colors.title`), « /10 » en couleur plus claire (`Colors.textLight`).
+- Q: À la limite exacte (ex. x10/10), faut-il un indicateur visuel supplémentaire sur le compteur ou le bouton désactivé suffit-il ? → A: Le bouton désactivé suffit — aucun indicateur supplémentaire sur le compteur (Option A).
