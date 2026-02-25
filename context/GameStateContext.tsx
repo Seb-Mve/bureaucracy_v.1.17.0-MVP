@@ -224,6 +224,10 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
         // Update conformite using prev — never reset isActivated/isUnlocked via stale snapshot.
         const formulairesGainedDelta = snapshot._formulairesGainedDelta ?? 0;
+        // Only formulaires actually stored (after cap) count toward conformité accumulation.
+        // newFormulaires is already capped by applyStorageCap above, so the difference
+        // reflects exactly what was stored this tick (0 if storage was full).
+        const actualFormulairesStored = newResources.formulaires - prev.resources.formulaires;
         let newConformite = prev.conformite;
         if (prev.conformite) {
           const lastAdmin = prev.administrations.find(a => a.id === 'agence-redondance');
@@ -233,7 +237,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
             lastAdmin?.isUnlocked ?? false
           );
           const newAccumulated = prev.conformite.isActivated
-            ? prev.conformite.accumulatedFormulaires + formulairesGainedDelta
+            ? prev.conformite.accumulatedFormulaires + Math.max(0, actualFormulairesStored)
             : prev.conformite.accumulatedFormulaires;
           newConformite = {
             ...prev.conformite,
