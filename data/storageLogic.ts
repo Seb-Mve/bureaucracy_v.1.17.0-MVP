@@ -16,7 +16,7 @@ import { GameState, Upgrade } from '@/types/game';
 /**
  * Storage cap thresholds (in order of sequence)
  */
-export const STORAGE_CAPS = [983, 1983, 4583, 11025] as const;
+export const STORAGE_CAPS = [983, 1983, 5583, 11025] as const;
 
 /**
  * Storage upgrade IDs (in strict sequence order)
