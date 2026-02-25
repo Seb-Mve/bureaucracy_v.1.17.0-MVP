@@ -334,7 +334,7 @@ export const administrations: Administration[] = [
           target: 'tampons',
           value: 10,
           isPercentage: true,
-          isGlobal: false
+          isGlobal: true
         },
         owned: 0,
         maxOwned: 5,
@@ -412,7 +412,7 @@ export const administrations: Administration[] = [
           target: 'formulaires',
           value: 15,
           isPercentage: true,
-          isGlobal: false
+          isGlobal: true
         },
         owned: 0,
         maxOwned: 5,
@@ -490,7 +490,7 @@ export const administrations: Administration[] = [
           target: 'tampons',
           value: 10,
           isPercentage: true,
-          isGlobal: false
+          isGlobal: true
         },
         owned: 0,
         maxOwned: 5,
