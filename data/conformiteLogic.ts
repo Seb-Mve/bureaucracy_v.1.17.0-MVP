@@ -132,22 +132,23 @@ export function canActivateConformite(
 }
 
 /**
- * Get the number of formulaires required for the next percentage bracket
- * Uses exponential formula: 1000 × (1.1)^bracket
- * 
+ * Get the number of formulaires required for the next percentage point.
+ * Uses exponential formula: 10 000 × (1.1)^bracket, brackets of 5%.
+ *
  * @param currentPercent - Current conformité percentage (0-100)
  * @returns Number of formulaires needed for the next 1%
- * 
+ *
  * @example
- * getFormulairesRequiredForNextPercent(0) // → 1000 (bracket 0: 0-9%)
- * getFormulairesRequiredForNextPercent(9) // → 1000 (bracket 0: 0-9%)
- * getFormulairesRequiredForNextPercent(10) // → 1100 (bracket 1: 10-19%)
- * getFormulairesRequiredForNextPercent(50) // → 1611 (bracket 5: 50-59%)
- * getFormulairesRequiredForNextPercent(90) // → 2358 (bracket 9: 90-99%)
+ * getFormulairesRequiredForNextPercent(0)  // → 10 000 (bracket 0: 0–4%)
+ * getFormulairesRequiredForNextPercent(4)  // → 10 000 (bracket 0: 0–4%)
+ * getFormulairesRequiredForNextPercent(5)  // → 11 000 (bracket 1: 5–9%)
+ * getFormulairesRequiredForNextPercent(50) // → 25 937 (bracket 10: 50–54%)
+ * getFormulairesRequiredForNextPercent(95) // → 61 159 (bracket 19: 95–99%)
+ * // Total formulaires to reach 100%: ~2 863 745
  */
 export function getFormulairesRequiredForNextPercent(currentPercent: number): number {
-  const bracket = Math.floor(currentPercent / 10);
-  return Math.round(1000 * Math.pow(1.1, bracket));
+  const bracket = Math.floor(currentPercent / 5);
+  return Math.round(10000 * Math.pow(1.1, bracket));
 }
 
 /**

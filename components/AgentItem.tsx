@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Agent, ResourceType } from '@/types/game';
+import { Agent } from '@/types/game';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
 import { File, Stamp, ClipboardList, Battery, Zap } from 'lucide-react-native';
@@ -15,8 +15,9 @@ const AnimatedZap = Animated.createAnimatedComponent(Zap);
 const AnimatedBattery = Animated.createAnimatedComponent(Battery);
 
 export default function AgentItem({ agent, administrationId }: AgentItemProps) {
-  const { canPurchaseAgent, purchaseAgent, formatNumber } = useGameState();
+  const { canPurchaseAgent, purchaseAgent, formatNumber, getAgentCurrentCost } = useGameState();
   const canBuy = canPurchaseAgent(administrationId, agent.id);
+  const currentCost = getAgentCurrentCost(administrationId, agent.id);
   const [isAnimating, setIsAnimating] = useState(false);
 
   const getResourceColor = (resource: string): string => {
@@ -105,8 +106,7 @@ export default function AgentItem({ agent, administrationId }: AgentItemProps) {
   };
 
   const getCostDisplay = () => {
-    const [resource, amount] = Object.entries(agent.cost)[0];
-    const resourceLabel = resource === 'dossiers' ? 'dossiers' : resource === 'tampons' ? 'tampons' : 'formulaires';
+    const [resource, amount] = Object.entries(currentCost)[0] ?? ['dossiers', 0];
     return (
       <View style={styles.costDisplay}>
         <Text style={[styles.costText, { color: 'white' }]}>
@@ -118,7 +118,7 @@ export default function AgentItem({ agent, administrationId }: AgentItemProps) {
   };
 
   const getAccessibilityLabel = () => {
-    const [resource, amount] = Object.entries(agent.cost)[0];
+    const [resource, amount] = Object.entries(currentCost)[0] ?? ['dossiers', 0];
     const resourceLabel = resource === 'dossiers' ? 'dossiers' : resource === 'tampons' ? 'tampons' : 'formulaires';
     let production = '';
     

@@ -6,6 +6,7 @@
  */
 
 import { GameState } from '@/types/game';
+import { administrations } from '@/data/gameData';
 
 /**
  * Migrate game state from any version to current version
@@ -32,6 +33,26 @@ export function migrateGameState(loaded: unknown): GameState {
     const version = (s.version as number | undefined) || 1;
     const conformite = s.conformite as Record<string, unknown> | undefined;
 
+    // V5 → V6 Migration: Refresh static agent/admin data (new costs, productions, maxOwned)
+    // Preserves isUnlocked per admin and owned count per agent from the saved state.
+    if (version === 5) {
+      console.log('[Migration] v5→v6: Refreshing static agent/admin data');
+      const savedAdmins = s.administrations as Array<Record<string, unknown>> | undefined;
+      const freshAdmins = administrations.map(freshAdmin => {
+        const savedAdmin = savedAdmins?.find((a) => a.id === freshAdmin.id) as Record<string, unknown> | undefined;
+        const savedAgents = savedAdmin?.agents as Array<Record<string, unknown>> | undefined;
+        return {
+          ...freshAdmin,
+          isUnlocked: (savedAdmin?.isUnlocked as boolean | undefined) ?? freshAdmin.isUnlocked,
+          agents: freshAdmin.agents.map(freshAgent => {
+            const savedAgent = savedAgents?.find((a) => a.id === freshAgent.id);
+            return { ...freshAgent, owned: (savedAgent?.owned as number | undefined) ?? 0 };
+          }),
+        };
+      });
+      return { ...s, version: 6, administrations: freshAdmins } as unknown as GameState;
+    }
+
     // V4 → V5 Migration: Add prestige system
     if (version === 4) {
       console.log('[Migration] v4→v5: Adding prestige system');
@@ -57,7 +78,7 @@ export function migrateGameState(loaded: unknown): GameState {
     }
 
     // Already at current version or newer
-    if (version >= 5) {
+    if (version >= 6) {
       return s as unknown as GameState;
     }
     

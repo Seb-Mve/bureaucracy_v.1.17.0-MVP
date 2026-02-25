@@ -29,6 +29,7 @@ export interface Agent {
     isGlobal: boolean;
   };
   owned: number;
+  maxOwned?: number;
   incrementThreshold: number;
   incrementValue: number;
   incrementIsPercentage: boolean;
