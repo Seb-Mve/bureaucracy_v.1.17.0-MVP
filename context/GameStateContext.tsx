@@ -608,11 +608,12 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
     if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false;
 
-    if (!canAfford(agent.cost)) return false;
+    const escalatedCost = getEscalatedAgentCost(agent);
+    if (!canAfford(escalatedCost)) return false;
 
     setGameState(prevState => {
       const newResources = { ...prevState.resources };
-      Object.entries(agent.cost).forEach(([resource, amount]) => {
+      Object.entries(escalatedCost).forEach(([resource, amount]) => {
         newResources[resource as keyof Resources] -= amount || 0;
       });
       
@@ -692,7 +693,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
     if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false;
 
-    return canAfford(agent.cost);
+    return canAfford(getEscalatedAgentCost(agent));
   }, [gameState.administrations, canAfford]);
 
   /** Returns true if the player currently has enough resources to unlock the given administration. */
