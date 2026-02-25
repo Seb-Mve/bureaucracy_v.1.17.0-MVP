@@ -1,4 +1,28 @@
-import { Administration, GameState, Upgrade, PrestigeUpgrade } from '@/types/game';
+import { Administration, Agent, GameState, Resources, Upgrade, PrestigeUpgrade } from '@/types/game';
+
+/**
+ * Calcule le coût réel (escaladé) d'un agent selon le nombre déjà possédé.
+ * Formule : ceil(coût_base × 1,09^floor(owned / 10))
+ *
+ * @param agent - L'agent dont on veut le coût actuel
+ * @returns Coût escaladé en Partial<Resources>
+ *
+ * @example
+ * // owned = 0 → coût de base inchangé
+ * getEscalatedAgentCost({ cost: { dossiers: 50 }, owned: 0 }) // → { dossiers: 50 }
+ * // owned = 10 → +9%
+ * getEscalatedAgentCost({ cost: { dossiers: 50 }, owned: 10 }) // → { dossiers: 55 }
+ * // owned = 20 → +18,81% cumulé
+ * getEscalatedAgentCost({ cost: { dossiers: 50 }, owned: 20 }) // → { dossiers: 60 }
+ */
+export function getEscalatedAgentCost(agent: Agent): Partial<Resources> {
+  const multiplier = Math.pow(1.09, Math.floor(agent.owned / 10));
+  const result: Partial<Resources> = {};
+  for (const [resource, amount] of Object.entries(agent.cost)) {
+    result[resource as keyof Resources] = Math.ceil((amount ?? 0) * multiplier);
+  }
+  return result;
+}
 
 // Storage upgrades data
 export const storageUpgrades: Upgrade[] = [
@@ -157,6 +181,7 @@ export const administrations: Administration[] = [
           isGlobal: false
         },
         owned: 0,
+        maxOwned: 10,
         incrementThreshold: 150,
         incrementValue: 5,
         incrementIsPercentage: false
@@ -185,6 +210,7 @@ export const administrations: Administration[] = [
           isGlobal: false
         },
         owned: 0,
+        maxOwned: 10,
         incrementThreshold: 150,
         incrementValue: 5,
         incrementIsPercentage: false
@@ -194,7 +220,7 @@ export const administrations: Administration[] = [
   {
     id: 'service-tampons',
     name: 'Service des Tampons Tamponnés',
-    unlockCost: { tampons: 500 },
+    unlockCost: { tampons: 1000 },
     isUnlocked: false,
     imagePath: require('@/assets/carousel-images/service_tampons_tamponnes_bureaucracy_carousel.png'),
     agents: [
@@ -233,6 +259,7 @@ export const administrations: Administration[] = [
           isGlobal: false
         },
         owned: 0,
+        maxOwned: 10,
         incrementThreshold: 100,
         incrementValue: 5,
         incrementIsPercentage: true
@@ -256,11 +283,12 @@ export const administrations: Administration[] = [
         baseProduction: {},
         productionBonus: {
           target: 'all',
-          value: 1,
+          value: 3,
           isPercentage: true,
           isGlobal: true
         },
         owned: 0,
+        maxOwned: 10,
         incrementThreshold: 150,
         incrementValue: 5,
         incrementIsPercentage: true
@@ -270,7 +298,7 @@ export const administrations: Administration[] = [
   {
     id: 'cellule-verification',
     name: 'Cellule de Double Vérification',
-    unlockCost: { tampons: 1000 },
+    unlockCost: { tampons: 15000 },
     isUnlocked: false,
     imagePath: require('@/assets/carousel-images/cellule_double_verification_bureaucracy_carousel.png'),
     agents: [
@@ -304,11 +332,12 @@ export const administrations: Administration[] = [
         baseProduction: {},
         productionBonus: {
           target: 'tampons',
-          value: 1,
+          value: 10,
           isPercentage: true,
           isGlobal: false
         },
         owned: 0,
+        maxOwned: 5,
         incrementThreshold: 100,
         incrementValue: 5,
         incrementIsPercentage: true
@@ -337,6 +366,7 @@ export const administrations: Administration[] = [
           isGlobal: true
         },
         owned: 0,
+        maxOwned: 5,
         incrementThreshold: 150,
         incrementValue: 5,
         incrementIsPercentage: false
@@ -346,7 +376,7 @@ export const administrations: Administration[] = [
   {
     id: 'division-archivage',
     name: 'Division de l\'Archivage Physique',
-    unlockCost: { formulaires: 1000 },
+    unlockCost: { formulaires: 5000 },
     isUnlocked: false,
     imagePath: require('@/assets/carousel-images/division_archivage_physique_bureaucracy_carousel.png'),
     agents: [
@@ -385,6 +415,7 @@ export const administrations: Administration[] = [
           isGlobal: false
         },
         owned: 0,
+        maxOwned: 5,
         incrementThreshold: 100,
         incrementValue: 5,
         incrementIsPercentage: false
@@ -413,6 +444,7 @@ export const administrations: Administration[] = [
           isGlobal: true
         },
         owned: 0,
+        maxOwned: 5,
         incrementThreshold: 150,
         incrementValue: 5,
         incrementIsPercentage: false
@@ -422,7 +454,7 @@ export const administrations: Administration[] = [
   {
     id: 'agence-redondance',
     name: 'Agence de Redondance Non Justifiée',
-    unlockCost: { formulaires: 5000 },
+    unlockCost: { formulaires: 10000 },
     isUnlocked: false,
     imagePath: require('@/assets/carousel-images/agence_redondance_non_justifiee_bureaucracy_carousel.png'),
     agents: [
@@ -461,6 +493,7 @@ export const administrations: Administration[] = [
           isGlobal: false
         },
         owned: 0,
+        maxOwned: 5,
         incrementThreshold: 100,
         incrementValue: 5,
         incrementIsPercentage: false
@@ -489,6 +522,7 @@ export const administrations: Administration[] = [
           isGlobal: true
         },
         owned: 0,
+        maxOwned: 3,
         incrementThreshold: 150,
         incrementValue: 5,
         incrementIsPercentage: false
@@ -499,7 +533,7 @@ export const administrations: Administration[] = [
 
 // Initial game state
 export const initialGameState: GameState = {
-  version: 5, // Updated to v5 for prestige system
+  version: 6, // Updated to v6 for admin rebalance (maxOwned, new costs/productions)
   resources: {
     dossiers: 0,
     tampons: 0,
