@@ -47,7 +47,7 @@ Le joueur refuse la migration. Le système « pilonne » ses dossiers en excès 
 
 **Acceptance Scenarios**:
 
-1. **Given** la modale est ouverte et la conformité est à 100 %, **When** le joueur tape [REFUSER], **Then** la modale se ferme, la conformité descend à une valeur entière aléatoire dans [23, 65], et la barre de progression reflète immédiatement ce nouveau seuil.
+1. **Given** la modale est ouverte et la conformité est à 100 %, **When** le joueur tape [REFUSER], **Then** la modale se ferme, la conformité descend à une valeur entière aléatoire dans [23, 65] avec une animation descendante de ~300 ms sur la barre de progression.
 2. **Given** le joueur a refusé une première fois, **When** la conformité atteint à nouveau 100 %, **Then** la modale réapparaît de façon identique (cycle illimité).
 3. **Given** le joueur a refusé, **When** la progression reprend, **Then** la progression passive normale continue depuis le seuil réinitialisé sans blocage.
 
@@ -69,8 +69,8 @@ Le joueur refuse la migration. Le système « pilonne » ses dossiers en excès 
 - **FR-004**: La modale DOIT être non-dismissible — tap en dehors et geste retour n'ont aucun effet.
 - **FR-005**: Lorsque le joueur tape [ACCEPTER LA MIGRATION], le système DOIT afficher un message « Coming soon » à la place du contenu initial de la modale, avec un bouton de fermeture.
 - **FR-006**: Lorsque le joueur tape [REFUSER], le système DOIT fermer la modale et réinitialiser la conformité à une valeur entière aléatoire uniforme dans [23, 65].
-- **FR-007**: Après refus, le compteur interne de formulaires accumulés DOIT être recalculé pour être cohérent avec le nouveau pourcentage (afin que la progression passive reprenne normalement depuis ce seuil).
-- **FR-008**: Le cycle DOIT être illimité : chaque fois que la conformité atteint 100 %, la modale réapparaît.
+- **FR-007**: Après refus, le compteur interne de formulaires accumulés DOIT être recalculé comme la somme exacte des coûts de 0 % à N−1 % (où N est le seuil aléatoire tiré), de sorte que le joueur reprenne la progression depuis le début du Nème pourcent.
+- **FR-008**: Le cycle DOIT être illimité : chaque fois que la conformité atteint 100 %, la modale réapparaît avec les deux choix complets — aucun état d'acceptation antérieure n'est mémorisé.
 - **FR-009**: Le bouton [REFUSER] DOIT avoir un style visuel d'avertissement distinct du bouton d'acceptation.
 
 ### Accessibility Requirements (Constitutional - Principle IV)
@@ -96,10 +96,18 @@ Le joueur refuse la migration. Le système « pilonne » ses dossiers en excès 
 ### Measurable Outcomes
 
 - **SC-001**: Le joueur peut ouvrir la modale en 1 tap depuis la conformité à 100 % — aucune navigation supplémentaire.
-- **SC-002**: Après refus, la barre de conformité reflète le nouveau seuil aléatoire de manière imperceptible pour le joueur (< 200 ms).
+- **SC-002**: Après refus, la barre de conformité effectue une animation descendante de ~300 ms vers le seuil aléatoire — l'effet « pilonnage » est perceptible et narrativement cohérent.
 - **SC-003**: La modale est non-dismissible à 100 % — 0 moyen de l'ignorer sans faire un choix.
 - **SC-004**: Le cycle refus → progression → 100 % → modale peut se répéter indéfiniment sans blocage ni erreur.
 - **SC-005**: Le message « Coming soon » est affiché immédiatement après [ACCEPTER LA MIGRATION] (réponse perçue < 100 ms).
+
+## Clarifications
+
+### Session 2026-02-25
+
+- Q: Après une acceptation (« Coming soon »), si le joueur retape le CTA à 100 %, voit-il la modale complète (deux choix) ou directement le « Coming soon » ? → A: Modale complète réapparaît à chaque tap — aucun état d'acceptation mémorisé.
+- Q: Comment recalculer `accumulatedFormulaires` après refus pour le seuil N % ? → A: Somme des coûts de 0 % à N−1 % — le joueur repart du début du Nème pourcent.
+- Q: La barre de conformité chute-t-elle instantanément ou avec animation lors du refus ? → A: Courte animation descendante (~300 ms) pour renforcer l'effet narratif « pilonnage ».
 
 ## Assumptions
 
@@ -107,4 +115,4 @@ Le joueur refuse la migration. Le système « pilonne » ses dossiers en excès 
 - Le texte exact des boutons et du message est figé tel que spécifié.
 - « Coming soon » est un texte court sans date ni contenu supplémentaire.
 - Après acceptation, la conformité reste à 100 % et le CTA reste visible jusqu'à l'implémentation réelle de la mécanique de prestige.
-- Le recalcul de `accumulatedFormulaires` après refus utilise la somme des coûts des N premiers pourcents (formule existante `getFormulairesRequiredForNextPercent`), où N est le seuil aléatoire tiré.
+- Le recalcul de `accumulatedFormulaires` après refus = somme de `getFormulairesRequiredForNextPercent(p)` pour p de 0 à N−1, où N est le seuil aléatoire tiré dans [23, 65].
