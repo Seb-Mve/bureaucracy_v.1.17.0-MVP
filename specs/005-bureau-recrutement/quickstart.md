@@ -9,15 +9,14 @@
 
 ## Étape 1 — Ajouter `getAdminStorageUpgrades` dans `GameStateContext.tsx`
 
-### 1a — Import (déjà présents, vérifier)
+### 1a — Import
 
 ```typescript
-// Déjà importés depuis @/data/storageLogic :
+// ⚠️ AJOUTER getVisibleStorageUpgrades (pas encore importé) :
 import { applyStorageCap, canPurchaseStorageUpgrade, getStorageCapAfterUpgrade, isStorageBlocked, getVisibleStorageUpgrades } from '@/data/storageLogic';
-// Déjà importé depuis @/data/gameData :
-import { ..., storageUpgrades, ... } from '@/data/gameData';
-// Déjà importé depuis @/types/game :
-import { ..., Upgrade, ... } from '@/types/game';
+// Déjà présents — vérifier :
+import { ..., storageUpgrades, ... } from '@/data/gameData';  // storageUpgrades ✅
+import { ..., Upgrade, ... } from '@/types/game';             // Upgrade ✅
 ```
 
 ### 1b — Interface `GameContextType`
@@ -189,7 +188,7 @@ Créer le fichier avec ce contenu :
 
 ```tsx
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import AgentItem from './AgentItem';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
@@ -231,14 +230,14 @@ export default function AdminContentSection() {
           </Text>
         ))}
         {canUnlock && (
-          <TouchableOpacity
+          <Pressable
             style={styles.unlockButton}
             onPress={() => unlockAdministration(activeAdministration.id)}
             accessibilityLabel={`Débloquer ${activeAdministration.name}`}
             accessibilityRole="button"
           >
             <Text style={styles.unlockButtonText}>Débloquer</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
     );
@@ -268,7 +267,7 @@ export default function AdminContentSection() {
               </View>
               <Text style={styles.upgradeDescription}>{upgrade.description}</Text>
               <Text style={styles.upgradeEffect}>{upgrade.effect}</Text>
-              <TouchableOpacity
+              <Pressable
                 style={[styles.purchaseButton, !upgrade.canPurchase && styles.purchaseButtonDisabled]}
                 onPress={() => { if (upgrade.canPurchase) purchaseStorageUpgrade(upgrade.id); }}
                 disabled={!upgrade.canPurchase}
@@ -282,7 +281,7 @@ export default function AdminContentSection() {
                 <Text style={[styles.purchaseButtonText, !upgrade.canPurchase && styles.purchaseButtonTextDisabled]}>
                   {upgrade.canPurchase ? 'Acheter' : 'Verrouillé'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ))}
         </View>
@@ -376,9 +375,15 @@ import { File, Stamp, ClipboardList, Battery } from 'lucide-react-native';
 import AdminContentSection from '@/components/AdminContentSection';
 ```
 
-### 4b — Supprimer fonctions devenues inutiles
+### 4b — Supprimer fonctions et variables devenues inutiles
 
 Supprimer entièrement : `getResourceIcon()`, `getResourceColor()`, `renderAgentInfo()`.
+
+Supprimer aussi la variable locale (ligne 86) :
+```typescript
+// Supprimer — plus utilisée après retrait du header et de renderAgentInfo :
+const activeAdministration = administrations.find(admin => admin.id === activeAdministrationId);
+```
 
 ### 4c — Ajouter handler momentum scroll
 
@@ -471,11 +476,19 @@ Supprimer : `header`, `activeAdministrationTitle`, `separator`, `administrationS
 />
 ```
 
-### 5c — Nettoyer les imports inutilisés
+### 5c — Nettoyer les imports et variables inutilisés
 
 ```typescript
 // Supprimer de l'import lucide :
-Users  // plus utilisé si aucun autre endroit
+Users  // plus utilisé après suppression de l'onglet Recrutement
+```
+
+Supprimer aussi la variable `unlockableCount` (ligne 50) :
+```typescript
+// Supprimer — plus utilisée après passage du badge à purchasableAgentsCount :
+const unlockableCount = gameState.administrations.filter(
+  admin => !admin.isUnlocked && canUnlockAdministration(admin.id)
+).length;
 ```
 
 ---
