@@ -34,7 +34,8 @@ import {
   applyStorageCap,
   canPurchaseStorageUpgrade,
   getStorageCapAfterUpgrade,
-  isStorageBlocked
+  isStorageBlocked,
+  getVisibleStorageUpgrades
 } from '@/data/storageLogic';
 import {
   getPrestigePotential,
@@ -60,6 +61,8 @@ interface GameContextType {
   // Storage cap system methods
   purchaseStorageUpgrade: (upgradeId: string) => boolean;
   isStorageBlocked: boolean;
+  /** Retourne les upgrades de stockage visibles pour l'administration donnée, avec flag canPurchase. */
+  getAdminStorageUpgrades: (adminId: string) => (Upgrade & { canPurchase: boolean })[];
   
   // Conformité system methods
   shouldShowConformite: boolean;
@@ -772,8 +775,16 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return true;
   }, [gameState]);
 
+  const getAdminStorageUpgrades = useCallback((adminId: string): (Upgrade & { canPurchase: boolean })[] => {
+    const adminIndex = gameState.administrations.findIndex(a => a.id === adminId);
+    const visible = getVisibleStorageUpgrades(gameState, storageUpgrades);
+    return visible
+      .filter(u => u.administrationId === adminIndex + 1)
+      .map(u => ({ ...u, canPurchase: canPurchaseStorageUpgrade(gameState, storageUpgrades, u.id) }));
+  }, [gameState]);
+
   // Conformité system methods
-  
+
   /**
    * Check if conformité system is unlocked
    * Memoized for performance
@@ -1158,6 +1169,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       getAgentCurrentCost,
       purchaseStorageUpgrade,
       isStorageBlocked: isStorageBlockedValue,
+      getAdminStorageUpgrades,
       shouldShowConformite,
       canActivateConformite,
       activateConformite,

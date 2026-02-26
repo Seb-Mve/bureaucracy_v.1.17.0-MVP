@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Text } from 'react-native';
+import React, { useRef } from 'react';
+import { View, StyleSheet, Image, TouchableOpacity, Text, Animated } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import { Administration } from '@/types/game';
 import { useGameState } from '@/context/GameStateContext';
@@ -11,17 +11,36 @@ interface AdministrationCardProps {
   onPress: () => void;
 }
 
-export default function AdministrationCard({ 
-  administration, 
+export default function AdministrationCard({
+  administration,
   isActive,
-  onPress 
+  onPress
 }: AdministrationCardProps) {
   const { canUnlockAdministration, unlockAdministration, formatNumber } = useGameState();
   const isUnlockable = canUnlockAdministration(administration.id);
 
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  };
+
   const handleUnlock = () => {
     if (isUnlockable) {
       unlockAdministration(administration.id);
+    }
+  };
+
+  const handlePress = () => {
+    onPress();
+    if (!administration.isUnlocked) {
+      if (isUnlockable) handleUnlock();
+      else triggerShake();
     }
   };
 
@@ -47,57 +66,72 @@ export default function AdministrationCard({
   };
 
   return (
-    <TouchableOpacity 
-      style={[
-        styles.container, 
-        isActive && styles.activeContainer,
-      ]}
-      onPress={administration.isUnlocked ? onPress : undefined}
-      activeOpacity={0.8}
-      accessible={true}
-      accessibilityLabel={getAccessibilityLabel()}
-      accessibilityHint={administration.isUnlocked ? 'Appuyez pour sélectionner cette administration' : (isUnlockable ? 'Appuyez sur le bouton débloquer pour accéder à cette administration' : 'Ressources insuffisantes pour débloquer')}
-      accessibilityRole="button"
-      accessibilityState={{ selected: isActive, disabled: !administration.isUnlocked }}
-    >
-      <Image 
-        source={administration.imagePath}
-        style={styles.image}
-      />
-      {!administration.isUnlocked && (
-        <View style={styles.lockedOverlay}>
-          <Lock size={48} color="white" strokeWidth={1.5} />
-          <View style={styles.unlockInfo}>
-            <Text style={styles.unlockTitle}>Coût de déblocage:</Text>
-            <View style={styles.costContainer}>
-              {renderUnlockCost()}
-            </View>
-            {isUnlockable && (
-              <TouchableOpacity 
-                style={styles.unlockButton}
-                onPress={handleUnlock}
-                accessible={true}
-                accessibilityLabel={`Débloquer ${administration.name}`}
-                accessibilityHint="Appuyez pour débloquer cette administration"
-                accessibilityRole="button"
-              >
-                <Text style={styles.unlockButtonText}>Débloquer</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+    <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+      <TouchableOpacity
+        style={[
+          styles.container,
+          isActive && styles.activeContainer,
+        ]}
+        onPress={handlePress}
+        activeOpacity={0.8}
+        accessible={true}
+        accessibilityLabel={getAccessibilityLabel()}
+        accessibilityHint={
+          administration.isUnlocked
+            ? 'Appuyez pour sélectionner cette administration'
+            : isUnlockable
+            ? 'Appuyez pour débloquer cette administration'
+            : 'Ressources insuffisantes pour débloquer'
+        }
+        accessibilityRole="button"
+        accessibilityState={{ selected: isActive, disabled: false }}
+      >
+        <Image
+          source={administration.imagePath}
+          style={styles.image}
+        />
+        <View style={styles.nameRow}>
+          <Text style={styles.nameText} numberOfLines={1}>{administration.name}</Text>
         </View>
-      )}
-    </TouchableOpacity>
+        {!administration.isUnlocked && (
+          <View style={styles.lockedOverlay}>
+            <Lock size={48} color="white" strokeWidth={1.5} />
+            <View style={styles.unlockInfo}>
+              <Text style={styles.unlockTitle}>Coût de déblocage:</Text>
+              <View style={styles.costContainer}>
+                {renderUnlockCost()}
+              </View>
+              {isUnlockable && (
+                <TouchableOpacity
+                  style={styles.unlockButton}
+                  onPress={handleUnlock}
+                  accessible={true}
+                  accessibilityLabel={`Débloquer ${administration.name}`}
+                  accessibilityHint="Appuyez pour débloquer cette administration"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.unlockButtonText}>Débloquer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+        {isUnlockable && !administration.isUnlocked && (
+          <View style={styles.unlockableBadge} accessibilityLabel="Débloquable">
+            <Text style={styles.unlockableBadgeText}>!</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     width: 300,
-    height: 200,
     marginHorizontal: 10,
     borderRadius: 12,
-    backgroundColor: 'transparent',
+    backgroundColor: Colors.background,
     overflow: 'hidden',
   },
   activeContainer: {
@@ -106,15 +140,25 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: '100%',
+    height: 200,
     resizeMode: 'cover',
+  },
+  nameRow: {
+    height: 44,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    backgroundColor: Colors.background,
+  },
+  nameText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 14,
+    color: Colors.title,
   },
   lockedOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
-    backdropFilter: 'blur(2px)',
   },
   unlockInfo: {
     alignItems: 'center',
@@ -152,5 +196,21 @@ const styles = StyleSheet.create({
     color: 'white',
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  unlockableBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unlockableBadgeText: {
+    color: 'white',
+    fontFamily: 'Inter-Bold',
+    fontSize: 14,
   },
 });

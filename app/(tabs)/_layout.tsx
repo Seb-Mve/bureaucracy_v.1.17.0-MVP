@@ -2,7 +2,7 @@ import { Tabs, SplashScreen } from 'expo-router';
 import { Platform, View, Pressable } from 'react-native';
 import { useFonts, ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { Building as BuildingOffice2, Users, ChartBar, Settings, Menu, ScrollText, Paperclip } from 'lucide-react-native';
+import { Building as BuildingOffice2, ChartBar, Settings, Menu, ScrollText, Paperclip } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useGameState } from '@/context/GameStateContext';
 import NotificationBadge from '@/components/NotificationBadge';
@@ -16,7 +16,7 @@ import Colors from '@/constants/Colors';
 SplashScreen.preventAutoHideAsync();
 
 export default function TabLayout() {
-  const { gameState, canUnlockAdministration, canPurchaseAgent } = useGameState();
+  const { gameState, canPurchaseAgent } = useGameState();
   const [menuOpen, setMenuOpen] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
   const [prestigeShopOpen, setPrestigeShopOpen] = useState(false);
@@ -47,8 +47,6 @@ export default function TabLayout() {
 
   // Calculate notifications
   const unlockedAdmins = gameState.administrations.filter(admin => admin.isUnlocked);
-  const unlockableCount = gameState.administrations.filter(admin => !admin.isUnlocked && canUnlockAdministration(admin.id)).length;
-  
   const purchasableAgentsCount = unlockedAdmins.reduce((count, admin) => {
     return count + admin.agents.filter(agent => canPurchaseAgent(admin.id, agent.id)).length;
   }, 0);
@@ -148,18 +146,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <View>
               <BuildingOffice2 size={size} color={color} />
-              <NotificationBadge count={unlockableCount} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="recruitment"
-        options={{
-          title: 'Recrutement',
-          tabBarIcon: ({ color, size }) => (
-            <View>
-              <Users size={size} color={color} />
               <NotificationBadge count={purchasableAgentsCount} />
             </View>
           ),
