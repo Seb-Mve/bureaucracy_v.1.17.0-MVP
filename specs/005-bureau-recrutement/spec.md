@@ -79,11 +79,11 @@ Les fonctionnalités de déverrouillage d'administration et d'achat d'upgrades d
 - **FR-004** : Quand le scroll horizontal des cartes se termine (fin du geste de swipe), la carte snappée au centre DOIT automatiquement devenir l'administration active — sans nécessiter un tap supplémentaire.
 - **FR-005** : La liste des agents sous les cartes DOIT être la liste interactive complète : nom de l'agent, description de production, coût actuel (avec escalade), bouton d'achat, compteur d'agents possédés.
 - **FR-006** : L'ancien affichage résumé des agents (icônes uniquement, sans bouton d'achat) DOIT être supprimé.
-- **FR-007** : Pour les administrations verrouillées, la carte DOIT afficher un indicateur de verrouillage et le coût de déverrouillage. Tapper la carte DOIT déclencher le déverrouillage si les ressources sont suffisantes.
+- **FR-007** : Pour les administrations verrouillées, la carte DOIT afficher un indicateur de verrouillage et le coût de déverrouillage. Tapper la carte DOIT déclencher le déverrouillage si les ressources sont suffisantes. Si les ressources sont insuffisantes, la carte DOIT jouer une brève animation de tremblement — aucun toast. Quand une carte verrouillée est snappée au centre (administration active), la liste en dessous DOIT afficher un message de déverrouillage avec le bouton correspondant — pas les agents.
 - **FR-008** : Les upgrades de stockage disponibles pour l'administration active DOIVENT s'afficher au-dessus des agents dans la liste, comme dans l'ancienne Recrutement.
 - **FR-009** : Le bouton Tamponner DOIT rester fixe en bas de l'écran et accessible en permanence, indépendamment de la position de scroll de la liste des agents.
 - **FR-010** : La ResourceBar DOIT apparaître une seule fois dans la vue fusionnée.
-- **FR-011** : Le badge de notification indiquant des agents recrutables DOIT rester accessible dans la navigation (sur l'onglet Bureau ou fusionné avec le badge existant).
+- **FR-011** : Le badge de l'onglet Bureau DOIT indiquer le nombre d'agents recrutables (ressources suffisantes pour acheter au moins un agent). Les administrations débloquables DOIVENT être signalées par une pastille visuelle directement sur leur carte d'illustration — pas dans le badge de l'onglet.
 
 ### Accessibility Requirements (Constitutional — Principle IV)
 
@@ -107,6 +107,16 @@ Les fonctionnalités de déverrouillage d'administration et d'achat d'upgrades d
 - **SC-002** : Après un swipe de carte suivi d'un snap, le nom affiché sur la carte et la liste des agents en dessous correspondent à la même administration — 100 % du temps, sans délai perceptible.
 - **SC-003** : Toutes les fonctionnalités de l'ancien onglet Recrutement (achat d'agents, déverrouillage d'administration, upgrades de stockage) sont accessibles dans la vue fusionnée — 0 régression fonctionnelle.
 - **SC-004** : Le bouton Tamponner est tappable en toutes circonstances dans la vue fusionnée (pendant le scroll des agents, pendant le swipe des cartes) — 0 cas où il est inaccessible.
+
+---
+
+## Clarifications
+
+### Session 2026-02-26
+
+- Q: Que montre la liste des agents quand une carte verrouillée est snappée au centre ? → A: La liste affiche un message + bouton de déverrouillage (identique à l'ancien Recrutement) — pas les agents.
+- Q: Que se passe-t-il quand le joueur tape une carte verrouillée sans avoir les ressources nécessaires ? → A: Animation de tremblement sur la carte (pas de toast) — signal visuel que le déverrouillage n'est pas possible.
+- Q: Que montre le badge de l'onglet Bureau après fusion ? → A: Badge = agents recrutables uniquement. Les administrations débloquables ont une pastille visuelle directement sur leur carte (sur ou autour de l'illustration), pas dans le badge de l'onglet.
 
 ---
 
