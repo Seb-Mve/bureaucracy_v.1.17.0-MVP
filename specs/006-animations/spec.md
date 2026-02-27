@@ -70,7 +70,7 @@ Même sans tapper, le joueur voit ses ressources "vivre". Les icônes pulsent do
 - **Taps très rapides** : les particules d'encre et floating +N s'accumulent si le joueur tape vite. Maximum 5 floating numbers simultanés — les suivants ignorés jusqu'à libération de slots.
 - **Production très rapide** (beaucoup d'agents) : le pulse production est throttlé à 1x/s par icône — jamais plus, quelle que soit la vitesse de production.
 - **App en arrière-plan puis retour** : les animations en loop (pan, respiration) doivent reprendre proprement au retour foreground. Utiliser `useFocusEffect` ou listener AppState si nécessaire.
-- **Carte verrouillée active** : la respiration et le pan s'appliquent aussi aux cartes verrouillées (l'overlay est dessus, mais l'image en dessous peut bouger).
+- **Carte verrouillée active** : la respiration s'applique à la carte verrouillée (l'overlay est au-dessus mais la carte entière peut respirer). Le pan panoramique NE s'applique PAS aux cartes verrouillées (overlay opaque, animation invisible et ressources inutiles).
 - **Accessibilité réduite (prefersReducedMotion)** : React Native n'expose pas encore cette préférence OS — toutes les animations sont maintenues mais leurs amplitudes sont suffisamment subtiles pour ne pas gêner.
 - **Performance** : toutes les animations utilisent `useNativeDriver: true` ou Reanimated v3 (UI thread) — aucune animation sur le JS thread sauf si inévitable (interpolation de layout).
 
@@ -82,9 +82,12 @@ Même sans tapper, le joueur voit ses ressources "vivre". Les icônes pulsent do
 
 - **FR-001** : À chaque tap sur le bouton Tamponner, le bouton DOIT animer une descente verticale (~4px) suivie d'un rebond spring vers la position initiale.
 - **FR-002** : À chaque tap sur le bouton Tamponner, 4 à 6 particules circulaires DOIVENT éclater radialement depuis le centre du bouton, avec une couleur `Colors.resourceDossiers`, et disparaître en ≤ 500ms.
-- **FR-003** : À chaque tap sur le bouton Tamponner, un texte "+[valeur]" DOIT apparaître au-dessus de l'icône dossiers dans la ResourceBar et monter en disparaissant en ≤ 700ms. La valeur affichée est la valeur réellement ajoutée (1 × click multiplier prestige).
+- **FR-003** : À chaque tap sur le bouton Tamponner, deux feedbacks visuels DOIVENT se déclencher simultanément :
+  - Un texte "+[valeur]" surgit depuis le bouton Tamponner, monte sur ~60px et disparaît progressivement (fade out) avant d'atteindre le haut de l'écran — durée totale ≤ 700ms.
+  - L'icône 📄 dans la ResourceBar fait un pulse (scale 1.0 → 1.25 → 1.0, 300ms) — non-throttlé sur les taps utilisateur.
+  - La valeur affichée est la valeur réellement ajoutée (1 × click multiplier prestige).
 - **FR-004** : La carte d'administration active DOIT avoir une animation de respiration continue (scale 1.0 ↔ 1.008, période ~2.5s, `withRepeat` infini). Les cartes non-actives DOIVENT rester statiques.
-- **FR-005** : L'image à l'intérieur de la carte active DOIT effectuer un pan panoramique continu (translateX ±8px, période ~7s, `withRepeat` infini reverse). L'image DOIT être légèrement plus large que son conteneur (`width: 115%`) pour éviter les bords visibles lors du pan.
+- **FR-005** : L'image à l'intérieur de la carte active DOIT effectuer un pan panoramique continu (translateX ±8px, période ~7s, `withRepeat` infini reverse). L'image DOIT être légèrement plus large que son conteneur (`width: 115%`) pour éviter les bords visibles lors du pan. Si la carte est verrouillée, aucun pan ne s'applique.
 - **FR-006** : Quand l'administration active change (snap ou tap), le texte du nameRow DOIT faire un fade-in depuis le bas (opacity 0→1 + translateY 6→0, durée 180ms).
 - **FR-007** : Quand une ressource est incrémentée par la production automatique, l'icône correspondante dans la ResourceBar DOIT faire un pulse (scale 1.0 → 1.25 → 1.0, 300ms). Ce pulse est throttlé à 1 déclenchement par seconde par icône.
 - **FR-008** : Le pulse de l'icône dossiers SE DÉCLENCHE aussi sur chaque tap Tamponner (non-throttlé sur les taps utilisateur). Il NE doit PAS s'empiler visuellement avec le clignotement formulaires bloqués.
@@ -105,6 +108,16 @@ Même sans tapper, le joueur voit ses ressources "vivre". Les icônes pulsent do
 ### Localization Requirements (Constitutional — Principe III)
 
 - **LR-001** : Le floating number affiche la valeur formatée via `formatNumberFrench()` — pas de `.toLocaleString()`.
+
+---
+
+## Clarifications
+
+### Session 2026-02-28
+
+- **Q1 : Position du floating "+N"** → Option C : deux feedbacks simultanés — le "+N" surgit depuis le bouton Tamponner et monte ~60px en fading (n'atteint pas la ResourceBar) ET l'icône 📄 pulse dans la ResourceBar.
+- **Q2 : Floating numbers sur production automatique** → Non. Le pulse icône suffit pour la production auto. Les floating numbers sont réservés aux taps utilisateur.
+- **Q3 : Pan sur cartes verrouillées** → Non. Overlay opaque = animation invisible + ressources inutiles. La respiration (scale) s'applique quand même.
 
 ---
 
