@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ResourceBar from '@/components/ResourceBar';
@@ -15,6 +15,8 @@ export default function BureauScreen() {
   const { gameState, setActiveAdministration } = useGameState();
   const { administrations, activeAdministrationId } = gameState;
   const scrollViewRef = useRef<ScrollView>(null);
+  const [dossierTapSignal, setDossierTapSignal] = useState(0);
+  const handleStampTap = useCallback(() => setDossierTapSignal(s => s + 1), []);
 
   const handleAdministrationPress = (administrationId: string) => {
     setActiveAdministration(administrationId);
@@ -35,7 +37,7 @@ export default function BureauScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ResourceBar />
+      <ResourceBar dossierTapSignal={dossierTapSignal} />
 
       {/* Conformité display (appears when unlocked) */}
       <ConformiteDisplay />
@@ -69,7 +71,7 @@ export default function BureauScreen() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <StampButton />
+          <StampButton onTap={handleStampTap} />
         </View>
       </View>
     </SafeAreaView>

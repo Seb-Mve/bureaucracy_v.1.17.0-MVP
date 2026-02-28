@@ -105,6 +105,8 @@ interface GameContextType {
   buyPrestigeUpgrade: (upgradeId: string) => boolean;
   hasPrestigeUpgrade: (upgradeId: string) => boolean;
   getActivePrestigeUpgrades: () => string[];
+  /** Click multiplier for dossiers — reflects active prestige upgrades (e.g. Tampon Double Flux) */
+  dossierClickMultiplier: number;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -606,6 +608,11 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       totalAdministrativeValue: prevState.totalAdministrativeValue + finalAmount
     }));
   }, [gameState.prestigeUpgrades]);
+
+  const dossierClickMultiplier = useMemo(
+    () => getClickMultiplier(gameState.prestigeUpgrades, prestigeUpgrades),
+    [gameState.prestigeUpgrades]
+  );
 
   /**
    * Purchase one unit of an agent, deducting its cost from current resources.
@@ -1189,6 +1196,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       buyPrestigeUpgrade,
       hasPrestigeUpgrade,
       getActivePrestigeUpgrades,
+      dossierClickMultiplier,
     }}>
       {children}
     </GameContext.Provider>

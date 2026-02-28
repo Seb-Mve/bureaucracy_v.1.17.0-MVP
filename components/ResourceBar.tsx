@@ -1,21 +1,43 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withRepeat, 
-  withTiming 
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+  withSpring,
 } from 'react-native-reanimated';
 import { File, Stamp, ClipboardList } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
 
-export default function ResourceBar() {
+interface ResourceBarProps {
+  dossierTapSignal?: number;
+}
+
+export default function ResourceBar({ dossierTapSignal }: ResourceBarProps) {
   const { gameState, formatNumber, isStorageBlocked } = useGameState();
-  
-  // Shared value for blinking animation
+
+  // Shared value for blinking animation (formulaires storage blocked)
   const opacity = useSharedValue(1);
+
+  // Pulse icône dossiers sur tap Tamponner (non-throttlé — T007)
+  const dossierScale = useSharedValue(1);
+  const dossierIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: dossierScale.value }],
+  }));
   
+  // Pulse icône dossiers sur tap Tamponner (non-throttlé)
+  useEffect(() => {
+    if (dossierTapSignal !== undefined && dossierTapSignal > 0) {
+      dossierScale.value = withSequence(
+        withSpring(1.25, { damping: 10, stiffness: 200 }),
+        withSpring(1.0, { damping: 12, stiffness: 200 })
+      );
+    }
+  }, [dossierTapSignal, dossierScale]);
+
   // Animation effect for storage blocking
   useEffect(() => {
     if (isStorageBlocked) {
@@ -59,7 +81,9 @@ export default function ResourceBar() {
       accessibilityRole="summary"
     >
       <View style={styles.resourceItem}>
-        <File color={Colors.resourceDossiers} size={18} />
+        <Animated.View style={dossierIconStyle}>
+          <File color={Colors.resourceDossiers} size={18} />
+        </Animated.View>
         <View style={styles.resourceValues}>
           <Text style={styles.resourceValue}>{formatNumber(resources.dossiers)}</Text>
           <Text style={styles.resourceProduction}>
