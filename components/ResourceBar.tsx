@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -22,13 +22,49 @@ export default function ResourceBar({ dossierTapSignal }: ResourceBarProps) {
   // Shared value for blinking animation (formulaires storage blocked)
   const opacity = useSharedValue(1);
 
-  // Pulse icône dossiers sur tap Tamponner (non-throttlé — T007)
+  // Pulse icônes — T007 (dossiers tap) + T014 (tampons, formulaires, auto-prod)
   const dossierScale = useSharedValue(1);
+  const tamponsScale = useSharedValue(1);
+  const formulairesScale = useSharedValue(1);
+
+  // Throttle auto-production : max 1 pulse/s par icône (PR-004)
+  const lastPulseRef = useRef({ dossiers: 0, tampons: 0, formulaires: 0 });
+
+  // Refs pour détecter les incréments de production automatique (T015)
+  const prevDossiers = useRef<number | null>(null);
+  const prevTampons = useRef<number | null>(null);
+  const prevFormulaires = useRef<number | null>(null);
+
+  // Animated styles icônes
   const dossierIconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: dossierScale.value }],
   }));
-  
-  // Pulse icône dossiers sur tap Tamponner (non-throttlé)
+  const tamponsIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: tamponsScale.value }],
+  }));
+  const formulairesIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: formulairesScale.value }],
+  }));
+
+  // Fonction unifiée de pulse (T014)
+  const triggerPulse = useCallback(
+    (r: 'dossiers' | 'tampons' | 'formulaires', throttle: boolean) => {
+      if (r === 'formulaires' && isStorageBlocked) return; // FR-008: pas d'empilement blink
+      if (throttle) {
+        const now = Date.now();
+        if (now - lastPulseRef.current[r] < 1000) return;
+        lastPulseRef.current[r] = now;
+      }
+      const sv = r === 'dossiers' ? dossierScale : r === 'tampons' ? tamponsScale : formulairesScale;
+      sv.value = withSequence(
+        withSpring(1.25, { damping: 10, stiffness: 200 }),
+        withSpring(1.0, { damping: 12, stiffness: 200 })
+      );
+    },
+    [isStorageBlocked, dossierScale, tamponsScale, formulairesScale]
+  );
+
+  // T007 — Pulse icône dossiers sur tap Tamponner (non-throttlé)
   useEffect(() => {
     if (dossierTapSignal !== undefined && dossierTapSignal > 0) {
       dossierScale.value = withSequence(
@@ -37,6 +73,26 @@ export default function ResourceBar({ dossierTapSignal }: ResourceBarProps) {
       );
     }
   }, [dossierTapSignal, dossierScale]);
+
+  // T015 — Pulse icônes sur production automatique (throttlé 1/s par icône)
+  useEffect(() => {
+    if (!gameState?.resources) return;
+    const curr = gameState.resources;
+
+    if (prevDossiers.current !== null && curr.dossiers > prevDossiers.current) {
+      triggerPulse('dossiers', true);
+    }
+    if (prevTampons.current !== null && curr.tampons > prevTampons.current) {
+      triggerPulse('tampons', true);
+    }
+    if (prevFormulaires.current !== null && curr.formulaires > prevFormulaires.current) {
+      triggerPulse('formulaires', true);
+    }
+
+    prevDossiers.current = curr.dossiers;
+    prevTampons.current = curr.tampons;
+    prevFormulaires.current = curr.formulaires;
+  }, [gameState?.resources, triggerPulse]);
 
   // Animation effect for storage blocking
   useEffect(() => {
@@ -52,12 +108,12 @@ export default function ResourceBar({ dossierTapSignal }: ResourceBarProps) {
       opacity.value = withTiming(1, { duration: 0 });
     }
   }, [isStorageBlocked, opacity]);
-  
+
   // Animated style for formulaires
   const animatedFormulairesStyle = useAnimatedStyle(() => ({
     opacity: opacity.value
   }));
-  
+
   // Early return with loading state if gameState is not initialized
   if (!gameState || !gameState.resources || !gameState.production) {
     return (
@@ -70,11 +126,11 @@ export default function ResourceBar({ dossierTapSignal }: ResourceBarProps) {
   const { resources, production } = gameState;
 
   return (
-    <View 
+    <View
       style={styles.container}
       accessible={true}
       accessibilityLabel={
-        isStorageBlocked 
+        isStorageBlocked
           ? `Ressources. Dossiers: ${formatNumber(resources.dossiers)}, production ${formatNumber(production.dossiers)} par seconde. Tampons: ${formatNumber(resources.tampons)}, production ${formatNumber(production.tampons)} par seconde. Formulaires: ${formatNumber(resources.formulaires)}, BLOQUÉ à ${gameState.currentStorageCap}, capacité maximale atteinte.`
           : `Ressources. Dossiers: ${formatNumber(resources.dossiers)}, production ${formatNumber(production.dossiers)} par seconde. Tampons: ${formatNumber(resources.tampons)}, production ${formatNumber(production.tampons)} par seconde. Formulaires: ${formatNumber(resources.formulaires)}, production ${formatNumber(production.formulaires)} par seconde.`
       }
@@ -93,7 +149,9 @@ export default function ResourceBar({ dossierTapSignal }: ResourceBarProps) {
       </View>
 
       <View style={styles.resourceItem}>
-        <Stamp color={Colors.resourceTampons} size={18} />
+        <Animated.View style={tamponsIconStyle}>
+          <Stamp color={Colors.resourceTampons} size={18} />
+        </Animated.View>
         <View style={styles.resourceValues}>
           <Text style={styles.resourceValue}>{formatNumber(resources.tampons)}</Text>
           <Text style={styles.resourceProduction}>
@@ -103,14 +161,16 @@ export default function ResourceBar({ dossierTapSignal }: ResourceBarProps) {
       </View>
 
       <View style={styles.resourceItem}>
-        <ClipboardList 
-          color={isStorageBlocked ? Colors.storageCapped : Colors.resourceFormulaires} 
-          size={18} 
-        />
+        <Animated.View style={formulairesIconStyle}>
+          <ClipboardList
+            color={isStorageBlocked ? Colors.storageCapped : Colors.resourceFormulaires}
+            size={18}
+          />
+        </Animated.View>
         <Animated.View style={[styles.resourceValues, animatedFormulairesStyle]}>
-          <Text 
+          <Text
             style={[
-              styles.resourceValue, 
+              styles.resourceValue,
               isStorageBlocked && { color: Colors.storageCapped }
             ]}
           >
