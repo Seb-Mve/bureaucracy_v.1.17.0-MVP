@@ -63,8 +63,14 @@ Modifier la zone JSX `buttonContainer` et `ResourceBar` :
 
 **Fichier** : `components/ResourceBar.tsx`
 
-### 3a — Ajouter `withSequence`, `withSpring` aux imports Reanimated
+### 3a — Compléter les imports
 
+`useEffect` est déjà importé dans `ResourceBar.tsx` — ajouter `useRef` et `useCallback` :
+```typescript
+import React, { useEffect, useRef, useCallback } from 'react';
+```
+
+Compléter les imports Reanimated avec `withSequence` et `withSpring` :
 ```typescript
 import Animated, {
   useSharedValue,
@@ -75,8 +81,6 @@ import Animated, {
   withSpring,    // ← nouveau
 } from 'react-native-reanimated';
 ```
-
-Ajouter `useRef`, `useEffect` aux imports React.
 
 ### 3b — Ajouter les props
 
@@ -147,12 +151,17 @@ useEffect(() => {
 
 ### 3f — useEffect pulse sur tap
 
+⚠️ À ce stade (T007), `triggerPulse` n'existe pas encore (défini en T014). Inliner le pulse dossier directement :
 ```typescript
 useEffect(() => {
   if (dossierTapSignal !== undefined && dossierTapSignal > 0) {
-    triggerPulse('dossiers', false);  // non-throttlé
+    // Pulse non-throttlé sur tap — inline (triggerPulse sera ajouté en T014)
+    dossierScale.value = withSequence(
+      withSpring(1.25, { damping: 10, stiffness: 200 }),
+      withSpring(1.0, { damping: 12, stiffness: 200 })
+    );
   }
-}, [dossierTapSignal, triggerPulse]);
+}, [dossierTapSignal, dossierScale]);
 ```
 
 ### 3g — Animated styles icônes
@@ -208,17 +217,16 @@ const formulairesIconStyle = useAnimatedStyle(() => ({
 
 ### 4a — Ajouter imports
 
-```typescript
-import Animated as RNAnimated from 'react-native';  // ATTENTION : renommer l'import Animated existant
-```
-
-Attendre — le fichier utilise `Animated` de `react-native` pour le shake. Il faut nommer l'import Reanimated différemment pour éviter le conflit :
+Le fichier utilise `Animated` de `react-native` pour le shake. Il faut nommer l'import Reanimated différemment pour éviter le conflit de noms. Ajouter aussi `useEffect` et `AppState` :
 
 ```typescript
-// Imports existants (react-native) — garder Animated tel quel
-import { View, StyleSheet, Image, TouchableOpacity, Text, Animated } from 'react-native';
+// Import React — ajouter useEffect (actuellement seul useRef est importé)
+import React, { useRef, useEffect } from 'react';
 
-// Nouveau — importer Reanimated sous un alias
+// Import react-native — ajouter AppState
+import { View, StyleSheet, Image, TouchableOpacity, Text, Animated, AppState } from 'react-native';
+
+// Nouveau — importer Reanimated sous un alias distinct (évite le conflit avec Animated de RN)
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -226,9 +234,6 @@ import Reanimated, {
   withTiming,
   cancelAnimation,
 } from 'react-native-reanimated';
-
-// Ajouter AppState aux imports react-native
-import { View, StyleSheet, Image, TouchableOpacity, Text, Animated, AppState } from 'react-native';
 ```
 
 ### 4b — Shared values (après `shakeAnim`)
@@ -236,8 +241,9 @@ import { View, StyleSheet, Image, TouchableOpacity, Text, Animated, AppState } f
 ```typescript
 const breathAnim = useSharedValue(1);
 const panAnim = useSharedValue(0);
-const nameOpacity = useSharedValue(isActive ? 1 : 0);
+const nameOpacity = useSharedValue(1);   // commence visible (l'effet fade-in est skippé au premier mount)
 const nameTranslateY = useSharedValue(0);
+const isFirstRenderRef = useRef(true);   // guard pour éviter le flash au mount
 ```
 
 ### 4c — useEffect breathing
@@ -268,8 +274,13 @@ useEffect(() => {
 
 ### 4e — useEffect nameRow fade-in
 
+Guard `isFirstRenderRef` pour éviter le flash visible→invisible→fade-in sur la carte initialement active au mount :
 ```typescript
 useEffect(() => {
+  if (isFirstRenderRef.current) {
+    isFirstRenderRef.current = false;
+    return;  // skip le fade-in au premier montage
+  }
   if (isActive) {
     nameOpacity.value = 0;
     nameTranslateY.value = 6;
@@ -416,9 +427,15 @@ const pressAnim = useSharedValue(0);  // translateY pixels
 
 ### 5d — Particules
 
-```typescript
-const PARTICLE_ANGLES = [0, 72, 144, 216, 288].map(d => (d * Math.PI) / 180);
+`PARTICLE_ANGLES` est une constante — la définir au niveau module (hors du composant) pour éviter une réallocation à chaque render :
 
+```typescript
+// Niveau module (avant la déclaration du composant)
+const PARTICLE_ANGLES = [0, 72, 144, 216, 288].map(d => (d * Math.PI) / 180);
+```
+
+Dans le corps du composant :
+```typescript
 const particles = useRef(
   PARTICLE_ANGLES.map(() => ({
     tx: new Animated.Value(0),
@@ -556,6 +573,10 @@ function FloatingNumber({ value, onDone }: FloatingNumberProps) {
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(1);
   const xOffset = useRef(Math.random() * 30 - 15).current;
+  // Capturer onDone dans un ref pour éviter l'avertissement exhaustive-deps
+  // tout en garantissant qu'on appelle la version la plus récente
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; });
 
   useEffect(() => {
     translateY.value = withTiming(-60, { duration: 700 });
@@ -563,8 +584,9 @@ function FloatingNumber({ value, onDone }: FloatingNumberProps) {
       withTiming(1, { duration: 100 }),
       withTiming(0, { duration: 600 })
     );
-    const t = setTimeout(onDone, 700);
+    const t = setTimeout(() => onDoneRef.current(), 700);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const style = useAnimatedStyle(() => ({
@@ -573,7 +595,8 @@ function FloatingNumber({ value, onDone }: FloatingNumberProps) {
   }));
 
   return (
-    <Reanimated.Text style={[styles.floatText, style]}>
+    // pointerEvents doit être une prop JSX, pas une propriété StyleSheet
+    <Reanimated.Text pointerEvents="none" style={[styles.floatText, style]}>
       +{formatNumberFrench(value)}
     </Reanimated.Text>
   );
@@ -597,7 +620,7 @@ floatText: {
   fontFamily: 'Inter-Bold',
   fontSize: 18,
   color: Colors.resourceDossiers,
-  pointerEvents: 'none',
+  // ⚠️ PAS de pointerEvents ici — c'est une prop JSX sur <Reanimated.Text>, pas une propriété StyleSheet
 },
 ```
 
