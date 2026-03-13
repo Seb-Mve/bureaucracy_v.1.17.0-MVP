@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     paddingHorizontal: (width - 300) / 2,
+    paddingTop: 12,
     paddingBottom: 20,
   },
   additionalContent: {
