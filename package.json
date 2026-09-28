@@ -9,10 +9,14 @@
     "lint": "expo lint"
   },
   "dependencies": {
-    "@expo/vector-icons": "^14.1.0",
     "@expo-google-fonts/archivo-black": "^0.2.3",
+    "@expo-google-fonts/fredoka": "^0.2.3",
     "@expo-google-fonts/inter": "^0.2.3",
+    "@expo-google-fonts/nunito": "^0.2.3",
+    "@expo-google-fonts/roboto-mono": "^0.2.3",
+    "@expo/vector-icons": "^14.1.0",
     "@lucide/lab": "^0.1.2",
+    "@react-native-async-storage/async-storage": "1.21.0",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "expo": "^53.0.0",
@@ -40,14 +44,13 @@
     "react-native-svg": "15.11.2",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
-    "react-native-webview": "13.13.5",
-    "@react-native-async-storage/async-storage": "1.21.0"
+    "react-native-webview": "13.13.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
-    "typescript": "~5.8.3",
     "eslint": "^9.0.0",
-    "eslint-config-expo": "~9.2.0"
+    "eslint-config-expo": "~9.2.0",
+    "typescript": "~5.8.3"
   }
 }

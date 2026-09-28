@@ -1,268 +1,196 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, Platform, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors from '@/constants/Colors';
-import { Save, Trash2, Volume2, Vibrate, RefreshCw } from 'lucide-react-native';
-import PrestigeGauge from '@/components/PrestigeGauge';
+import Colors, { Charte, Fonts } from '@/constants/Colors';
+import { formatEntier } from '@/utils/formatters';
+import Panneau from '@/components/charte/Panneau';
+import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 
+function confirmer(titre: string, message: string, ok: () => void) {
+  if (Platform.OS === 'web') {
+    if (window.confirm(`${titre}\n\n${message}`)) ok();
+    return;
+  }
+  Alert.alert(titre, message, [
+    { text: 'Annuler', style: 'cancel' },
+    { text: 'Confirmer', style: 'destructive', onPress: ok },
+  ]);
+}
+
+function dureeJeu(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? `${h} h ${m.toString().padStart(2, '0')} min` : `${m} min`;
+}
+
+/** Options : dossier administratif de l'agent, démission, remise à zéro. */
 export default function OptionsScreen() {
-  const { performPrestige, getPrestigePotentialLive, formatNumber } = useGameState();
-  const [soundEnabled, setSoundEnabled] = React.useState(true);
-  const [hapticsEnabled, setHapticsEnabled] = React.useState(true);
-  
-  const handlePrestige = async () => {
-    const potential = getPrestigePotentialLive();
-    
-    // Block if gain is 0
-    if (!potential.isAvailable || potential.paperclipsGain === 0) {
-      Alert.alert(
-        'Réforme Administrative impossible',
-        `VAT insuffisante. Minimum requis : ${formatNumber(potential.minVAT)}`,
-        [{ text: 'Compris', style: 'cancel' }]
-      );
-      return;
-    }
-    
-    // Show confirmation dialog
-    const confirmPrestige = async () => {
-      const success = await performPrestige();
-      if (!success) {
-        console.warn('[Options] Prestige failed');
-      }
-    };
-    
-    if (Platform.OS === 'web') {
-      if (window.confirm(
-        `Confirmer la Réforme Administrative ?\n\nVous gagnerez ${formatNumber(potential.paperclipsGain)} Trombone${potential.paperclipsGain > 1 ? 's' : ''}.\n\nToutes vos ressources et infrastructures seront réinitialisées.`
-      )) {
-        confirmPrestige();
-      }
-    } else {
-      Alert.alert(
-        'Réforme Administrative',
-        `Confirmer la Réforme Administrative ?\n\nVous gagnerez ${formatNumber(potential.paperclipsGain)} Trombone${potential.paperclipsGain > 1 ? 's' : ''}.\n\nToutes vos ressources et infrastructures seront réinitialisées.`,
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { 
-            text: 'Confirmer', 
-            onPress: confirmPrestige,
-            style: 'default'
-          }
-        ]
-      );
-    }
-  };
-  
-  const handleResetGame = async () => {
-    const confirmReset = () => {
-      // Clear game storage
-      AsyncStorage.removeItem('bureaucracy_game_state')
-        .then(() => {
-          // Reload the app
-          if (Platform.OS === 'web') {
-            window.location.reload();
-          } else {
-            // For mobile, we would use a different approach
-            // but for this example we'll just show an alert
-            Alert.alert('Jeu réinitialisé', 'Veuillez redémarrer l\'application');
-          }
-        })
-        .catch(error => {
-          console.error('Erreur lors de la réinitialisation:', error);
-        });
-    };
-    
-    if (Platform.OS === 'web') {
-      if (window.confirm('Êtes-vous sûr de vouloir réinitialiser tout votre progrès?')) {
-        confirmReset();
-      }
-    } else {
-      Alert.alert(
-        'Réinitialiser le jeu',
-        'Êtes-vous sûr de vouloir réinitialiser tout votre progrès?',
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'Réinitialiser', onPress: confirmReset, style: 'destructive' }
-        ]
-      );
-    }
-  };
-  
+  const { etat, deposerDemission, nouvellePartie, marquerFichePoste } = useGameState();
+  const deposee = etat.demission.deposeeLe !== null;
+  const agent = etat.cerfa.prenom || 'Agent sans prénom';
+
+  const lignes: [string, string][] = [
+    ['Agent', agent],
+    ['Affectation', 'Guichet 3'],
+    ['Dossiers traités', formatEntier(Math.floor(etat.stats.traites))],
+    ['Dossiers rejetés', formatEntier(Math.floor(etat.stats.rejetes))],
+    ['Coups de tampon', formatEntier(etat.stats.taps)],
+    ['Temps de service', dureeJeu(etat.stats.tempsDeJeu)],
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Options</Text>
-      </View>
-      
-      <View style={styles.settingGroup}>
-        <Text style={styles.settingGroupTitle}>Paramètres</Text>
-        
-        <View style={styles.settingItem}>
-          <View style={styles.settingLabelContainer}>
-            <Volume2 size={20} color={Colors.textLight} style={styles.settingIcon} />
-            <Text style={styles.settingLabel}>Son</Text>
+    <ScrollView style={styles.ecran} contentContainerStyle={styles.contenu}>
+      <Text style={styles.titre}>Dossier administratif</Text>
+      <Panneau contenuStyle={styles.fiche} rayon={14}>
+        {lignes.map(([k, v]) => (
+          <View key={k} style={styles.ligne}>
+            <Text style={styles.cle}>{k}</Text>
+            <Text style={styles.valeur}>{v}</Text>
           </View>
-          <Switch
-            value={soundEnabled}
-            onValueChange={setSoundEnabled}
-            trackColor={{ false: '#d1d1d1', true: Colors.buttonPrimary }}
-          />
-        </View>
-        
-        <View style={styles.settingItem}>
-          <View style={styles.settingLabelContainer}>
-            <Vibrate size={20} color={Colors.textLight} style={styles.settingIcon} />
-            <Text style={styles.settingLabel}>Retour haptique</Text>
-          </View>
-          <Switch
-            value={hapticsEnabled}
-            onValueChange={setHapticsEnabled}
-            trackColor={{ false: '#d1d1d1', true: Colors.buttonPrimary }}
-          />
-        </View>
-      </View>
-      
-      <View style={styles.settingGroup}>
-        <Text style={styles.settingGroupTitle}>Jeu</Text>
-        
-        {/* Prestige Gauge - Shows potential Trombones gain */}
-        <PrestigeGauge />
-        
-        <Pressable 
-          style={({ pressed }) => [
-            styles.button, 
-            styles.prestigeButton,
-            pressed && styles.buttonPressed
-          ]}
-          onPress={handlePrestige}
-          accessibilityLabel="Réforme Administrative - Effectuer un prestige pour gagner des Trombones"
+        ))}
+        <Pressable
+          style={({ pressed }) => [styles.relire, pressed && styles.presse]}
+          accessibilityRole="button"
+          accessibilityLabel="Relire ma fiche de poste"
+          onPress={() => marquerFichePoste(false)}
         >
-          <RefreshCw size={18} color="white" style={styles.buttonIcon} />
-          <Text style={styles.buttonText}>Réforme Administrative</Text>
+          <Text style={styles.relireTexte}>Relire ma fiche de poste</Text>
         </Pressable>
-        
-        <TouchableOpacity style={styles.button}>
-          <Save size={18} color="white" style={styles.buttonIcon} />
-          <Text style={styles.buttonText}>Sauvegarder</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.resetButton]}
-          onPress={handleResetGame}
+      </Panneau>
+
+      <Text style={styles.titre}>Démission</Text>
+      <Panneau contenuStyle={styles.fiche} rayon={14}>
+        <Text style={styles.cerfa}>Cerfa n° 00001*02 — Demande de cessation volontaire de fonctions</Text>
+        {deposee ? (
+          <>
+            <Text style={styles.texte}>Demande n° 000001 enregistrée.</Text>
+            <Text style={styles.texte}>Délai d’instruction : indéterminé.</Text>
+            <Text style={styles.aide}>Toute correspondance vous parviendra par le courrier du S.I.C.</Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.texte}>
+              Je soussigné·e, {agent}, sollicite la cessation de mes fonctions au guichet 3.
+            </Text>
+            <BoutonPoussoir
+              libelle="DÉPOSER MA DÉMISSION"
+              taille={16}
+              hauteur={50}
+              couleur={Colors.carton}
+              couleurOmbre={Colors.crayonClair}
+              couleurTexte={Colors.anthracite}
+              onPress={() =>
+                confirmer(
+                  'Déposer votre démission ?',
+                  'Votre demande sera transmise au Service Inconnu de Coordination.',
+                  deposerDemission,
+                )
+              }
+            />
+          </>
+        )}
+      </Panneau>
+
+      <Text style={styles.titre}>Remise à zéro</Text>
+      <Panneau contenuStyle={styles.fiche} rayon={14}>
+        <Text style={styles.texte}>Efface la partie en cours et recommence au Cerfa d’embauche.</Text>
+        <Pressable
+          style={({ pressed }) => [styles.danger, pressed && styles.presse]}
+          accessibilityRole="button"
+          accessibilityLabel="Effacer la partie"
+          onPress={() =>
+            confirmer('Effacer la partie ?', 'Toute votre progression sera perdue. Cette action est définitive.', nouvellePartie)
+          }
         >
-          <Trash2 size={18} color="white" style={styles.buttonIcon} />
-          <Text style={styles.buttonText}>Réinitialiser le jeu</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.credits}>
-        <Text style={styles.creditsTitle}>BUREAUCRACY++</Text>
-        <Text style={styles.creditsText}>Version 1.0.0</Text>
-        <Text style={styles.creditsText}>© 2025 Ministère des Jeux Absurdes</Text>
-      </View>
-    </SafeAreaView>
+          <Text style={styles.dangerTexte}>Effacer la partie</Text>
+        </Pressable>
+      </Panneau>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  ecran: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.creme,
   },
-  header: {
-    paddingTop: 20,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+  contenu: {
+    padding: 12,
+    gap: 10,
   },
-  headerTitle: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 20,
-    color: Colors.title,
-    textAlign: 'center',
+  titre: {
+    fontFamily: Fonts.titre,
+    fontSize: 17,
+    color: Colors.anthracite,
+    marginTop: 6,
   },
-  settingGroup: {
-    margin: 20,
-    marginBottom: 30,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+  fiche: {
+    padding: 12,
+    gap: 8,
+    backgroundColor: Colors.papierChaud,
   },
-  settingGroupTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    color: Colors.title,
-    marginBottom: 15,
-  },
-  settingItem: {
+  ligne: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: Colors.carton,
+    paddingBottom: 4,
   },
-  settingLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  cle: {
+    fontFamily: Fonts.texteGras,
+    fontSize: 13,
+    color: Colors.crayon,
   },
-  settingIcon: {
-    marginRight: 10,
+  valeur: {
+    fontFamily: Fonts.chiffres,
+    fontSize: 13,
+    color: Colors.anthracite,
   },
-  settingLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    color: Colors.text,
+  cerfa: {
+    fontFamily: Fonts.chiffres,
+    fontSize: 11,
+    color: Colors.crayon,
   },
-  button: {
-    backgroundColor: Colors.buttonPrimary,
-    flexDirection: 'row',
+  texte: {
+    fontFamily: Fonts.texte,
+    fontSize: 14,
+    color: Colors.anthracite,
+  },
+  aide: {
+    fontFamily: Fonts.texte,
+    fontSize: 12,
+    color: Colors.crayon,
+  },
+  relire: {
+    minHeight: 44,
+    borderRadius: Charte.rayonPetit,
+    borderWidth: Charte.traitFin,
+    borderColor: Colors.anthracite,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginVertical: 10,
-    minHeight: 44, // Accessibility: minimum touch target
+    backgroundColor: Colors.papier,
+    marginTop: 4,
   },
-  buttonPressed: {
-    opacity: 0.7,
-  },
-  prestigeButton: {
-    backgroundColor: Colors.success,
-  },
-  resetButton: {
-    backgroundColor: Colors.error,
-  },
-  buttonIcon: {
-    marginRight: 10,
-  },
-  buttonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: 'white',
-  },
-  credits: {
-    marginTop: 'auto',
-    padding: 20,
-    alignItems: 'center',
-  },
-  creditsTitle: {
-    fontFamily: 'ArchivoBlack-Regular',
-    fontSize: 18,
-    color: Colors.title,
-    marginBottom: 5,
-  },
-  creditsText: {
-    fontFamily: 'Inter-Regular',
+  relireTexte: {
+    fontFamily: Fonts.texteGras,
     fontSize: 14,
-    color: Colors.textLight,
-    marginBottom: 3,
+    color: Colors.anthracite,
+  },
+  danger: {
+    minHeight: 44,
+    borderRadius: Charte.rayonPetit,
+    borderWidth: Charte.traitFin,
+    borderColor: Colors.rouge,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.rougeFond,
+  },
+  presse: {
+    transform: [{ translateY: 2 }],
+  },
+  dangerTexte: {
+    fontFamily: Fonts.texteGras,
+    fontSize: 14,
+    color: Colors.rougeTexte,
   },
 });

@@ -39,3 +39,22 @@ export function formatNumberFrench(value: number): string {
 export function formatLargeNumber(value: number): string {
   return Math.floor(value).toLocaleString('fr-FR');
 }
+
+/**
+ * Formate une quantité entière (dossiers, formulaires) au format français :
+ * pas de décimale sous 1 000, puis « 1,5 k », « 2,3 M ».
+ */
+export function formatEntier(value: number): string {
+  const v = Math.floor(value);
+  return v < 1000 ? v.toString() : formatNumberFrench(v);
+}
+
+/**
+ * Formate un montant en euros (sans le symbole) :
+ * « 1,5 » sous 10, « 1 240 » jusqu'à 100 000, puis « 1,2 M ».
+ */
+export function formatEuros(value: number): string {
+  if (value < 10) return (Math.floor(value * 100) / 100).toString().replace('.', ',');
+  if (value < 100000) return Math.floor(value).toLocaleString('fr-FR');
+  return formatNumberFrench(value);
+}

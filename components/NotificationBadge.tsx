@@ -1,17 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Colors from '@/constants/Colors';
+import { StyleSheet, Text, View } from 'react-native';
+import Colors, { Fonts } from '@/constants/Colors';
 
-interface NotificationBadgeProps {
-  count: number;
-}
-
-export default function NotificationBadge({ count }: NotificationBadgeProps) {
+/** Pastille de nouveauté (onglets, enveloppe du courrier). */
+export default function NotificationBadge({ count }: { count: number }) {
   if (count <= 0) return null;
-
   return (
-    <View style={styles.badge}>
-      <Text style={styles.text}>{count}</Text>
+    <View style={styles.badge} accessibilityLabel={`${count} nouveau${count > 1 ? 'x' : ''}`}>
+      <Text style={styles.texte}>{count > 9 ? '9+' : count}</Text>
     </View>
   );
 }
@@ -20,9 +16,11 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -6,
-    right: -6,
-    backgroundColor: Colors.error,
+    right: -10,
+    backgroundColor: Colors.rouge,
     borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.anthracite,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
@@ -30,9 +28,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     zIndex: 1,
   },
-  text: {
-    color: 'white',
-    fontSize: 12,
-    fontFamily: 'Inter-Bold',
+  texte: {
+    color: Colors.papier,
+    fontSize: 11,
+    fontFamily: Fonts.texteGras,
   },
 });

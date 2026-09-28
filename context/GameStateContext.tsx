@@ -1,1212 +1,337 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { GameState, ResourceType, Resources, Production, ToastMessage, JournalEntry, Upgrade, PrestigeUpgrade, PrestigeTransaction } from '@/types/game';
-import { initialGameState, storageUpgrades, prestigeUpgrades, administrations, getEscalatedAgentCost } from '@/data/gameData';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { formatNumberFrench } from '@/utils/formatters';
-import { migrateGameState, isValidGameState } from '@/utils/stateMigration';
 import * as Haptics from 'expo-haptics';
-import { 
-  calculateConformitePercentage, 
-  shouldUnlockConformite, 
-  canPerformTest,
-  canActivateConformite as canActivateConformiteCheck,
-  calculateConformitePercentageNew,
-  getFormulairesRequiredForNextPercent,
-  getConformiteProgressFraction,
-  getReaffectationResetPercentage,
-  getAccumulatedFormulairesForPercentage,
-  ACTIVATION_COST_TAMPONS,
-  ACTIVATION_COST_FORMULAIRES,
-  TEST_COST,
-  TEST_GAIN,
-  MAX_PERCENTAGE
-} from '@/data/conformiteLogic';
-import {
-  getRandomSICMessage,
-  calculateSICProbability,
-  shouldTriggerNonConformity,
-  hasCrossedMilestone,
-  MILESTONE_DOSSIERS,
-  MILESTONE_TAMPONS,
-  MILESTONE_FORMULAIRES
-} from '@/data/messageSystem';
-import {
-  applyStorageCap,
-  canPurchaseStorageUpgrade,
-  getStorageCapAfterUpgrade,
-  isStorageBlocked,
-  getVisibleStorageUpgrades
-} from '@/data/storageLogic';
-import {
-  getPrestigePotential,
-  applyPrestigeMultipliers,
-  applyPrestigeStorageBonus,
-  getClickMultiplier,
-  calculatePrestigePaperclips,
-  canPurchasePrestigeUpgrade
-} from '@/data/prestigeLogic';
+import type { AgentId, GameEvents, GameState, Lettre, Modifiers, NoteId } from '@/types/game';
+import { AGENTS, type AgentDef } from '@/constants/balance';
+import * as E from '@/data/engine';
+import { NOTES_PAR_ID, type NoteDef } from '@/data/notes';
+import { nouvellesLettres, lettreAbsence } from '@/data/courrier';
+import { teteDeFile, type UsagerAffiche } from '@/data/usagers';
+import { CLE_SAUVEGARDE, estSauvegardeValide } from '@/data/save';
+import { formatEntier } from '@/utils/formatters';
+
+export type { UsagerAffiche };
+
+const INTERVALLE = 100;
+/** Au-delà de cet écart entre deux ticks, on considère une absence (onglet en veille). */
+const SEUIL_ABSENCE = 30_000;
+
+export type StatutNote = 'disponible' | 'tropCher' | 'instruction' | 'effective';
+
+export interface NoteAffichee extends Omit<NoteDef, 'visible' | 'appliquer'> {
+  statut: StatutNote;
+  /** Secondes restantes d'instruction. */
+  resteSec: number;
+  nouvelle: boolean;
+}
+
+export interface AgentAffiche extends AgentDef {
+  possedes: number;
+  cout: number;
+  achetable: boolean;
+}
+
+export interface Verdict {
+  id: number;
+  rejete: boolean;
+  /** Le dossier qui vient d'être tamponné (celui qui était au guichet). */
+  usager: UsagerAffiche | null;
+}
 
 interface GameContextType {
-  gameState: GameState;
-  incrementResource: (resource: ResourceType, amount: number) => void;
-  purchaseAgent: (administrationId: string, agentId: string) => boolean;
-  unlockAdministration: (administrationId: string) => boolean;
-  setActiveAdministration: (administrationId: string) => void;
-  formatNumber: (value: number) => string;
-  canPurchaseAgent: (administrationId: string, agentId: string) => boolean;
-  canUnlockAdministration: (administrationId: string) => boolean;
-  /** Returns the current (escalated) cost of an agent for UI display */
-  getAgentCurrentCost: (administrationId: string, agentId: string) => Partial<Resources>;
-
-  // Storage cap system methods
-  purchaseStorageUpgrade: (upgradeId: string) => boolean;
-  isStorageBlocked: boolean;
-  /** Retourne les upgrades de stockage visibles pour l'administration donnée, avec flag canPurchase. */
-  getAdminStorageUpgrades: (adminId: string) => (Upgrade & { canPurchase: boolean })[];
-  
-  // Conformité system methods
-  shouldShowConformite: boolean;
-  canActivateConformite: boolean;
-  activateConformite: () => boolean;
-  /** Decimal percentage for display, e.g. 5.3 (use with toLocaleString for French comma) */
-  conformiteDisplayPercentage: number;
-  isConformiteUnlocked: () => boolean;
-  isPhase2ButtonActive: () => boolean;
-  performConformiteTest: () => boolean;
-  /** Refuse la réaffectation : réinitialise la conformité à [23,65] et retourne le nouveau %. */
-  refuseReaffectation: () => number;
-  
-  // Toast system methods
-  toastQueue: ToastMessage[];
-  showToast: (message: string, type: ToastMessage['type'], duration?: number) => void;
-  dismissToast: (toastId: string) => void;
-  getActiveToasts: () => ToastMessage[];
-  
-  // Journal system methods
-  addJournalEntry: (
-    type: 'sic' | 'non-conformity' | 'narrative-hint',
-    text: string,
-    options?: {
-      revealedText?: string;
-      targetId?: string;
-    }
-  ) => void;
-  revealNarrativeHint: (targetId: string) => void;
-  
-  // Prestige system methods
-  getPrestigePotentialLive: () => {
-    paperclipsGain: number;
-    isAvailable: boolean;
-    minVAT: number;
-    currentVAT: number;
-    tierName: 'local' | 'national' | 'global';
-  };
-  performPrestige: () => Promise<boolean>;
-  buyPrestigeUpgrade: (upgradeId: string) => boolean;
-  hasPrestigeUpgrade: (upgradeId: string) => boolean;
-  getActivePrestigeUpgrades: () => string[];
-  /** Click multiplier for dossiers — reflects active prestige upgrades (e.g. Tampon Double Flux) */
-  dossierClickMultiplier: number;
+  pret: boolean;
+  etat: GameState;
+  mods: Modifiers;
+  maintenant: number;
+  enAttente: number;
+  vitesse: number;
+  perimetre: number;
+  conformite: number;
+  tete: UsagerAffiche[];
+  notes: NoteAffichee[];
+  notesNonVues: number;
+  agents: AgentAffiche[];
+  prixRamette: number;
+  lettresNonLues: number;
+  verdict: Verdict | null;
+  tamponner: () => GameEvents;
+  acheterAgent: (id: AgentId) => void;
+  acheterRamettes: (nb: number) => void;
+  reglerTauxRejet: (taux: number) => void;
+  acheterNote: (id: NoteId) => void;
+  marquerNotesVues: () => void;
+  signerCerfa: (prenom: string) => void;
+  deposerDemission: () => void;
+  marquerLettresLues: () => void;
+  marquerFinActeVue: () => void;
+  marquerFichePoste: (vue: boolean) => void;
+  nouvellePartie: () => void;
 }
 
-const GameContext = createContext<GameContextType | undefined>(undefined);
+const GameContext = createContext<GameContextType | null>(null);
 
-const STORAGE_KEY = 'bureaucracy_game_state';
-const PRESTIGE_TRANSACTION_KEY = 'prestige_transaction';
-const PRESTIGE_TRANSACTION_TIMEOUT = 30000; // 30 seconds
-const UPDATE_INTERVAL = 100; // Plus fréquent pour une meilleure réactivité
-const SAVE_INTERVAL = 5000; // Sauvegarde toutes les 5 secondes
+function vibrer(style: 'leger' | 'moyen' | 'succes') {
+  if (Platform.OS === 'web') return;
+  if (style === 'succes') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  else Haptics.impactAsync(style === 'leger' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
+}
+
+/** Ajoute au courrier les lettres dont le déclencheur est devenu vrai. */
+function distribuerCourrier(s: GameState, maintenant: number): GameState {
+  const lettres = nouvellesLettres(s, maintenant);
+  if (lettres.length === 0) return s;
+  return {
+    ...s,
+    courrier: [...lettres, ...s.courrier],
+    lettresEnvoyees: [...s.lettresEnvoyees, ...lettres.map((l) => l.id)],
+  };
+}
+
+function rattraperAbsence(s: GameState, maintenant: number): GameState {
+  const r = E.simulerAbsence(s, maintenant);
+  if (r.secondes < 30 || r.traites < 1) return r.s;
+  const lettre: Lettre = lettreAbsence(r.secondes, r.traites, r.budget, maintenant, formatEntier);
+  return { ...r.s, courrier: [lettre, ...r.s.courrier] };
+}
 
 export default function GameStateProvider({ children }: { children: React.ReactNode }) {
-  const [gameState, setGameState] = useState<GameState>(() => ({
-    ...initialGameState,
-  }));
-  
-  // Toast queue state (separate from GameState, not persisted)
-  const [toastQueue, setToastQueue] = useState<ToastMessage[]>([]);
-  
-  const gameLoopRef = useRef<number | null>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateTimeRef = useRef<number>(Date.now());
-  const isMountedRef = useRef(false);
-  const productionCacheRef = useRef<Production | null>(null);
-  const pendingUpdatesRef = useRef<Partial<GameState> & { _resourcesDelta?: Resources; _formulairesGainedDelta?: number; _vatDelta?: number }>({});
+  const [etat, setEtat] = useState<GameState>(() => E.etatInitial(Date.now()));
+  const [pret, setPret] = useState(false);
+  const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const etatRef = useRef(etat);
+  const rejetAcc = useRef(0);
+  const verdictId = useRef(0);
+  const sauvegardeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Memoized production calculation — 2-pass algorithm:
-  // Pass 1 (per-admin): base production + local bonuses scoped to each admin only.
-  // Pass 2 (global): accumulate global multipliers, apply to total, then apply prestige.
-  // This correctly scopes isGlobal:false bonuses (including target:'all') to their admin.
-  const calculateProduction = useCallback((state: GameState): Production => {
-    const total: Production = { dossiers: 0, tampons: 0, formulaires: 0 };
-    const globalMultipliers: { [key: string]: number } = {
-      dossiers: 1,
-      tampons: 1,
-      formulaires: 1,
-      all: 1,
-    };
-
-    state.administrations.forEach(admin => {
-      if (!admin.isUnlocked) return;
-
-      // Step 1: Sum base production for this admin
-      const adminBase: Production = { dossiers: 0, tampons: 0, formulaires: 0 };
-      admin.agents.forEach(agent => {
-        if (agent.owned === 0) return;
-        if (agent.baseProduction) {
-          Object.entries(agent.baseProduction).forEach(([resource, amount]) => {
-            adminBase[resource as keyof Production] += amount * agent.owned;
-          });
-        }
-      });
-
-      // Step 2: Apply local bonuses to this admin's base only
-      let localAllMultiplier = 1;
-      admin.agents.forEach(agent => {
-        if (agent.owned === 0 || !agent.productionBonus) return;
-        const { target, value, isPercentage, isGlobal } = agent.productionBonus;
-
-        if (isGlobal) {
-          // Accumulate global multipliers — applied after all admins processed
-          if (isPercentage) {
-            globalMultipliers[target] += (value / 100) * agent.owned;
-          }
-        } else if (target === 'all') {
-          // Local all-resource multiplier — scoped to this admin only
-          localAllMultiplier += (value / 100) * agent.owned;
-        } else if (isPercentage) {
-          // Local per-resource multiplier — scoped to this admin only
-          adminBase[target as keyof Production] *= (1 + (value / 100) * agent.owned);
-        } else {
-          adminBase[target as keyof Production] += value * agent.owned;
-        }
-      });
-
-      // Step 3: Apply local-all multiplier to this admin's entire output
-      (Object.keys(adminBase) as Array<keyof Production>).forEach(r => {
-        adminBase[r] *= localAllMultiplier;
-      });
-
-      // Step 4: Accumulate into global total
-      (Object.keys(total) as Array<keyof Production>).forEach(r => {
-        total[r] += adminBase[r];
-      });
-    });
-
-    // Step 5: Apply per-resource global multipliers
-    (Object.keys(total) as Array<keyof Production>).forEach(r => {
-      total[r] *= globalMultipliers[r] ?? 1;
-    });
-
-    // Step 6: Apply global 'all' multiplier (stacks on top of per-resource)
-    if (globalMultipliers.all > 1) {
-      (Object.keys(total) as Array<keyof Production>).forEach(r => {
-        total[r] *= globalMultipliers.all;
-      });
-    }
-
-    // Step 7: Apply prestige production multipliers
-    return applyPrestigeMultipliers(total, state.prestigeUpgrades, prestigeUpgrades);
+  const appliquer = useCallback((s: GameState) => {
+    etatRef.current = s;
+    setEtat(s);
   }, []);
 
-  const canAfford = useCallback((cost: Partial<Resources>): boolean => {
-    return Object.entries(cost).every(([resource, amount]) => 
-      gameState.resources[resource as keyof Resources] >= (amount || 0)
-    );
-  }, [gameState.resources]);
-
-  // Fonction optimisée pour appliquer les mises à jour en batch
-  const applyPendingUpdates = useCallback(() => {
-    if (Object.keys(pendingUpdatesRef.current).length > 0) {
-      // Snapshot before clearing (React's updater runs asynchronously).
-      const snapshot = { ...pendingUpdatesRef.current };
-      pendingUpdatesRef.current = {};
-      setGameState(prev => {
-        // Apply resource delta to latest state (not stale closure) — prevents
-        // overwriting concurrent modifications such as activateConformite deductions.
-        const delta = snapshot._resourcesDelta;
-        const effectiveStorageCap = prev.currentStorageCap === null
-          ? null
-          : applyPrestigeStorageBonus(prev.currentStorageCap, prev.prestigeUpgrades, prestigeUpgrades);
-        const newResources: Resources = delta ? {
-          dossiers: prev.resources.dossiers + delta.dossiers,
-          tampons: prev.resources.tampons + delta.tampons,
-          formulaires: applyStorageCap(
-            prev.resources.formulaires + delta.formulaires,
-            effectiveStorageCap
-          ),
-        } : prev.resources;
-
-        // Update conformite using prev — never reset isActivated/isUnlocked via stale snapshot.
-        const formulairesGainedDelta = snapshot._formulairesGainedDelta ?? 0;
-        // Only formulaires actually stored (after cap) count toward conformité accumulation.
-        // newFormulaires is already capped by applyStorageCap above, so the difference
-        // reflects exactly what was stored this tick (0 if storage was full).
-        const actualFormulairesStored = newResources.formulaires - prev.resources.formulaires;
-        let newConformite = prev.conformite;
-        if (prev.conformite) {
-          const lastAdmin = prev.administrations.find(a => a.id === 'agence-redondance');
-          const isUnlocked = prev.conformite.isUnlocked || shouldUnlockConformite(
-            Math.max(prev.conformite.highestEverTampons, newResources.tampons),
-            Math.max(prev.conformite.highestEverFormulaires, newResources.formulaires),
-            lastAdmin?.isUnlocked ?? false
-          );
-          const newAccumulated = prev.conformite.isActivated
-            ? prev.conformite.accumulatedFormulaires + Math.max(0, actualFormulairesStored)
-            : prev.conformite.accumulatedFormulaires;
-          newConformite = {
-            ...prev.conformite,
-            lifetimeFormulaires: prev.conformite.lifetimeFormulaires + formulairesGainedDelta,
-            highestEverTampons: Math.max(prev.conformite.highestEverTampons, newResources.tampons),
-            highestEverFormulaires: Math.max(prev.conformite.highestEverFormulaires, newResources.formulaires),
-            isUnlocked,
-            // isActivated: NEVER reset by the game loop — only set by activateConformite
-            accumulatedFormulaires: newAccumulated,
-            percentage: prev.conformite.isActivated
-              ? calculateConformitePercentageNew(0, newAccumulated)
-              : prev.conformite.percentage,
-          };
-        }
-
-        // Destructure out delta fields and fields we compute ourselves to avoid
-        // spreading stale/undefined values over prev.
-        const {
-          _resourcesDelta, _formulairesGainedDelta, _vatDelta,
-          resources: _r, conformite: _c, totalAdministrativeValue: _v,
-          ...safeRest
-        } = snapshot;
-        return {
-          ...prev,
-          ...safeRest,
-          resources: newResources,
-          conformite: newConformite,
-          totalAdministrativeValue: prev.totalAdministrativeValue + (_vatDelta ?? 0),
-        };
-      });
-    }
-  }, []);
-
+  // Chargement de la sauvegarde + rattrapage de l'absence.
   useEffect(() => {
-    isMountedRef.current = true;
-
-    const loadGameState = async () => {
+    let annule = false;
+    (async () => {
+      const maintenant = Date.now();
+      let s = E.etatInitial(maintenant);
       try {
-        // Check for incomplete prestige transaction first
-        const transactionData = await AsyncStorage.getItem(PRESTIGE_TRANSACTION_KEY);
-        if (transactionData) {
-          const transaction: PrestigeTransaction = JSON.parse(transactionData);
-          const transactionAge = Date.now() - transaction.timestamp;
-          
-          if (transactionAge > PRESTIGE_TRANSACTION_TIMEOUT) {
-            // Transaction too old (>30s) - rollback (ignore transaction)
-            console.warn('[Prestige Recovery] Transaction too old, performing rollback (ignoring transaction)');
-            await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
-          } else {
-            // Transaction recent - attempt to complete prestige
-            console.log('[Prestige Recovery] Found recent incomplete transaction, attempting to complete...');
-            
-            // Load current state
-            const storedState = await AsyncStorage.getItem(STORAGE_KEY);
-            if (storedState) {
-              const parsedState = JSON.parse(storedState);
-              const migratedState = migrateGameState(parsedState);
-              
-              // If prestigeInProgress flag is still true, complete the prestige
-              if (migratedState.prestigeInProgress) {
-                console.log('[Prestige Recovery] Completing interrupted prestige transaction');
-                
-                // Credit Paperclips from transaction
-                migratedState.paperclips = (migratedState.paperclips || 0) + transaction.paperclipsGained;
-                
-                // Clear flag
-                migratedState.prestigeInProgress = false;
-                
-                // Save completed state
-                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migratedState));
-                await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
-                
-                console.log('[Prestige Recovery] Transaction completed successfully');
-              } else {
-                // Flag already cleared, just remove transaction log
-                await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
-              }
-            }
-          }
+        const brut = await AsyncStorage.getItem(CLE_SAUVEGARDE);
+        if (brut) {
+          const lu: unknown = JSON.parse(brut);
+          if (estSauvegardeValide(lu)) s = rattraperAbsence(lu, maintenant);
         }
-        
-        // Now load normal game state
-        const storedState = await AsyncStorage.getItem(STORAGE_KEY);
-        if (storedState && isMountedRef.current) {
-          const parsedState = JSON.parse(storedState);
-          
-          // Migrate state from old versions to current version
-          const migratedState = migrateGameState(parsedState);
-          
-          // Validate migrated state
-          if (!isValidGameState(migratedState)) {
-            console.error('[GameState] Migrated state is invalid, using initial state');
-            setGameState({
-              ...initialGameState,
-              lastTimestamp: Date.now(),
-            });
-            return;
-          }
-          
-          setGameState({
-            ...migratedState,
-            lastTimestamp: Date.now(),
-          });
-        } else if (isMountedRef.current) {
-          setGameState(prevState => ({
-            ...prevState,
-            lastTimestamp: Date.now(),
-          }));
-        }
-      } catch (error) {
-        console.error('[GameState] Failed to load game state:', error);
-        // Fallback to initial state on any error (corrupted save, migration failure, etc.)
-        if (isMountedRef.current) {
-          setGameState({
-            ...initialGameState,
-            lastTimestamp: Date.now(),
-          });
-        }
+      } catch {
+        // Sauvegarde corrompue : nouvelle partie.
       }
-    };
-
-    loadGameState();
-
+      if (!annule) {
+        appliquer(s);
+        setPret(true);
+      }
+    })();
     return () => {
-      isMountedRef.current = false;
+      annule = true;
     };
-  }, []);
+  }, [appliquer]);
 
-  // Sauvegarde optimisée avec debounce
-  const saveGameState = useCallback(async () => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
-    } catch (error) {
-      console.error('Failed to save game state:', error);
-    }
-  }, [gameState]);
-
+  // Sauvegarde différée (1 s).
   useEffect(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    if (gameState.lastTimestamp !== null) {
-      saveTimeoutRef.current = setTimeout(saveGameState, SAVE_INTERVAL);
-    }
+    if (!pret) return;
+    if (sauvegardeTimer.current) clearTimeout(sauvegardeTimer.current);
+    sauvegardeTimer.current = setTimeout(() => {
+      AsyncStorage.setItem(CLE_SAUVEGARDE, JSON.stringify(etatRef.current)).catch(() => undefined);
+    }, 1000);
+  }, [etat, pret]);
 
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+  // Boucle de jeu.
+  useEffect(() => {
+    if (!pret) return;
+    const id = setInterval(() => {
+      const maintenant = Date.now();
+      const s0 = etatRef.current;
+      if (!s0.cerfa.signe) return;
+      const ecart = maintenant - s0.derniereMaj;
+      const s1 =
+        ecart > SEUIL_ABSENCE
+          ? rattraperAbsence(s0, maintenant)
+          : E.tick(s0, Math.max(0, ecart) / 1000, maintenant).s;
+      appliquer(distribuerCourrier(s1, maintenant));
+    }, INTERVALLE);
+    return () => clearInterval(id);
+  }, [pret, appliquer]);
+
+  // Sauvegarde immédiate en arrière-plan.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st !== 'active') {
+        AsyncStorage.setItem(CLE_SAUVEGARDE, JSON.stringify(etatRef.current)).catch(() => undefined);
       }
-    };
-  }, [gameState, saveGameState]);
-
-  // Toast system methods (declared before game loop to avoid TDZ)
-
-  /**
-   * Show a toast notification
-   * Enforces max 3 active toasts (overflow silently dropped)
-   */
-  const showToast = useCallback((
-    message: string,
-    type: ToastMessage['type'],
-    duration: number = 4000
-  ): void => {
-    setToastQueue(prev => {
-      if (prev.length >= 3) {
-        return prev; // Drop overflow
-      }
-      const newToast: ToastMessage = {
-        id: `${Date.now()}_${Math.random()}`,
-        text: message,
-        type,
-        duration,
-        timestamp: Date.now()
-      };
-      return [...prev, newToast];
     });
+    return () => sub.remove();
   }, []);
 
-  /**
-   * Add a journal entry (S.I.C. message, non-conformity, or narrative hint)
-   * Enforces 500-entry limit via FIFO rotation
-   */
-  const addJournalEntry = useCallback((
-    type: 'sic' | 'non-conformity' | 'narrative-hint',
-    text: string,
-    options: {
-      revealedText?: string;
-      targetId?: string;
-    } = {}
-  ) => {
-    const newEntry: JournalEntry = {
-      id: `${Date.now()}_${Math.random()}`,
-      type,
-      text,
-      timestamp: Date.now(),
-      ...(type === 'narrative-hint' ? {
-        isRevealed: false,
-        revealedText: options.revealedText,
-        targetId: options.targetId
-      } : {})
-    };
-    setGameState(prevState => ({
-      ...prevState,
-      journal: [newEntry, ...prevState.journal].slice(0, 500)
-    }));
-  }, []);
+  const tamponner = useCallback((): GameEvents => {
+    const avant = teteDeFile(etatRef.current, 1)[0] ?? null;
+    const r = E.tamponner(etatRef.current, Date.now());
+    if (r.ev.traites > 0) {
+      rejetAcc.current += r.ev.rejetes;
+      const rejete = rejetAcc.current >= 0.999;
+      if (rejete) rejetAcc.current -= 1;
+      verdictId.current += 1;
+      setVerdict({ id: verdictId.current, rejete, usager: avant });
+      vibrer('leger');
+    }
+    appliquer(r.s);
+    return r.ev;
+  }, [appliquer]);
 
-  /**
-   * Reveal a narrative hint by targetId (when unlock condition met)
-   */
-  const revealNarrativeHint = useCallback((targetId: string) => {
-    setGameState(prevState => ({
-      ...prevState,
-      journal: prevState.journal.map(entry => {
-        if (entry.type === 'narrative-hint' && entry.targetId === targetId && !entry.isRevealed) {
-          return {
-            ...entry,
-            isRevealed: true,
-            text: entry.revealedText || entry.text
-          };
-        }
-        return entry;
-      })
-    }));
-  }, []);
-
-  // Boucle de jeu optimisée pour la production
-  useEffect(() => {
-    const updateGameState = () => {
-      if (!isMountedRef.current) return;
-
-      const currentTime = Date.now();
-      const deltaTime = (currentTime - lastUpdateTimeRef.current) / 1000;
-      lastUpdateTimeRef.current = currentTime;
-
-      const currentProduction = productionCacheRef.current || calculateProduction(gameState);
-      productionCacheRef.current = currentProduction;
-
-      const formulairesGained = currentProduction.formulaires * deltaTime;
-      // Compute production delta — applied to prev.resources in applyPendingUpdates
-      // to prevent overwriting concurrent state changes (e.g. activation costs).
-      const resourcesDelta: Resources = {
-        dossiers: currentProduction.dossiers * deltaTime,
-        tampons: currentProduction.tampons * deltaTime,
-        formulaires: formulairesGained,
-      };
-
-      // Approximate resource totals for milestone detection (stale base + delta is sufficient).
-      const approxNewResources = {
-        dossiers: gameState.resources.dossiers + resourcesDelta.dossiers,
-        tampons: gameState.resources.tampons + resourcesDelta.tampons,
-        formulaires: gameState.resources.formulaires + resourcesDelta.formulaires,
-      };
-
-      // Check for milestone crossings and trigger S.I.C. messages
-      let newMessageSystem = gameState.messageSystem ? { ...gameState.messageSystem } : undefined;
-
-      if (newMessageSystem) {
-        const { lastProductionMilestone } = newMessageSystem;
-        let milestoneTriggered = false;
-
-        // Check dossiers milestone (every 100)
-        if (hasCrossedMilestone(approxNewResources.dossiers, lastProductionMilestone.dossiers, MILESTONE_DOSSIERS)) {
-          milestoneTriggered = true;
-          newMessageSystem.lastProductionMilestone.dossiers = approxNewResources.dossiers;
-        }
-
-        // Check tampons milestone (every 50)
-        if (hasCrossedMilestone(approxNewResources.tampons, lastProductionMilestone.tampons, MILESTONE_TAMPONS)) {
-          milestoneTriggered = true;
-          newMessageSystem.lastProductionMilestone.tampons = approxNewResources.tampons;
-        }
-
-        // Check formulaires milestone (every 25)
-        if (hasCrossedMilestone(approxNewResources.formulaires, lastProductionMilestone.formulaires, MILESTONE_FORMULAIRES)) {
-          milestoneTriggered = true;
-          newMessageSystem.lastProductionMilestone.formulaires = approxNewResources.formulaires;
-        }
-
-        // If any milestone crossed, check if we should trigger a message
-        if (milestoneTriggered) {
-          // Check non-conformity first (rarer, higher priority)
-          if (shouldTriggerNonConformity(newMessageSystem.nonConformityLastTriggerTime)) {
-            const nonConformityMessage = 'Tampon non conforme détecté. Analyse en cours.';
-            showToast(nonConformityMessage, 'non-conformity', 5000);
-            addJournalEntry('non-conformity', nonConformityMessage);
-            newMessageSystem.nonConformityLastTriggerTime = Date.now();
-          } else {
-            // Check S.I.C. message probability
-            const probability = calculateSICProbability(newMessageSystem.sicLastTriggerTime);
-            if (Math.random() < probability) {
-              const sicMessage = getRandomSICMessage();
-              showToast(sicMessage, 'sic', 5000);
-              addJournalEntry('sic', sicMessage);
-              newMessageSystem.sicLastTriggerTime = Date.now();
-            }
-          }
-        }
-      }
-
-      // VAT delta — applied to prev.totalAdministrativeValue in applyPendingUpdates.
-      const vatDelta = currentProduction.dossiers * deltaTime +
-                       currentProduction.tampons * deltaTime +
-                       currentProduction.formulaires * deltaTime;
-
-      pendingUpdatesRef.current = {
-        ...pendingUpdatesRef.current,
-        _resourcesDelta: resourcesDelta,
-        _formulairesGainedDelta: formulairesGained,
-        _vatDelta: vatDelta,
-        production: currentProduction,
-        lastTimestamp: currentTime,
-        messageSystem: newMessageSystem,
-      };
-
-      applyPendingUpdates();
-    };
-
-    const interval = setInterval(updateGameState, UPDATE_INTERVAL);
-    gameLoopRef.current = interval as unknown as number;
-
-    return () => {
-      if (gameLoopRef.current !== null) {
-        clearInterval(gameLoopRef.current as unknown as NodeJS.Timeout);
-      }
-    };
-  }, [gameState, calculateProduction, applyPendingUpdates, showToast, addJournalEntry]);
-
-  useEffect(() => {
-    productionCacheRef.current = null;
-  }, [gameState.administrations]);
-
-  /**
-   * Add resources to the current totals (used by the stamp button and game loop).
-   * Also tracks lifetime formulaires for conformité progression and VAT for prestige.
-   * Applies prestige click multiplier for manual dossier production (T052).
-   */
-  const incrementResource = useCallback((resource: ResourceType, amount: number) => {
-    // Apply click multiplier for dossiers (prestige_01: Tampon Double Flux)
-    const clickMultiplier = resource === 'dossiers' 
-      ? getClickMultiplier(gameState.prestigeUpgrades, prestigeUpgrades)
-      : 1;
-    
-    const finalAmount = amount * clickMultiplier;
-    
-    setGameState(prevState => ({
-      ...prevState,
-      resources: {
-        ...prevState.resources,
-        [resource]: prevState.resources[resource] + finalAmount
-      },
-      // Track manual production in totalAdministrativeValue for prestige
-      totalAdministrativeValue: prevState.totalAdministrativeValue + finalAmount
-    }));
-  }, [gameState.prestigeUpgrades]);
-
-  const dossierClickMultiplier = useMemo(
-    () => getClickMultiplier(gameState.prestigeUpgrades, prestigeUpgrades),
-    [gameState.prestigeUpgrades]
+  const acheterAgent = useCallback(
+    (id: AgentId) => {
+      const s = E.acheterAgent(etatRef.current, id, Date.now());
+      if (s !== etatRef.current) vibrer('moyen');
+      appliquer(s);
+    },
+    [appliquer],
   );
 
-  /**
-   * Purchase one unit of an agent, deducting its cost from current resources.
-   * @returns true if purchase succeeded, false if insufficient resources or agent not found
-   */
-  const purchaseAgent = useCallback((administrationId: string, agentId: string): boolean => {
-    const administration = gameState.administrations.find(a => a.id === administrationId);
-    if (!administration || !administration.isUnlocked) return false;
-
-    const agent = administration.agents.find(a => a.id === agentId);
-    if (!agent) return false;
-
-    if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false;
-
-    const escalatedCost = getEscalatedAgentCost(agent);
-    if (!canAfford(escalatedCost)) return false;
-
-    setGameState(prevState => {
-      const newResources = { ...prevState.resources };
-      Object.entries(escalatedCost).forEach(([resource, amount]) => {
-        newResources[resource as keyof Resources] -= amount || 0;
-      });
-      
-      const newAdministrations = prevState.administrations.map(admin => {
-        if (admin.id !== administrationId) return admin;
-        const updatedAgents = admin.agents.map(a => {
-          if (a.id !== agentId) return a;
-          return { ...a, owned: a.owned + 1 };
-        });
-        return { ...admin, agents: updatedAgents };
-      });
-      
-      return {
-        ...prevState,
-        resources: newResources,
-        administrations: newAdministrations
-      };
-    });
-    
-    return true;
-  }, [gameState.administrations, canAfford]);
-
-  /**
-   * Unlock an administration, deducting its unlockCost and switching the active view to it.
-   * Also reveals any narrative hints for this administration.
-   * @returns true if unlock succeeded, false if already unlocked or insufficient resources
-   */
-  const unlockAdministration = useCallback((administrationId: string): boolean => {
-    const administration = gameState.administrations.find(a => a.id === administrationId);
-    if (!administration || administration.isUnlocked) return false;
-
-    if (!canAfford(administration.unlockCost)) return false;
-
-    setGameState(prevState => {
-      const newResources = { ...prevState.resources };
-      Object.entries(administration.unlockCost).forEach(([resource, amount]) => {
-        newResources[resource as keyof Resources] -= amount || 0;
-      });
-      
-      const newAdministrations = prevState.administrations.map(admin => 
-        admin.id === administrationId ? { ...admin, isUnlocked: true } : admin
-      );
-      
-      return {
-        ...prevState,
-        resources: newResources,
-        administrations: newAdministrations,
-        activeAdministrationId: administrationId
-      };
-    });
-    
-    // Reveal any narrative hint for this administration
-    revealNarrativeHint(administrationId);
-    
-    return true;
-  }, [gameState.administrations, canAfford, revealNarrativeHint]);
-
-  /**
-   * Returns the current (escalated) cost of an agent for UI display.
-   * Applies formula: ceil(coût_base × 1,09^floor(owned / 10))
-   * Returns {} if the administration or agent is not found.
-   */
-  const getAgentCurrentCost = useCallback((administrationId: string, agentId: string): Partial<Resources> => {
-    const admin = gameState.administrations.find(a => a.id === administrationId);
-    const agent = admin?.agents.find(a => a.id === agentId);
-    if (!agent) return {};
-    return getEscalatedAgentCost(agent);
-  }, [gameState.administrations]);
-
-  /** Switch the currently displayed administration tab. */
-  const setActiveAdministration = useCallback((administrationId: string) => {
-    setGameState(prevState => ({
-      ...prevState,
-      activeAdministrationId: administrationId
-    }));
-  }, []);
-
-  const formatNumber = useCallback((value: number): string => {
-    return formatNumberFrench(value);
-  }, []);
-
-  /** Returns true if the player currently has enough resources to buy the given agent. */
-  const canPurchaseAgent = useCallback((administrationId: string, agentId: string): boolean => {
-    const administration = gameState.administrations.find(a => a.id === administrationId);
-    if (!administration || !administration.isUnlocked) return false;
-
-    const agent = administration.agents.find(a => a.id === agentId);
-    if (!agent) return false;
-
-    if (agent.maxOwned !== undefined && agent.owned >= agent.maxOwned) return false;
-
-    return canAfford(getEscalatedAgentCost(agent));
-  }, [gameState.administrations, canAfford]);
-
-  /** Returns true if the player currently has enough resources to unlock the given administration. */
-  const canUnlockAdministration = useCallback((administrationId: string): boolean => {
-    const administration = gameState.administrations.find(a => a.id === administrationId);
-    if (!administration || administration.isUnlocked) return false;
-
-    return canAfford(administration.unlockCost);
-  }, [gameState.administrations, canAfford]);
-
-  // Storage cap system methods
-  
-  /**
-   * Check if storage is currently blocked (formulaires >= cap)
-   * Memoized computed value for UI reactivity
-   */
-  const isStorageBlockedValue = useMemo(() => {
-    return isStorageBlocked(gameState);
-  }, [gameState.resources.formulaires, gameState.currentStorageCap]);
-  
-  /**
-   * Purchase a storage upgrade
-   * Validates sequence and cost, then atomically:
-   * - Sets formulaires to 0
-   * - Updates currentStorageCap to new value
-   * - Marks upgrade as purchased
-   * 
-   * @param upgradeId - ID of the storage upgrade to purchase
-   * @returns true if purchase succeeded, false if validation failed
-   */
-  const purchaseStorageUpgrade = useCallback((upgradeId: string): boolean => {
-    // Validate purchase
-    if (!canPurchaseStorageUpgrade(gameState, storageUpgrades, upgradeId)) {
-      console.warn('[StorageUpgrade] Cannot purchase:', upgradeId);
-      return false;
-    }
-    
-    const upgrade = storageUpgrades.find(u => u.id === upgradeId);
-    if (!upgrade || !upgrade.storageConfig) {
-      console.error('[StorageUpgrade] Invalid upgrade config:', upgradeId);
-      return false;
-    }
-    
-    // Atomic transaction: reset formulaires + update cap + mark purchased
-    setGameState(prevState => ({
-      ...prevState,
-      resources: {
-        ...prevState.resources,
-        formulaires: 0 // Reset to 0 (cost = entire stock)
-      },
-      currentStorageCap: upgrade.storageConfig!.newCap
-    }));
-    
-    console.log(`[StorageUpgrade] Purchased ${upgradeId}, new cap: ${upgrade.storageConfig.newCap}`);
-    return true;
-  }, [gameState]);
-
-  const getAdminStorageUpgrades = useCallback((adminId: string): (Upgrade & { canPurchase: boolean })[] => {
-    const adminIndex = gameState.administrations.findIndex(a => a.id === adminId);
-    const visible = getVisibleStorageUpgrades(gameState, storageUpgrades);
-    return visible
-      .filter(u => u.administrationId === adminIndex + 1)
-      .map(u => ({ ...u, canPurchase: canPurchaseStorageUpgrade(gameState, storageUpgrades, u.id) }));
-  }, [gameState]);
-
-  // Conformité system methods
-
-  /**
-   * Check if conformité system is unlocked
-   * Memoized for performance
-   */
-  const isConformiteUnlocked = useMemo(() => {
-    return () => {
-      if (!gameState.conformite) return false;
-      return gameState.conformite.isUnlocked;
-    };
-  }, [gameState.conformite]);
-
-  /**
-   * Check if the "Réaffectation différée" button (post-conformité prestige mechanic) should be active.
-   * Distinct from the conformité system itself — this is the Phase 2 transition triggered at 100% conformité.
-   * @returns true when conformité percentage reaches 100%
-   */
-  const isPhase2ButtonActive = useMemo(() => {
-    return () => {
-      if (!gameState.conformite) return false;
-      return gameState.conformite.percentage >= MAX_PERCENTAGE;
-    };
-  }, [gameState.conformite]);
-
-  /**
-   * Perform a conformité test
-   * Costs 150 formulaires, grants +3% conformité (capped at 100%)
-   * 
-   * @returns true if test succeeded, false if validation failed
-   */
-  const performConformiteTest = useCallback((): boolean => {
-    if (!gameState.conformite) return false;
-    
-    // Validate test can be performed
-    const canTest = canPerformTest(
-      gameState.resources.formulaires,
-      gameState.conformite.lastTestTimestamp,
-      gameState.conformite.isUnlocked
-    );
-    
-    if (!canTest) return false;
-    
-    // Atomic state update: deduct resources, increase percentage, update timestamp
-    setGameState(prevState => {
-      if (!prevState.conformite) return prevState;
-      
-      const newPercentage = Math.min(
-        prevState.conformite.percentage + TEST_GAIN,
-        MAX_PERCENTAGE
-      );
-      
-      return {
-        ...prevState,
-        resources: {
-          ...prevState.resources,
-          formulaires: prevState.resources.formulaires - TEST_COST
-        },
-        conformite: {
-          ...prevState.conformite,
-          percentage: newPercentage,
-          lastTestTimestamp: Date.now()
-        }
-      };
-    });
-    
-    return true;
-  }, [gameState.resources.formulaires, gameState.conformite]);
-
-  /**
-   * Dismiss a toast by ID
-   * 
-   * @param toastId - Toast ID to dismiss
-   */
-  const dismissToast = useCallback((toastId: string): void => {
-    setToastQueue(prev => prev.filter(toast => toast.id !== toastId));
-  }, []);
-
-  /**
-   * Get list of active toasts
-   * 
-   * @returns Array of active toast messages
-   */
-  const getActiveToasts = useCallback((): ToastMessage[] => {
-    return toastQueue;
-  }, [toastQueue]);
-
-  // NEW: Conformité system state helpers
-  
-  /**
-   * Check if conformité system should be visible (5th admin unlocked)
-   */
-  const shouldShowConformite = useMemo(() => {
-    return gameState.administrations[4]?.isUnlocked || false;
-  }, [gameState.administrations]);
-
-  /**
-   * Check if player can activate conformité (40k tampons + 10k formulaires)
-   */
-  const canActivateConformite = useMemo(() => {
-    if (!gameState.conformite) return false;
-    if (gameState.conformite.isActivated) return false;
-    
-    return canActivateConformiteCheck(
-      gameState.resources.tampons,
-      gameState.resources.formulaires
-    );
-  }, [gameState.resources.tampons, gameState.resources.formulaires, gameState.conformite]);
-
-  /**
-   * Decimal display percentage including fractional progress within current bracket.
-   * e.g. 5.3 when 30% of the way from 5% to 6%.
-   */
-  const conformiteDisplayPercentage = useMemo(() => {
-    const conformite = gameState.conformite;
-    if (!conformite || !conformite.isActivated) {
-      return conformite?.percentage ?? 0;
-    }
-    const fraction = getConformiteProgressFraction(
-      conformite.accumulatedFormulaires,
-      conformite.percentage
-    );
-    return conformite.percentage + fraction;
-  }, [gameState.conformite]);
-
-  /**
-   * Activate conformité system (one-time action)
-   * Also reveals any narrative hint for conformité system.
-   */
-  const activateConformite = useCallback((): boolean => {
-    if (!gameState.conformite) return false;
-    if (gameState.conformite.isActivated) return false;
-    
-    if (!canActivateConformiteCheck(
-      gameState.resources.tampons,
-      gameState.resources.formulaires
-    )) {
-      return false;
-    }
-    
-    setGameState(prevState => ({
-      ...prevState,
-      resources: {
-        ...prevState.resources,
-        tampons: prevState.resources.tampons - ACTIVATION_COST_TAMPONS,
-        formulaires: prevState.resources.formulaires - ACTIVATION_COST_FORMULAIRES
-      },
-      conformite: prevState.conformite ? {
-        ...prevState.conformite,
-        isActivated: true,
-        percentage: 0,
-        accumulatedFormulaires: 0
-      } : prevState.conformite
-    }));
-    
-    // Reveal any narrative hint for conformité system
-    revealNarrativeHint('conformite');
-    return true;
-  }, [gameState.resources, gameState.conformite, revealNarrativeHint]);
-
-  const refuseReaffectation = useCallback((): number => {
-    const newPct = getReaffectationResetPercentage();
-    const newAccumulated = getAccumulatedFormulairesForPercentage(newPct);
-    setGameState(prev => ({
-      ...prev,
-      conformite: prev.conformite ? {
-        ...prev.conformite,
-        percentage: newPct,
-        accumulatedFormulaires: newAccumulated,
-      } : prev.conformite,
-    }));
-    return newPct;
-  }, []);
-
-  /**
-   * Get real-time prestige potential for UI display
-   */
-  const getPrestigePotentialLive = useCallback(() => {
-    const potential = getPrestigePotential(gameState);
-    return {
-      paperclipsGain: potential.paperclipsGain,
-      isAvailable: potential.canPrestige,
-      minVAT: potential.minVATRequired,
-      currentVAT: potential.currentVAT,
-      tierName: gameState.currentTier,
-    };
-  }, [gameState.totalAdministrativeValue, gameState.currentTier]);
-
-  /**
-   * Buy a prestige upgrade with Paperclips
-   * Deducts cost and activates upgrade for current run
-   * 
-   * @param upgradeId - ID of upgrade to purchase
-   * @returns true if purchase succeeded, false if blocked
-   */
-  const buyPrestigeUpgrade = useCallback((upgradeId: string): boolean => {
-    const validation = canPurchasePrestigeUpgrade(
-      upgradeId,
-      gameState.paperclips,
-      gameState.prestigeUpgrades,
-      prestigeUpgrades
-    );
-    
-    if (!validation.canPurchase) {
-      if (validation.error) {
-        showToast(validation.error, 'error', 2000);
-      }
-      return false;
-    }
-    
-    // Find upgrade to get cost and name
-    const upgrade = prestigeUpgrades.find(u => u.id === upgradeId);
-    if (!upgrade) {
-      console.error('[Prestige] Upgrade not found:', upgradeId);
-      return false;
-    }
-    
-    // Deduct cost and activate upgrade
-    setGameState(prevState => ({
-      ...prevState,
-      paperclips: prevState.paperclips - upgrade.cost,
-      prestigeUpgrades: [...prevState.prestigeUpgrades, upgradeId]
-    }));
-    
-    // Haptic feedback (Light for purchase)
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    // Show success toast
-    showToast(`Amélioration achetée : ${upgrade.name}`, 'success', 3000);
-    
-    return true;
-  }, [gameState.paperclips, gameState.prestigeUpgrades, showToast]);
-  
-  /**
-   * Check if a prestige upgrade is currently active
-   */
-  const hasPrestigeUpgrade = useCallback((upgradeId: string): boolean => {
-    return gameState.prestigeUpgrades.includes(upgradeId);
-  }, [gameState.prestigeUpgrades]);
-  
-  /**
-   * Get list of all active prestige upgrade IDs
-   */
-  const getActivePrestigeUpgrades = useCallback((): string[] => {
-    return gameState.prestigeUpgrades;
-  }, [gameState.prestigeUpgrades]);
-
-  /**
-   * Perform prestige (Réforme Administrative)
-   * Two-phase commit for transaction safety:
-   * 1. Write transaction log to separate AsyncStorage key
-   * 2. Reset game state (resources, agents, upgrades)
-   * 3. Credit Paperclips
-   * 4. Commit to AsyncStorage
-   * 5. Clear transaction log
-   * 
-   * @returns Promise<boolean> - true if prestige succeeded, false if blocked
-   */
-  const performPrestige = useCallback(async (): Promise<boolean> => {
-    // Calculate potential gain
-    const paperclipsGain = calculatePrestigePaperclips(
-      gameState.totalAdministrativeValue,
-      gameState.currentTier
-    );
-    
-    // Block prestige if gain is 0
-    if (paperclipsGain === 0) {
-      showToast('VAT insuffisante pour une Réforme Administrative', 'error', 3000);
-      return false;
-    }
-    
-    // Block if prestige already in progress
-    if (gameState.prestigeInProgress) {
-      console.warn('[Prestige] Transaction already in progress, blocking duplicate prestige');
-      return false;
-    }
-    
-    try {
-      // Phase 1: Write transaction log (BEFORE any state changes)
-      const transaction: PrestigeTransaction = {
-        timestamp: Date.now(),
-        paperclipsGained: paperclipsGain,
-        totalAdministrativeValue: gameState.totalAdministrativeValue,
-        currentTier: gameState.currentTier
-      };
-      
-      await AsyncStorage.setItem(PRESTIGE_TRANSACTION_KEY, JSON.stringify(transaction));
-      console.log('[Prestige] Transaction logged:', transaction);
-      
-      // Set prestigeInProgress flag
-      await new Promise<void>((resolve) => {
-        setGameState(prevState => ({
-          ...prevState,
-          prestigeInProgress: true
-        }));
-        // Wait for state update
-        setTimeout(resolve, 50);
-      });
-      
-      // Phase 2: Reset game state
-      const resetState: GameState = {
-        ...initialGameState,
-        version: 5, // Keep current version
-        // PERSISTENT: Paperclips, currentTier
-        paperclips: gameState.paperclips + paperclipsGain,
-        currentTier: gameState.currentTier,
-        // PERSISTENT: Conformité unlock status (but reset activation)
-        conformite: gameState.conformite ? {
-          ...initialGameState.conformite!,
-          isUnlocked: gameState.conformite.isUnlocked,
-          highestEverTampons: gameState.conformite.highestEverTampons,
-          highestEverFormulaires: gameState.conformite.highestEverFormulaires
-        } : initialGameState.conformite,
-        // RESET: Resources, VAT, agents, upgrades, administrations (except centrale)
-        resources: { dossiers: 0, tampons: 0, formulaires: 0 },
-        totalAdministrativeValue: 0,
-        prestigeUpgrades: [], // Reset active upgrades
-        administrations: administrations.map((admin, index) => ({
-          ...admin,
-          isUnlocked: index === 0, // Only centrale unlocked
-          agents: admin.agents.map(agent => ({ ...agent, owned: 0 }))
-        })),
-        activeAdministrationId: 'administration-centrale',
-        currentStorageCap: 983, // Reset to initial cap
-        messageSystem: initialGameState.messageSystem,
-        journal: [], // Clear journal on prestige
-        lastTimestamp: null,
-        prestigeInProgress: true // Keep flag until commit
-      };
-      
-      // Phase 3: Apply reset state
-      setGameState(resetState);
-      
-      // Phase 4: Save to AsyncStorage (debounced save will happen, but force immediate save)
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(resetState));
-      console.log('[Prestige] State reset complete, Paperclips credited:', paperclipsGain);
-      
-      // Phase 5: Clear transaction flag and log
-      await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
-      setGameState(prevState => ({
-        ...prevState,
-        prestigeInProgress: false
-      }));
-      
-      // Haptic feedback (Medium impact for major action)
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      
-      // Show success toast
-      showToast(
-        `Réforme Administrative réussie ! +${formatNumberFrench(paperclipsGain)} Trombone${paperclipsGain > 1 ? 's' : ''}`,
-        'success',
-        4000
-      );
-      
-      console.log('[Prestige] Transaction complete and cleaned up');
-      return true;
-      
-    } catch (error) {
-      console.error('[Prestige] Error during prestige operation:', error);
-      
-      // Attempt to clear transaction flag
-      try {
-        await AsyncStorage.removeItem(PRESTIGE_TRANSACTION_KEY);
-        setGameState(prevState => ({ ...prevState, prestigeInProgress: false }));
-      } catch (cleanupError) {
-        console.error('[Prestige] Failed to cleanup after error:', cleanupError);
-      }
-      
-      showToast('Erreur lors de la Réforme Administrative', 'error', 3000);
-      return false;
-    }
-  }, [gameState, showToast, formatNumberFrench]);
-
-  return (
-    <GameContext.Provider value={{
-      gameState,
-      incrementResource,
-      purchaseAgent,
-      unlockAdministration,
-      setActiveAdministration,
-      formatNumber,
-      canPurchaseAgent,
-      canUnlockAdministration,
-      getAgentCurrentCost,
-      purchaseStorageUpgrade,
-      isStorageBlocked: isStorageBlockedValue,
-      getAdminStorageUpgrades,
-      shouldShowConformite,
-      canActivateConformite,
-      activateConformite,
-      conformiteDisplayPercentage,
-      isConformiteUnlocked,
-      isPhase2ButtonActive,
-      performConformiteTest,
-      refuseReaffectation,
-      toastQueue,
-      showToast,
-      dismissToast,
-      getActiveToasts,
-      addJournalEntry,
-      revealNarrativeHint,
-      getPrestigePotentialLive,
-      performPrestige,
-      buyPrestigeUpgrade,
-      hasPrestigeUpgrade,
-      getActivePrestigeUpgrades,
-      dossierClickMultiplier,
-    }}>
-      {children}
-    </GameContext.Provider>
+  const acheterRamettes = useCallback(
+    (nb: number) => {
+      const s = E.acheterRamettes(etatRef.current, nb, Date.now());
+      if (s !== etatRef.current) vibrer('moyen');
+      appliquer(s);
+    },
+    [appliquer],
   );
+
+  const reglerTauxRejet = useCallback(
+    (taux: number) => appliquer(E.reglerTauxRejet(etatRef.current, taux, Date.now())),
+    [appliquer],
+  );
+
+  const acheterNote = useCallback(
+    (id: NoteId) => {
+      const s = E.acheterNote(etatRef.current, id, Date.now());
+      if (s !== etatRef.current) vibrer('succes');
+      appliquer(s);
+    },
+    [appliquer],
+  );
+
+  const marquerNotesVues = useCallback(() => {
+    const s = etatRef.current;
+    const visibles = E.notesVisibles(s);
+    if (visibles.every((id) => s.notesVues.includes(id))) return;
+    appliquer({ ...s, notesVues: visibles });
+  }, [appliquer]);
+
+  const signerCerfa = useCallback(
+    (prenom: string) => {
+      const maintenant = Date.now();
+      vibrer('succes');
+      appliquer({ ...E.signerCerfa(etatRef.current, prenom, maintenant), derniereMaj: maintenant });
+    },
+    [appliquer],
+  );
+
+  const deposerDemission = useCallback(
+    () => appliquer(E.deposerDemission(etatRef.current, Date.now())),
+    [appliquer],
+  );
+
+  const marquerLettresLues = useCallback(() => {
+    const s = etatRef.current;
+    if (s.courrier.every((l) => l.lue)) return;
+    appliquer({ ...s, courrier: s.courrier.map((l) => (l.lue ? l : { ...l, lue: true })) });
+  }, [appliquer]);
+
+  const marquerFinActeVue = useCallback(
+    () => appliquer({ ...etatRef.current, finActeVue: true }),
+    [appliquer],
+  );
+
+  const marquerFichePoste = useCallback(
+    (vue: boolean) => appliquer({ ...etatRef.current, fichePosteVue: vue }),
+    [appliquer],
+  );
+
+  const nouvellePartie = useCallback(() => {
+    rejetAcc.current = 0;
+    setVerdict(null);
+    appliquer(E.etatInitial(Date.now()));
+  }, [appliquer]);
+
+  const maintenant = etat.derniereMaj;
+  const mods = useMemo(() => E.getModifiers(etat, maintenant), [etat, maintenant]);
+
+  const notes = useMemo<NoteAffichee[]>(
+    () =>
+      E.notesVisibles(etat).map((id) => {
+        const def = NOTES_PAR_ID[id];
+        const st = etat.notes[id];
+        let statut: StatutNote = etat.budget >= def.cout ? 'disponible' : 'tropCher';
+        let resteSec = 0;
+        if (st) {
+          resteSec = Math.max(0, Math.ceil((st.effective - maintenant) / 1000));
+          statut = resteSec > 0 ? 'instruction' : 'effective';
+        }
+        const { visible: _v, appliquer: _a, ...rest } = def;
+        return { ...rest, statut, resteSec, nouvelle: !etat.notesVues.includes(id) };
+      }),
+    [etat, maintenant],
+  );
+
+  const agents = useMemo<AgentAffiche[]>(
+    () =>
+      AGENTS.filter((a) => mods.agentsDisponibles.includes(a.id)).map((a) => {
+        const cout = E.coutAgent(a.id, etat.agents[a.id]);
+        return { ...a, possedes: etat.agents[a.id], cout, achetable: etat.budget >= cout };
+      }),
+    [etat, mods],
+  );
+
+  const valeur = useMemo<GameContextType>(
+    () => ({
+      pret,
+      etat,
+      mods,
+      maintenant,
+      enAttente: E.dossiersEnAttente(etat),
+      vitesse: E.vitesseCollegues(etat, mods),
+      perimetre: E.perimetre(etat, maintenant),
+      conformite: E.conformite(etat),
+      tete: teteDeFile(etat),
+      notes,
+      notesNonVues: notes.filter((n) => n.nouvelle).length,
+      agents,
+      prixRamette: E.prixRamette(mods),
+      lettresNonLues: etat.courrier.filter((l) => !l.lue).length,
+      verdict,
+      tamponner,
+      acheterAgent,
+      acheterRamettes,
+      reglerTauxRejet,
+      acheterNote,
+      marquerNotesVues,
+      signerCerfa,
+      deposerDemission,
+      marquerLettresLues,
+      marquerFinActeVue,
+      marquerFichePoste,
+      nouvellePartie,
+    }),
+    [
+      pret, etat, mods, maintenant, notes, agents, verdict, tamponner, acheterAgent, acheterRamettes,
+      reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa, deposerDemission, marquerLettresLues,
+      marquerFinActeVue, marquerFichePoste, nouvellePartie,
+    ],
+  );
+
+  return <GameContext.Provider value={valeur}>{children}</GameContext.Provider>;
 }
 
-export const useGameState = () => {
-  const context = useContext(GameContext);
-  if (context === undefined) {
-    throw new Error('useGameState must be used within a GameStateProvider');
-  }
-  return context;
-};
+/** Accès à l'état et aux actions du jeu. */
+export function useGameState(): GameContextType {
+  const ctx = useContext(GameContext);
+  if (!ctx) throw new Error('useGameState doit être utilisé dans GameStateProvider');
+  return ctx;
+}

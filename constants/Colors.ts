@@ -1,32 +1,60 @@
-export default {
-  background: '#f9edcd',
-  title: '#4b6c8c',
-  text: '#333333',
-  textLight: '#666666',
-  border: '#e0d5b8',
-  buttonPrimary: '#f0ab63',
-  buttonPrimaryPressed: '#e59c54',
-  buttonDisabled: '#cccccc',
-  resourceDossiers: '#e67e22',
-  resourceTampons: '#3498db',
-  resourceFormulaires: '#9b59b6',
-  locked: '#bbbbbb',
-  shadow: 'rgba(0, 0, 0, 0.1)',
-  success: '#2ecc71',
-  warning: '#f1c40f',
-  error: '#e74c3c',
+/**
+ * Charte « Pastel Dystopia / Soft-Vector ».
+ * Voir la section « Direction visuelle » du document de design.
+ */
+const Colors = {
+  // Fonds
+  creme: '#F9F4E0',
+  carton: '#E8E0C5',
+  papier: '#FFFFFF',
+  papierChaud: '#FFF8E8',
 
-  // S.I.C. Journal & Toast
-  sicBackground: '#2C3E50',
-  nonConformityBackground: '#3D2C2C',
-  phase2Background: '#2C3E2C',
-  phase2Border: '#27AE60',
-  systemBorder: '#95A5A6',
-  journalBackground: '#2C2C2C',
-  journalText: '#DDDDDD',
-  journalTimestamp: '#999999',
-  toastText: '#FFFFFF',
-  
-  // Storage cap system
-  storageCapped: '#FF0000',
-};
+  // Encre de l'acte I (bouton poussoir)
+  encre: '#E6904E',
+  encreOmbre: '#D47A38',
+  encreClaire: '#F3B27E',
+  encreFond: '#FDEBD8',
+  /** Orange lisible pour du texte (contraste AA sur fond clair). */
+  encreTexte: '#A0531C',
+
+  // Secondaire
+  bleu: '#5D9CEC',
+  bleuOmbre: '#4A89DC',
+
+  // Sémantique et texte
+  anthracite: '#2D3436',
+  crayon: '#636E72',
+  crayonClair: '#9AA3A6',
+  vert: '#A3CB38',
+  vertClair: '#C8E07A',
+  vertEncre: '#4F7A12',
+  rouge: '#D63031',
+  rougeClair: '#F08A7E',
+  rougeFond: '#FDE3DE',
+  /** Rouge lisible sur rougeFond. */
+  rougeTexte: '#B3261E',
+  texteSurEncre: '#FFF8E7',
+
+  // Avatars des usagers (cercles pastel)
+  avatars: ['#FAB1A0', '#81ECEC', '#FFEAA7', '#A0C4FF', '#C7ECB5', '#E0C3FC'],
+} as const;
+
+export default Colors;
+
+export const Fonts = {
+  titre: 'Fredoka-SemiBold',
+  titreGras: 'Fredoka-Bold',
+  texte: 'Nunito-SemiBold',
+  texteGras: 'Nunito-ExtraBold',
+  chiffres: 'RobotoMono-Bold',
+  chiffresRegular: 'RobotoMono-Medium',
+} as const;
+
+/** Constructions de la charte : contours, arrondis, ombres dures. */
+export const Charte = {
+  trait: 3,
+  traitFin: 2,
+  rayon: 16,
+  rayonPetit: 12,
+  ombre: 3,
+} as const;

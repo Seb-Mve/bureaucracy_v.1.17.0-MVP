@@ -4,101 +4,75 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**BUREAUCRACY++** is a satirical French incremental/idle mobile game built with React Native + Expo. Players collect three resources (dossiers, tampons, formulaires) by clicking a stamp button and hiring agents that automate production.
+**BUREAUCRACY++** is a satirical French incremental/idle mobile game built with React Native + Expo. The game is being rebuilt as a 6-act arc (see the design document); the code currently implements **Act I — Le Guichet** (spec: `specs/007-acte1-guichet/spec.md`).
+
+Act I loop: usagers file dossiers at the guichet; the player taps TAMPONNER (and hires collègues) to process them; each processed dossier consumes formulaires and pays a dotation. A player-set **Taux de rejet** sends usagers back (more dossiers, more budget, hidden Conformité) until their patience runs out and they abandon. Notes de service (projects) drip-feed mechanics. The act ends when Conformité reaches 100 %.
 
 - Language: TypeScript (strict mode)
 - Platform: React Native / Expo 53, portrait only
-- GameState schema: v4
-- All in-game text is in French
+- GameState schema: v1 of the Act I rewrite (AsyncStorage key `bureaucracy_acte1_v1`; the old `bureaucracy_game_state` v4 save is ignored)
+- All in-game text is in French (typographic apostrophes ’)
+- Visual identity: charte « Pastel Dystopia / Soft-Vector » (`constants/Colors.ts`: cream `#F9F4E0`, anthracite outlines, hard offset shadows; fonts Fredoka / Nunito / Roboto Mono)
 
 ## Commands
 
 ```bash
-npm run dev          # Start Expo dev server (i=iOS, a=Android, w=browser)
-npm run build:web    # Export static web build to dist/
-npm run lint         # Run ESLint via expo lint
+npm run dev                              # Start Expo dev server (i=iOS, a=Android, w=browser)
+npm run build:web                        # Export static web build to dist/
+npm run lint                             # Run ESLint via expo lint
+./node_modules/.bin/tsc --noEmit -p .    # Type-check (scripts/ and specs/ are excluded)
+node scripts/simulate-acte1.ts [taps/s] [minutes]   # Balance simulator: bot player, prints milestones
 ```
 
-There is no automated test suite. Testing is done manually on iOS/Android simulators or in the browser (`npm run dev` then press `w`).
+There is no automated test suite. Balance changes must be checked with the simulator (target: bot finishes Act I in ~60–75 min, i.e. ~85–100 min for a human).
+
+**iCloud warning:** the repo lives in an iCloud-synced `Documents` folder. If npm, tsc or Metro hang with 0 % CPU, macOS has probably evicted files from `node_modules` (`ls -lO` shows `dataless`). Fix: `rm -rf node_modules && npm ci`. Metro's file watcher may also miss edits: restart with `npx expo start --clear`.
 
 ## Architecture
 
 ### Three-layer separation (strict)
 
 ```
-components/   → UI only, no game math
-context/      → GameStateContext: state, actions, game loop
-data/         → Pure functions, no React dependencies
+components/   → UI only, no game math (components/charte/ = charte primitives)
+context/      → GameStateContext: state, actions, game loop, save
+data/         → Pure functions, no React dependencies (also run by the simulator under Node)
+constants/    → Colors/Fonts/Charte, balance numbers and agent definitions
 ```
 
-Components must never import directly from `data/`. All business logic is accessed through `GameStateContext` via the `useGameState()` hook.
+Components must never import from `data/`. Everything goes through `useGameState()`; types needed by components are re-exported from the context.
 
 ### GameStateContext (`context/GameStateContext.tsx`)
 
-Single source of truth for all runtime state. Key internals:
-
-- **Game loop:** `setInterval` at 100ms (`UPDATE_INTERVAL`)
-- **Auto-save:** Debounced 5s to AsyncStorage key `'bureaucracy_game_state'`
-- **Production cache:** Invalidated only when the administrations list changes
-- **Refs vs state:** Values read by the game loop but not displayed (timestamps, caches, pending updates) live in `useRef`, never in `useState`
-- **Pending updates pattern:** Snapshot pending updates *before* clearing them — React's async updater requires this
-
-Toast queue is **not** persisted; it lives in a separate `useState` in the provider.
+- **Game loop:** `setInterval` at 100 ms, calls `tick(state, dt)`; a gap > 30 s (backgrounded tab) is treated as an absence.
+- **Offline progress:** `simulerAbsence` runs 1 s ticks with collègues only (capped at 2 h) and posts a courrier letter.
+- **Save:** debounced 1 s to AsyncStorage, plus immediate save when the app goes to background.
+- **Courrier:** `nouvellesLettres` is checked every tick; each letter is sent once (`lettresEnvoyees`).
 
 ### Data layer files
 
 | File | Responsibility |
 |---|---|
-| `data/gameData.ts` | Static definitions — administrations, agents, costs, initial state |
-| `data/conformiteLogic.ts` | Conformité unlock/activation checks, percentage calculations |
-| `data/messageSystem.ts` | S.I.C. message pool, cooldown-based probabilities, milestone thresholds |
-| `data/storageLogic.ts` | Storage cap checks, upgrade sequence validation |
-| `data/prestigeLogic.ts` | Prestige paperclip gain, multipliers, upgrade validation |
-| `utils/formatters.ts` | `formatNumberFrench()` — always use this, never raw `.toLocaleString()` |
-| `utils/stateMigration.ts` | GameState version migration chain (v1→v4) |
+| `data/engine.ts` | Initial state, `tick`, `tamponner`, purchases, modifiers derived from notes, offline simulation |
+| `data/notes.ts` | The 22 Notes de service: text, cost, instruction delay, visibility condition, effect on `Modifiers` |
+| `data/courrier.ts` | S.I.C. letters and their triggers, absence summary letter |
+| `data/usagers.ts` | Deterministic usager identities (name, request, mood) for the queue display |
+| `data/save.ts` | Storage key and save validation |
+| `constants/balance.ts` | All tuning numbers (`BALANCE`) and collègue definitions (`AGENTS`) |
+| `utils/formatters.ts` | `formatEntier` (counts), `formatEuros` (money), `formatNumberFrench` (rates) |
+
+### Economy model (aggregate, no per-usager objects)
+
+`file[p]` / `retours[p]` count dossiers by remaining patience `p` (1..3). Rejection is a deterministic fraction (`tauxRejet`), not random. A rejected usager returns with `p-1`; at `p = 1` they abandon and leave the population. Population refills toward the périmètre capacity (extension notes raise it).
 
 ### Navigation
 
-File-based routing via `expo-router`. Tabs in `app/(tabs)/`:
-- `index.tsx` — main stamping screen
-- `recruitment.tsx` — buy agents, unlock administrations
-- `progression.tsx` — stats and prestige
-- `options.tsx` — settings, reset save
+File-based routing via `expo-router`. First launch shows `CerfaEcran` (hiring form) instead of the tabs. Tabs in `app/(tabs)/`:
+- `index.tsx` — Guichet (HUD, scene, queue, rejection slider, TAMPONNER)
+- `recruitment.tsx` — collègues and ramettes (hidden until note n° 1)
+- `notes.tsx` — Notes de service (hidden until the first note)
+- `options.tsx` — dossier administratif, démission, reset
 
-### Resource system
-
-Three resources: **dossiers** (orange `#e67e22`), **tampons** (blue `#3498db`), **formulaires** (purple `#9b59b6`). All floating-point; always display via `formatNumberFrench()`. Formulaires are storage-capped (until Vide Juridique upgrade).
-
-### Bonus system
-
-`Agent.productionBonus` scope:
-- `isGlobal: false` — applies only within its administration
-- `isGlobal: true` — applies to the global multiplier across all administrations
-
-Target: `'dossiers'` | `'tampons'` | `'formulaires'` | `'all'`
-
-### Conformité system
-
-Unlocks when 5th administration is active AND `highestEverTampons >= 1000` AND `highestEverFormulaires >= 100`. Activation costs 40,000 tampons + 10,000 formulaires (one-time). Percentage advances via exponential formula by 10% tranches — all threshold constants live in `data/conformiteLogic.ts`.
-
-### Storage cap system
-
-Four upgrades in mandatory sequence (Casier B-9 → Rayonnage Vertical → Compression A-1 → Vide Juridique). Only the next eligible upgrade is shown. Storage is blocked (formulaires icon turns red) when `resources.formulaires >= currentStorageCap`.
-
-### S.I.C. message system
-
-Milestone triggers (every 100 dossiers / 50 tampons / 25 formulaires) check cooldown-based probability. Non-conformity alerts: 0.2% per milestone, max 1 per 10 minutes. Journal max 500 entries (FIFO).
-
-### Prestige system
-
-Paperclips are earned via `performPrestige()`, spent in the prestige shop. Effect types: `'click_multiplier'`, `'production_bonus'`, `'storage_bonus'`. Use `getPrestigePotentialLive()` for live gain preview.
-
-### State migration
-
-To add a new schema version:
-1. Increment `initialGameState.version` in `data/gameData.ts`
-2. Add a migration block in `utils/stateMigration.ts` (before the `if (version >= N+1)` guard)
-3. Update `isValidGameState()` for any new required fields
+The header (`EnTete`) holds the S.I.C. courrier envelope.
 
 ## Key Conventions
 
@@ -107,7 +81,8 @@ To add a new schema version:
 - Path alias `@/` maps to project root.
 
 ### Styling
-- All colors from `constants/Colors.ts` — never hardcode hex values in components.
+- All colors from `constants/Colors.ts` — never hardcode hex values in components. Use `Colors.encreTexte` / `Colors.rougeTexte` for orange/red text (AA contrast).
+- Build cards with `components/charte/Panneau` (hard shadow), buttons with `BoutonPoussoir`, gauges with `JaugeHachuree`.
 - `StyleSheet.create` always — never inline style objects.
 - Prettier: single quotes, 2-space indent, no tabs.
 - Components ≤ ~300 lines; split if larger.
@@ -121,12 +96,11 @@ To add a new schema version:
 - Haptics: `Light` impact for taps, `Medium` for purchases, `Success` notification for unlocks.
 - Screens always wrapped in `SafeAreaView` from `react-native-safe-area-context`.
 
-### Adding a new administration or agent
+### Adding a Note de service or a collègue
 
-1. Add to the `administrations` array in `data/gameData.ts`.
-2. Set `isUnlocked: false` with an `unlockCost` (except `administration-centrale` which starts unlocked).
-3. Use `Partial<Resources>` for `baseProduction` — only specify applicable resources.
-4. Bonus-only agents: set `baseProduction: {}` and define `productionBonus`.
+1. Notes: add an entry to `NOTES` in `data/notes.ts` (and its id to `NoteId` in `types/game.ts`). Effects only mutate `Modifiers`.
+2. Collègues: add to `AGENTS` in `constants/balance.ts` (and `AgentId`), then unlock it from a note.
+3. Re-run `node scripts/simulate-acte1.ts` to check pacing.
 
 ### SpecKit workflow
 
