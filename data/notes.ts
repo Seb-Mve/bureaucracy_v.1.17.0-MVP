@@ -66,7 +66,7 @@ export const NOTES: NoteDef[] = [
     titre: "Élargissement des horaires d’ouverture",
     texte: 'Le guichet ouvrira désormais à 8 h 58 au lieu de 9 h 00. Les usagers sont priés de ne pas en abuser.',
     effet: 'Demandes des usagers +50 %.',
-    cout: 150,
+    cout: 300,
     instruction: 0,
     visible: (s) => s.tampons >= 300,
     appliquer: (m) => {
@@ -79,7 +79,7 @@ export const NOTES: NoteDef[] = [
     titre: "Commande groupée d’imprimés",
     texte: "Les imprimés seront désormais commandés par lot. Le formulaire de commande groupée est disponible à l’unité.",
     effet: 'Prix des ramettes −25 %.',
-    cout: 80,
+    cout: 160,
     instruction: 0,
     visible: (s) => s.stats.formulairesAchetes >= 600,
     appliquer: (m) => {
@@ -92,7 +92,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Tampon dateur automatique',
     texte: "Le tampon indique désormais la date. Elle n’engage personne.",
     effet: 'Chaque tap traite 2 dossiers.',
-    cout: 250,
+    cout: 500,
     instruction: 0,
     visible: (s) => s.tampons >= 500,
     appliquer: (m) => {
@@ -106,7 +106,7 @@ export const NOTES: NoteDef[] = [
     texte:
       "Afin de valoriser la rigueur des agents, chaque dossier rejeté ouvrira droit à une dotation complémentaire. Un dossier rejeté est un dossier traité deux fois.",
     effet: 'Dossiers rejetés : dotation +50 %.',
-    cout: 400,
+    cout: 800,
     instruction: 0,
     visible: (s) => s.stats.rejetes >= 200,
     appliquer: (m) => {
@@ -118,7 +118,7 @@ export const NOTES: NoteDef[] = [
     numero: 7,
     titre: 'Extension du périmètre : quartier des Tilleuls',
     texte: "Le guichet 3 est désormais compétent pour le quartier des Tilleuls. Les Tilleuls n’ont pas été consultés.",
-    effet: 'Périmètre +240 usagers.',
+    effet: 'Périmètre +1 000 usagers.',
     cout: 900,
     instruction: 90,
     visible: (s) => s.tampons >= 1500,
@@ -131,7 +131,7 @@ export const NOTES: NoteDef[] = [
     texte:
       "Par souci d’égalité de traitement, les usagers seront désormais désignés par un numéro. Les prénoms seront archivés.",
     effet: 'Vitesse des collègues +25 %. Les usagers perdent leur nom.',
-    cout: 1500,
+    cout: 3000,
     instruction: 60,
     visible: (s) => s.tampons >= 3000,
     appliquer: (m) => {
@@ -145,7 +145,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Pièce justificative supplémentaire',
     texte: 'Toute demande devra être accompagnée d’un justificatif attestant de la demande.',
     effet: '+1 formulaire par dossier. Dotation ×1,6. La procédure s’alourdit.',
-    cout: 800,
+    cout: 1600,
     instruction: 0,
     visible: (s) => s.tampons >= 2000,
     appliquer: (m) => {
@@ -159,7 +159,7 @@ export const NOTES: NoteDef[] = [
     titre: "Création d’un poste d’agent instructeur",
     texte: "Un poste d’agent instructeur est créé. Sa fiche de poste est en cours d’instruction.",
     effet: 'Débloque l’agent instructeur.',
-    cout: 1000,
+    cout: 2000,
     instruction: 0,
     visible: (s) => s.tampons >= 3000,
     appliquer: (m) => {
@@ -172,7 +172,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Tampon à double encrage',
     texte: "Deux encres, un seul geste. L’agent est prié de ne pas tamponner ses collègues.",
     effet: 'Chaque tap traite 5 dossiers.',
-    cout: 1200,
+    cout: 2400,
     instruction: 0,
     visible: (s) => achetee(s, 'dateur') && s.tampons >= 5000,
     appliquer: (m) => {
@@ -185,7 +185,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Relèvement du plafond de rejet',
     texte: "Le plafond de rejet de 50 % est jugé excessivement bas. Il est relevé à titre expérimental et définitif.",
     effet: 'Taux de rejet jusqu’à 80 %.',
-    cout: 1500,
+    cout: 3000,
     instruction: 0,
     visible: (s) => achetee(s, 'prime') && s.stats.rejetes >= 1500,
     appliquer: (m) => {
@@ -198,7 +198,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Délai de retour réglementaire',
     texte: 'Les usagers rejetés sont invités à revenir sous 48 heures, faute de quoi leur demande sera rejetée.',
     effet: 'Les usagers rejetés reviennent deux fois plus vite.',
-    cout: 2000,
+    cout: 4000,
     instruction: 0,
     visible: (s) => s.stats.rejetes >= 2500,
     appliquer: (m) => {
@@ -211,7 +211,7 @@ export const NOTES: NoteDef[] = [
     titre: "Commande automatique d’imprimés",
     texte: "Les imprimés seront commandés automatiquement, sur présentation d’un imprimé.",
     effet: 'Les ramettes sont rachetées automatiquement quand le stock baisse.',
-    cout: 2500,
+    cout: 5000,
     instruction: 0,
     visible: (s) => s.tampons >= 6000,
     appliquer: (m) => {
@@ -223,8 +223,8 @@ export const NOTES: NoteDef[] = [
     numero: 15,
     titre: 'Extension du périmètre : la commune entière',
     texte: "Le guichet 3 devient le guichet de la commune. Les guichets 1 et 2 n’ont jamais existé.",
-    effet: 'Périmètre +900 usagers.',
-    cout: 3000,
+    effet: 'Périmètre +3 500 usagers.',
+    cout: 5000,
     instruction: 180,
     visible: (s) => achetee(s, 'tilleuls') && s.tampons >= 8000,
     appliquer: () => undefined,
@@ -249,7 +249,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Formulaire de demande de formulaire',
     texte: 'Tout formulaire devra désormais faire l’objet d’une demande, sur formulaire.',
     effet: '+1 formulaire par dossier. Dotation ×1,5. Conformité des pièces ×2.',
-    cout: 8000,
+    cout: 60000,
     instruction: 0,
     visible: (s) => achetee(s, 'audit'),
     appliquer: (m) => {
@@ -264,7 +264,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Titularisation des agents',
     texte: 'Les agents sont titularisés. Ils ne peuvent plus être déplacés, ni motivés.',
     effet: 'Vitesse des collègues ×2.',
-    cout: 15000,
+    cout: 120000,
     instruction: 0,
     visible: (s) => s.tampons >= 25000,
     appliquer: (m) => {
@@ -277,7 +277,7 @@ export const NOTES: NoteDef[] = [
     titre: "Création d’un poste de titulaire",
     texte: 'Un poste de titulaire est ouvert. Il sera pourvu par un titulaire.',
     effet: 'Débloque le titulaire.',
-    cout: 20000,
+    cout: 150000,
     instruction: 0,
     visible: (s) => achetee(s, 'titularisation'),
     appliquer: (m) => {
@@ -289,7 +289,7 @@ export const NOTES: NoteDef[] = [
     numero: 20,
     titre: 'Extension du périmètre : le canton',
     texte: 'Le guichet 3 est étendu au canton. Le canton est prié de se présenter au guichet 3.',
-    effet: 'Périmètre +3 000 usagers.',
+    effet: 'Périmètre +12 000 usagers.',
     cout: 40000,
     instruction: 300,
     visible: (s) => achetee(s, 'commune') && s.tampons >= 40000,
@@ -301,7 +301,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Guichet unique',
     texte: 'Un guichet unique est créé pour simplifier les démarches. Il renvoie vers les autres guichets.',
     effet: 'Conformité des rejets ×2.',
-    cout: 60000,
+    cout: 200000,
     instruction: 0,
     visible: (s) => achetee(s, 'audit') && s.tampons >= 60000,
     appliquer: (m) => {
@@ -324,9 +324,9 @@ export const NOTES: NoteDef[] = [
 
 /** Capacité ajoutée au périmètre par les notes d'extension. */
 export const EXTENSIONS_PERIMETRE: Partial<Record<NoteId, number>> = {
-  tilleuls: 240,
-  commune: 900,
-  canton: 3000,
+  tilleuls: 1000,
+  commune: 3500,
+  canton: 12000,
 };
 
 export const NOTES_PAR_ID: Record<NoteId, NoteDef> = Object.fromEntries(

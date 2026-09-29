@@ -14,7 +14,7 @@ export const BALANCE = {
    */
   demandeRate: 1 / 8,
   /** Nouveaux habitants par seconde, en fraction de la place libre du périmètre. */
-  installationRate: 1 / 120,
+  installationRate: 1 / 30,
   /** Délai moyen avant le retour d'un usager rejeté (s). */
   delaiRetour: 20,
   /** Capacité des collègues / plafond de demande à partir duquel on alerte. */
@@ -33,7 +33,7 @@ export const BALANCE = {
   /** Points de Conformité par pièce supplémentaire exigée, par dossier. */
   confParPiece: 0.25,
   /** Points de Conformité correspondant à 100 %. */
-  confCible: 100000,
+  confCible: 500000,
   /** Plafond de simulation hors-ligne (s). */
   horsLigneMax: 2 * 60 * 60,
   croissanceCoutAgent: 1.15,
@@ -56,27 +56,27 @@ export const AGENTS: AgentDef[] = [
     nom: 'Stagiaire',
     description: "Motivé, non rémunéré, ne sait pas où est l’agrafeuse.",
     vitesse: 0.1,
-    coutBase: 20,
+    coutBase: 80,
   },
   {
     id: 'accueil',
     nom: "Agent d’accueil",
     description: 'Sourit par délégation.',
     vitesse: 0.5,
-    coutBase: 85,
+    coutBase: 340,
   },
   {
     id: 'instructeur',
     nom: 'Agent instructeur',
     description: 'Instruit. Surtout des refus.',
     vitesse: 2.5,
-    coutBase: 350,
+    coutBase: 1400,
   },
   {
     id: 'titulaire',
     nom: 'Titulaire',
     description: 'Inamovible, imperturbable, indispensable.',
     vitesse: 12,
-    coutBase: 1400,
+    coutBase: 5600,
   },
 ];

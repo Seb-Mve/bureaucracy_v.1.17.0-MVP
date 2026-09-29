@@ -18,9 +18,9 @@ registerHooks({
   },
 });
 
-const { AGENTS, BALANCE } = await import('../constants/balance.ts');
+const { BALANCE } = await import('../constants/balance.ts');
 const E = await import('../data/engine.ts');
-const { NOTES } = await import('../data/notes.ts');
+const { NOTES, NOTES_PAR_ID } = await import('../data/notes.ts');
 
 const taps = Number(process.argv[2] ?? 2);
 const minutesMax = Number(process.argv[3] ?? 180);
@@ -32,11 +32,35 @@ const marquer = (k: string, t: number) => {
 };
 const mn = (t: number) => `${(t / 60).toFixed(1)} min`;
 
+const EXTENSIONS = ['tilleuls', 'commune', 'canton'] as const;
+let tapsDemandes = 0;
+let tapsTraites = 0;
+let serieVide = 0;
+let pireSerie = 0;
+let pireSerieA = 0;
+
 for (let t = 1; t <= minutesMax * 60; t++) {
   const now = t * 1000;
-  for (let i = 0; i < taps; i++) s = E.tamponner(s, now).s;
+  const puissance = E.getModifiers(s, now).tapPower;
+  for (let i = 0; i < taps; i++) {
+    const r = E.tamponner(s, now);
+    tapsDemandes += puissance;
+    tapsTraites += r.ev.traites;
+    s = r.s;
+  }
   s = E.tick(s, 1, now).s;
   const m = E.getModifiers(s, now);
+  // Série de file vide, excusée si une extension de périmètre attend d'être achetée.
+  const extensionEnAttente = EXTENSIONS.some((id) => s.notes[id] === undefined && NOTES_PAR_ID[id].visible(s));
+  if (E.dossiersEnAttente(s) < 1 && !extensionEnAttente) {
+    serieVide += 1;
+    if (serieVide > pireSerie) {
+      pireSerie = serieVide;
+      pireSerieA = t;
+    }
+  } else {
+    serieVide = 0;
+  }
 
   if (m.rejetVisible) {
     marquer('rejet débloqué', t);
@@ -62,11 +86,12 @@ for (let t = 1; t <= minutesMax * 60; t++) {
   const reserve = enAttente.length ? Math.min(...enAttente.map((n) => n.cout)) : 0;
   for (;;) {
     const choix = m.agentsDisponibles
-      .map((id) => ({ id, cout: E.coutAgent(id, s.agents[id]), v: AGENTS.find((a) => a.id === id)!.vitesse }))
-      .sort((a, b) => b.v / b.cout - a.v / a.cout)[0];
-    if (!choix || E.dossiersEnAttente(s) < 5 || s.budget < choix.cout || (reserve > 0 && choix.cout > reserve * 0.5 && s.budget - choix.cout < reserve)) break;
+      .map((id) => ({ id, cout: E.coutAgent(id, s.agents[id]), gain: E.gainAgent(s, id, m) }))
+      .sort((a, b) => b.gain / b.cout - a.gain / a.cout)[0];
+    if (!choix || s.budget < choix.cout || (reserve > 0 && choix.cout > reserve * 0.5 && s.budget - choix.cout < reserve)) break;
     s = E.acheterAgent(s, choix.id, now);
     marquer('premier collègue', t);
+    if (choix.id === 'stagiaire' && t >= 20 * 60) marquer('stagiaire recruté après 20 min', t);
   }
 
   if (m.conformiteVisible) marquer('conformité révélée', t);
@@ -87,3 +112,7 @@ console.log('\nJalons :');
 for (const [k, t] of Object.entries(jalons).sort((a, b) => a[1] - b[1])) {
   console.log(`  ${mn(t).padStart(9)}  ${k}`);
 }
+
+console.log('\nMesures :');
+console.log(`  efficacité des taps : ${((tapsTraites / Math.max(1, tapsDemandes)) * 100).toFixed(1)} %`);
+console.log(`  plus longue file vide : ${pireSerie} s (finie à ${mn(pireSerieA)})`);

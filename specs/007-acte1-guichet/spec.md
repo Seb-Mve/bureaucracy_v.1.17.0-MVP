@@ -79,15 +79,15 @@ Au retour, le temps écoulé (plafonné à 2 h) est simulé avec les collègues 
 
 ## Rythme cible (vérifié par `scripts/simulate-acte1.ts`)
 
-Mesures du joueur-robot (achats immédiats, rejet toujours au maximum). Un joueur humain, qui lit et hésite, est estimé 1,3 à 1,5 fois plus lent.
+Mesures du joueur-robot (achats immédiats, rejet toujours au maximum), recalées par la spec 008 (demande abondante). Référence : 2 taps/s, fin de l'acte à 66 min. Un joueur humain, qui lit et hésite, est estimé 1,3 à 1,5 fois plus lent.
 
 | Jalon | Robot 1 tap/s | Robot 3 taps/s | Cible humaine |
 |---|---|---|---|
-| Premier collègue | 0,3 min | 0,2 min | 1 – 3 min |
-| Taux de rejet débloqué | 3,4 min | 2,3 min | 3 – 6 min |
-| Numérotation des usagers | 29 min | 20 min | 25 – 40 min |
-| Conformité révélée (audit) | 44 min | 38 min | 50 – 65 min |
-| Fin de l'acte | 71 min | 63 min | 85 – 100 min |
+| Premier collègue | 1,5 min | 0,5 min | 1 – 3 min |
+| Taux de rejet débloqué | 3,9 min | 1,4 min | 3 – 6 min |
+| Numérotation des usagers | 52 min | 25 min | 25 – 40 min |
+| Conformité révélée (audit) | 55 min | 28 min | 50 – 65 min |
+| Fin de l'acte | 88 min | 56 min | 85 – 100 min |
 
 ## Hors périmètre
 Actes II à VI, trombones et Réforme, Atelier des Procédures, notifications push. Aucune migration de l'ancienne sauvegarde.
