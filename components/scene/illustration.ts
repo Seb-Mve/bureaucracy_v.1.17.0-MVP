@@ -5,12 +5,14 @@
  */
 export const FOND_GUICHET = require('@/assets/scene/guichet-fond.png');
 export const BRAS_GUICHET = require('@/assets/scene/guichet-bras.png');
+/** Même bras, avec un contour inférieur et un coude arrondi : affiché quand il est levé. */
+export const BRAS_CONTOUR_GUICHET = require('@/assets/scene/guichet-bras-contour.png');
 
 /** Dimensions de l'image de fond (px). */
 const IMAGE = { largeur: 1152, hauteur: 768 };
 
 /** Calque du bras dans le repère de l'image (px), pivot en fraction du calque. */
-const BRAS = { x: 430.5, y: 382.5, largeur: 226, hauteur: 163, pivotX: 0.1163, pivotY: 0.318 };
+const BRAS = { x: 429, y: 383.25, largeur: 226, hauteur: 161, pivotX: 0.1225, pivotY: 0.3163 };
 
 /** Centre de l'empreinte sur le papier du bureau, à droite du tampon posé (px de l'image). */
 const EMPREINTE = { x: 668, y: 512 };

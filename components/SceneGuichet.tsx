@@ -11,7 +11,13 @@ import Animated, {
 import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Fonts } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
-import { BRAS_GUICHET, FOND_GUICHET, LEVEE, cadrerIllustration } from '@/components/scene/illustration';
+import {
+  BRAS_CONTOUR_GUICHET,
+  BRAS_GUICHET,
+  FOND_GUICHET,
+  LEVEE,
+  cadrerIllustration,
+} from '@/components/scene/illustration';
 
 /** Hauteur de la scène (pt). */
 const HAUTEUR_SCENE = 200;
@@ -97,6 +103,8 @@ export default function SceneGuichet() {
       { rotate: `${-bras.value * LEVEE.angle}deg` },
     ],
   }));
+  // Le contour du dessous n'existe pas sur l'illustration : il n'apparaît que bras levé.
+  const styleContour = useAnimatedStyle(() => ({ opacity: Math.min(1, bras.value * 4) }));
   const styleImage = useAnimatedStyle(() => ({
     transform: [{ translateY: secousse.value * 3 }, { scale: 1 + secousse.value * 0.012 }],
   }));
@@ -129,10 +137,10 @@ export default function SceneGuichet() {
       {largeur > 0 && verdict && <Empreinte key={verdict.id} rejete={verdict.rejete} position={positionEmpreinte} />}
 
       {largeur > 0 && (
-        <Animated.Image
-          source={BRAS_GUICHET}
-          style={[styles.calque, styles.bras, cadres.bras, styleBras]}
-        />
+        <Animated.View style={[styles.calque, styles.bras, cadres.bras, styleBras]}>
+          <Image source={BRAS_GUICHET} style={styles.plein} />
+          <Animated.Image source={BRAS_CONTOUR_GUICHET} style={[styles.plein, styleContour]} />
+        </Animated.View>
       )}
     </Panneau>
   );
@@ -151,6 +159,13 @@ const styles = StyleSheet.create({
   },
   bras: {
     zIndex: 3,
+  },
+  plein: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
   },
   bulle: {
     position: 'absolute',
