@@ -103,6 +103,28 @@ export function dossiersEnAttente(s: GameState): number {
   return somme(s.file);
 }
 
+/** Dossiers arrivant au guichet par seconde : nouvelles demandes + retours de rejetés. */
+export function fluxEntrant(s: GameState, m: Modifiers): number {
+  const inactifs = Math.max(0, s.population - somme(s.file) - somme(s.retours));
+  const delai = BALANCE.delaiRetour * m.delaiRetourMult;
+  return inactifs * BALANCE.demandeRate * m.demandeMult + somme(s.retours) / delai;
+}
+
+/** Débit maximal de demandes que le périmètre peut produire (file vide). */
+export function plafondDemande(s: GameState, m: Modifiers): number {
+  return s.population * BALANCE.demandeRate * m.demandeMult;
+}
+
+/**
+ * Vrai quand la capacité des collègues approche le plafond de demande.
+ * Hystérésis : on entre à `saturationEntree`, on sort sous `saturationSortie`.
+ */
+export function saturation(precedent: boolean, capacite: number, plafond: number): boolean {
+  if (plafond <= 0) return capacite > 0;
+  const ratio = capacite / plafond;
+  return ratio >= (precedent ? BALANCE.saturationSortie : BALANCE.saturationEntree);
+}
+
 export function coutAgent(id: AgentId, possedes: number): number {
   const def = AGENTS.find((a) => a.id === id);
   if (!def) return Infinity;

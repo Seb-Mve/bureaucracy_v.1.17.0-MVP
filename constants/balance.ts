@@ -8,12 +8,19 @@ export const BALANCE = {
   /** Dossiers en retard au premier lancement. */
   fileInitiale: 30,
   populationInitiale: 100,
-  /** Demandes par seconde et par usager inactif. */
-  demandeRate: 1 / 60,
+  /**
+   * Demandes par seconde et par usager inactif. Assez élevé pour que la file
+   * reste abondante : le frein est la capacité de traitement, pas la demande.
+   */
+  demandeRate: 1 / 8,
   /** Nouveaux habitants par seconde, en fraction de la place libre du périmètre. */
   installationRate: 1 / 120,
   /** Délai moyen avant le retour d'un usager rejeté (s). */
   delaiRetour: 20,
+  /** Capacité des collègues / plafond de demande à partir duquel on alerte. */
+  saturationEntree: 0.8,
+  /** Seuil de fin d'alerte (hystérésis, pour éviter le clignotement). */
+  saturationSortie: 0.7,
   /** Budget reçu par dossier traité (€). */
   dotation: 1,
   budgetInitial: 0,
