@@ -8,14 +8,27 @@ import * as E from '@/data/engine';
 import { NOTES_PAR_ID, type NoteDef } from '@/data/notes';
 import { nouvellesLettres, lettreAbsence } from '@/data/courrier';
 import { teteDeFile, type UsagerAffiche } from '@/data/usagers';
-import { CLE_SAUVEGARDE, estSauvegardeValide } from '@/data/save';
+import { CLE_SAUVEGARDE, estSauvegardeValide, normaliserSauvegarde } from '@/data/save';
+import { ordreDuJour, type Consigne, type Onglet } from '@/data/ordreDuJour';
+import { circulaireAAfficher, type CirculaireDef } from '@/data/circulaires';
 import { formatEntier } from '@/utils/formatters';
 
-export type { UsagerAffiche };
+export type { UsagerAffiche, Consigne, Onglet, CirculaireDef };
 
 const INTERVALLE = 100;
 /** Au-delà de cet écart entre deux ticks, on considère une absence (onglet en veille). */
 const SEUIL_ABSENCE = 30_000;
+/** Fenêtre de calcul du débit des taps (ms). */
+const FENETRE_TAPS = 5000;
+
+export interface Flux {
+  /** Dossiers arrivant par seconde. */
+  arrivees: number;
+  /** Dossiers traités par seconde : collègues + taps récents. */
+  traitement: number;
+  /** Les collègues approchent le plafond de demande du périmètre. */
+  sature: boolean;
+}
 
 export type StatutNote = 'disponible' | 'tropCher' | 'instruction' | 'effective';
 
@@ -30,6 +43,11 @@ export interface AgentAffiche extends AgentDef {
   possedes: number;
   cout: number;
   achetable: boolean;
+  /** Dossiers/s gagnés avec le prochain recrutement (palier compris). */
+  gain: number;
+  /** Multiplicateur d'ancienneté actuel (×1, ×2, ×4, ×8). */
+  multiplicateur: number;
+  prochainPalier: number | null;
 }
 
 export interface Verdict {
@@ -55,6 +73,9 @@ interface GameContextType {
   prixRamette: number;
   lettresNonLues: number;
   verdict: Verdict | null;
+  flux: Flux;
+  consigne: Consigne | null;
+  circulaire: CirculaireDef | null;
   tamponner: () => GameEvents;
   acheterAgent: (id: AgentId) => void;
   acheterRamettes: (nb: number) => void;
@@ -66,6 +87,7 @@ interface GameContextType {
   marquerLettresLues: () => void;
   marquerFinActeVue: () => void;
   marquerFichePoste: (vue: boolean) => void;
+  marquerCirculaireVue: (id: string) => void;
   nouvellePartie: () => void;
 }
 
@@ -103,6 +125,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const rejetAcc = useRef(0);
   const verdictId = useRef(0);
   const sauvegardeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tapsRecents = useRef<{ t: number; n: number }[]>([]);
+  const satureRef = useRef(false);
 
   const appliquer = useCallback((s: GameState) => {
     etatRef.current = s;
@@ -119,7 +143,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         const brut = await AsyncStorage.getItem(CLE_SAUVEGARDE);
         if (brut) {
           const lu: unknown = JSON.parse(brut);
-          if (estSauvegardeValide(lu)) s = rattraperAbsence(lu, maintenant);
+          if (estSauvegardeValide(lu)) s = rattraperAbsence(normaliserSauvegarde(lu, maintenant), maintenant);
         }
       } catch {
         // Sauvegarde corrompue : nouvelle partie.
@@ -172,8 +196,10 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
   const tamponner = useCallback((): GameEvents => {
     const avant = teteDeFile(etatRef.current, 1)[0] ?? null;
-    const r = E.tamponner(etatRef.current, Date.now());
+    const t = Date.now();
+    const r = E.tamponner(etatRef.current, t);
     if (r.ev.traites > 0) {
+      tapsRecents.current = [...tapsRecents.current.filter((x) => t - x.t < FENETRE_TAPS), { t, n: r.ev.traites }];
       rejetAcc.current += r.ev.rejetes;
       const rejete = rejetAcc.current >= 0.999;
       if (rejete) rejetAcc.current -= 1;
@@ -254,8 +280,19 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     [appliquer],
   );
 
+  const marquerCirculaireVue = useCallback(
+    (id: string) => {
+      const s = etatRef.current;
+      if (s.circulairesVues.includes(id)) return;
+      appliquer({ ...s, circulairesVues: [...s.circulairesVues, id] });
+    },
+    [appliquer],
+  );
+
   const nouvellePartie = useCallback(() => {
     rejetAcc.current = 0;
+    tapsRecents.current = [];
+    satureRef.current = false;
     setVerdict(null);
     appliquer(E.etatInitial(Date.now()));
   }, [appliquer]);
@@ -283,11 +320,33 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const agents = useMemo<AgentAffiche[]>(
     () =>
       AGENTS.filter((a) => mods.agentsDisponibles.includes(a.id)).map((a) => {
-        const cout = E.coutAgent(a.id, etat.agents[a.id]);
-        return { ...a, possedes: etat.agents[a.id], cout, achetable: etat.budget >= cout };
+        const possedes = etat.agents[a.id];
+        const cout = E.coutAgent(a.id, possedes);
+        return {
+          ...a,
+          possedes,
+          cout,
+          achetable: etat.budget >= cout,
+          gain: E.gainAgent(etat, a.id, mods),
+          multiplicateur: E.multiplicateurAnciennete(possedes),
+          prochainPalier: E.prochainPalier(possedes),
+        };
       }),
     [etat, mods],
   );
+
+  const vitesse = useMemo(() => E.vitesseCollegues(etat, mods), [etat, mods]);
+
+  const flux = useMemo<Flux>(() => {
+    const recents = tapsRecents.current.filter((x) => maintenant - x.t < FENETRE_TAPS);
+    const parTaps = recents.reduce((acc, x) => acc + x.n, 0) / (FENETRE_TAPS / 1000);
+    const sature = E.saturation(satureRef.current, vitesse, E.plafondDemande(etat, mods));
+    satureRef.current = sature;
+    return { arrivees: E.fluxEntrant(etat, mods), traitement: vitesse + parTaps, sature };
+  }, [etat, mods, maintenant, vitesse]);
+
+  const consigne = useMemo(() => ordreDuJour(etat, mods), [etat, mods]);
+  const circulaire = useMemo(() => circulaireAAfficher(etat, mods), [etat, mods]);
 
   const valeur = useMemo<GameContextType>(
     () => ({
@@ -296,7 +355,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       mods,
       maintenant,
       enAttente: E.dossiersEnAttente(etat),
-      vitesse: E.vitesseCollegues(etat, mods),
+      vitesse,
       perimetre: E.perimetre(etat, maintenant),
       conformite: E.conformite(etat),
       tete: teteDeFile(etat),
@@ -306,6 +365,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       prixRamette: E.prixRamette(mods),
       lettresNonLues: etat.courrier.filter((l) => !l.lue).length,
       verdict,
+      flux,
+      consigne,
+      circulaire,
       tamponner,
       acheterAgent,
       acheterRamettes,
@@ -317,12 +379,14 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       marquerLettresLues,
       marquerFinActeVue,
       marquerFichePoste,
+      marquerCirculaireVue,
       nouvellePartie,
     }),
     [
-      pret, etat, mods, maintenant, notes, agents, verdict, tamponner, acheterAgent, acheterRamettes,
-      reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa, deposerDemission, marquerLettresLues,
-      marquerFinActeVue, marquerFichePoste, nouvellePartie,
+      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, flux, consigne, circulaire, tamponner,
+      acheterAgent, acheterRamettes, reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa,
+      deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste, marquerCirculaireVue,
+      nouvellePartie,
     ],
   );
 
