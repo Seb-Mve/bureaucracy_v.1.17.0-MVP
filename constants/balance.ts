@@ -54,13 +54,13 @@ export const AGENTS: AgentDef[] = [
   {
     id: 'stagiaire',
     nom: 'Stagiaire',
-    description: "Motivé, non rémunéré, ne sait pas où est l'agrafeuse.",
+    description: "Motivé, non rémunéré, ne sait pas où est l’agrafeuse.",
     vitesse: 0.1,
     coutBase: 20,
   },
   {
     id: 'accueil',
-    nom: "Agent d'accueil",
+    nom: "Agent d’accueil",
     description: 'Sourit par délégation.',
     vitesse: 0.5,
     coutBase: 85,
