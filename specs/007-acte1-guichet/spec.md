@@ -34,6 +34,8 @@ En 90 minutes environ, le joueur découvre qu'une administration financée à l'
 
 Conséquence voulue : quand le guichet traite plus vite que la demande (milieu d'acte), **rejeter multiplie le nombre de dossiers**, donc le budget. C'est la découverte centrale de l'acte.
 
+> **Révisé par la spec 008** : la demande est désormais abondante. Rejeter ne multiplie plus le nombre de dossiers ; un dossier rejeté rapporte plus (prime de rejet dès la note n° 2) et produit de la Conformité.
+
 ## Parcours joueur
 
 ### US1 — Le Cerfa d'embauche (P1)

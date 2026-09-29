@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **BUREAUCRACY++** is a satirical French incremental/idle mobile game built with React Native + Expo. The game is being rebuilt as a 6-act arc (see the design document); the code currently implements **Act I — Le Guichet** (spec: `specs/007-acte1-guichet/spec.md`).
 
-Act I loop: usagers file dossiers at the guichet; the player taps TAMPONNER (and hires collègues) to process them; each processed dossier consumes formulaires and pays a dotation. A player-set **Taux de rejet** sends usagers back (more dossiers, more budget, hidden Conformité) until their patience runs out and they abandon. Notes de service (projects) drip-feed mechanics. The act ends when Conformité reaches 100 %.
+Act I loop: usagers file dossiers at the guichet; the player taps TAMPONNER (and hires collègues) to process them; each processed dossier consumes formulaires and pays a dotation. Demand is abundant (the queue rarely empties): the bottleneck is processing capacity and formulaires. A player-set **Taux de rejet** sends usagers back; a rejected dossier pays a bonus (prime de rejet) and raises hidden Conformité, but usagers who run out of patience abandon, shrinking future demand. Collègues double their speed at 10/25/50 copies (ancienneté). An **Ordre du jour** banner and one-off **circulaires** guide the first minutes (spec 008). Notes de service (projects) drip-feed mechanics. The act ends when Conformité reaches 100 %.
 
 - Language: TypeScript (strict mode)
 - Platform: React Native / Expo 53, portrait only
@@ -21,10 +21,11 @@ npm run dev                              # Start Expo dev server (i=iOS, a=Andro
 npm run build:web                        # Export static web build to dist/
 npm run lint                             # Run ESLint via expo lint
 ./node_modules/.bin/tsc --noEmit -p .    # Type-check (scripts/ and specs/ are excluded)
+npm test                                 # Unit tests of data/ (node:test, scripts/tests/*.test.ts)
 node scripts/simulate-acte1.ts [taps/s] [minutes]   # Balance simulator: bot player, prints milestones
 ```
 
-There is no automated test suite. Balance changes must be checked with the simulator (target: bot finishes Act I in ~60–75 min, i.e. ~85–100 min for a human).
+Pure data-layer logic is covered by `npm test` (Node's built-in test runner, no dependency). Balance changes must be checked with the simulator (target: bot finishes Act I in ~60–75 min, i.e. ~85–100 min for a human).
 
 **iCloud warning:** the repo lives in an iCloud-synced `Documents` folder. If npm, tsc or Metro hang with 0 % CPU, macOS has probably evicted files from `node_modules` (`ls -lO` shows `dataless`). Fix: `rm -rf node_modules && npm ci`. Metro's file watcher may also miss edits: restart with `npx expo start --clear`.
 
@@ -56,7 +57,9 @@ Components must never import from `data/`. Everything goes through `useGameState
 | `data/notes.ts` | The 22 Notes de service: text, cost, instruction delay, visibility condition, effect on `Modifiers` |
 | `data/courrier.ts` | S.I.C. letters and their triggers, absence summary letter |
 | `data/usagers.ts` | Deterministic usager identities (name, request, mood) for the queue display |
-| `data/save.ts` | Storage key and save validation |
+| `data/save.ts` | Storage key, save validation and normalization of older saves |
+| `data/ordreDuJour.ts` | Current objective shown in the guichet banner |
+| `data/circulaires.ts` | One-off explanations shown when a mechanic unlocks |
 | `constants/balance.ts` | All tuning numbers (`BALANCE`) and collègue definitions (`AGENTS`) |
 | `utils/formatters.ts` | `formatEntier` (counts), `formatEuros` (money), `formatNumberFrench` (rates) |
 
