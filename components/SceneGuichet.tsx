@@ -11,8 +11,8 @@ import Animated, {
 import { useGameState, type Verdict } from '@/context/GameStateContext';
 import Colors, { Charte, Fonts } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
-import DossierCarte from '@/components/scene/DossierCarte';
-import { BRAS_GUICHET, FOND_GUICHET, LEVEE, cadrerIllustration } from '@/components/scene/illustration';
+import DossierCarte, { CARTE_DOSSIER } from '@/components/scene/DossierCarte';
+import { BRAS_GUICHET, FOND_GUICHET, LEVEE, cadrerIllustration, type Cadre } from '@/components/scene/illustration';
 
 /** Hauteur de la scène (pt). */
 const HAUTEUR_SCENE = 200;
@@ -22,9 +22,27 @@ const LEVEE_MS = 80;
 const DESCENTE = 90;
 /** Instant de l'impact sur le dossier (ms). */
 const IMPACT = LEVEE_MS + DESCENTE;
+/** Marge minimale entre la carte du dossier et le bord de la scène (pt). */
+const MARGE_CARTE = 6;
+
+/** Place la carte pour que son empreinte tombe sous le tampon, sans sortir de la scène. */
+function placerCarte(impact: { x: number; y: number }, largeurScene: number): Pick<Cadre, 'left' | 'top'> {
+  const left = impact.x - CARTE_DOSSIER.empreinteX;
+  const top = impact.y - CARTE_DOSSIER.empreinteY;
+  return {
+    left: Math.max(MARGE_CARTE, Math.min(largeurScene - CARTE_DOSSIER.largeur - MARGE_CARTE, left)),
+    top: Math.min(HAUTEUR_SCENE - CARTE_DOSSIER.hauteur - MARGE_CARTE, top),
+  };
+}
 
 /** Le dossier qui vient d'être tamponné : il reçoit l'empreinte puis quitte le bureau. */
-const DossierSortant = memo(function DossierSortant({ verdict, numerote }: { verdict: Verdict; numerote: boolean }) {
+interface DossierSortantProps {
+  verdict: Verdict;
+  numerote: boolean;
+  position: Pick<Cadre, 'left' | 'top'>;
+}
+
+const DossierSortant = memo(function DossierSortant({ verdict, numerote, position }: DossierSortantProps) {
   const opacite = useSharedValue(0);
   const x = useSharedValue(0);
   const sens = verdict.rejete ? -1 : 1;
@@ -43,7 +61,7 @@ const DossierSortant = memo(function DossierSortant({ verdict, numerote }: { ver
   }));
 
   return (
-    <Animated.View style={[styles.dossier, styles.sortant, style]} pointerEvents="none">
+    <Animated.View style={[styles.dossier, position, styles.sortant, style]} pointerEvents="none">
       <DossierCarte usager={verdict.usager} numerote={numerote} empreinte={verdict.rejete ? 'rejete' : 'accepte'} />
     </Animated.View>
   );
@@ -57,6 +75,7 @@ export default function SceneGuichet() {
   const [largeur, setLargeur] = useState(0);
   const surLayout = useCallback((e: LayoutChangeEvent) => setLargeur(e.nativeEvent.layout.width), []);
   const cadres = useMemo(() => cadrerIllustration(largeur, HAUTEUR_SCENE), [largeur]);
+  const positionCarte = useMemo(() => placerCarte(cadres.impact, largeur), [cadres, largeur]);
 
   /** 0 = bras posé sur le dossier, 1 = bras levé. */
   const bras = useSharedValue(0);
@@ -110,15 +129,19 @@ export default function SceneGuichet() {
         </Text>
       </View>
 
-      <View style={styles.dossier} pointerEvents="none">
-        <DossierCarte usager={premier} numerote={mods.numerotation} />
-      </View>
-      {verdict?.usager && <DossierSortant key={verdict.id} verdict={verdict} numerote={mods.numerotation} />}
+      {largeur > 0 && (
+        <View style={[styles.dossier, positionCarte]} pointerEvents="none">
+          <DossierCarte usager={premier} numerote={mods.numerotation} />
+        </View>
+      )}
+      {largeur > 0 && verdict?.usager && (
+        <DossierSortant key={verdict.id} verdict={verdict} numerote={mods.numerotation} position={positionCarte} />
+      )}
 
       {largeur > 0 && (
         <Animated.Image
           source={BRAS_GUICHET}
-          style={[styles.calque, cadres.bras, styleBras]}
+          style={[styles.calque, styles.bras, cadres.bras, styleBras]}
         />
       )}
     </Panneau>
@@ -135,6 +158,9 @@ const styles = StyleSheet.create({
   },
   calque: {
     position: 'absolute',
+  },
+  bras: {
+    zIndex: 3,
   },
   bulle: {
     position: 'absolute',
@@ -155,10 +181,6 @@ const styles = StyleSheet.create({
   },
   dossier: {
     position: 'absolute',
-    bottom: 10,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
     transform: [{ rotate: '-3deg' }],
   },
   sortant: {

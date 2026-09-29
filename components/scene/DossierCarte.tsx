@@ -10,6 +10,9 @@ interface DossierCarteProps {
   empreinte?: 'accepte' | 'rejete';
 }
 
+/** Dimensions de la carte et centre de l'empreinte du tampon (pt, repère de la carte). */
+export const CARTE_DOSSIER = { largeur: 158, hauteur: 64, empreinteX: 113, empreinteY: 17 };
+
 /** Le dossier posé sur le bureau : c'est lui que l'on tamponne. */
 function DossierCarte({ usager, numerote, empreinte }: DossierCarteProps) {
   if (!usager) {
@@ -44,8 +47,8 @@ export default memo(DossierCarte);
 
 const styles = StyleSheet.create({
   carte: {
-    width: 158,
-    height: 64,
+    width: CARTE_DOSSIER.largeur,
+    height: CARTE_DOSSIER.hauteur,
     backgroundColor: '#FFFEF9',
     borderWidth: 2,
     borderColor: Colors.anthracite,
@@ -81,8 +84,8 @@ const styles = StyleSheet.create({
   },
   empreinte: {
     position: 'absolute',
-    right: 6,
-    top: 14,
+    right: 2,
+    top: 2,
     borderWidth: 3,
     borderRadius: 6,
     paddingHorizontal: 5,
