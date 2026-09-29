@@ -127,6 +127,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const sauvegardeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tapsRecents = useRef<{ t: number; n: number }[]>([]);
   const satureRef = useRef(false);
+  const debitCollegues = useRef(0);
 
   const appliquer = useCallback((s: GameState) => {
     etatRef.current = s;
@@ -175,10 +176,15 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       const s0 = etatRef.current;
       if (!s0.cerfa.signe) return;
       const ecart = maintenant - s0.derniereMaj;
-      const s1 =
-        ecart > SEUIL_ABSENCE
-          ? rattraperAbsence(s0, maintenant)
-          : E.tick(s0, Math.max(0, ecart) / 1000, maintenant).s;
+      let s1: GameState;
+      if (ecart > SEUIL_ABSENCE) {
+        s1 = rattraperAbsence(s0, maintenant);
+      } else {
+        const dt = Math.max(0, ecart) / 1000;
+        const r = E.tick(s0, dt, maintenant);
+        if (dt > 0) debitCollegues.current = debitCollegues.current * 0.8 + (r.ev.traites / dt) * 0.2;
+        s1 = r.s;
+      }
       appliquer(distribuerCourrier(s1, maintenant));
     }, INTERVALLE);
     return () => clearInterval(id);
@@ -293,6 +299,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     rejetAcc.current = 0;
     tapsRecents.current = [];
     satureRef.current = false;
+    debitCollegues.current = 0;
     setVerdict(null);
     appliquer(E.etatInitial(Date.now()));
   }, [appliquer]);
@@ -342,7 +349,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     const parTaps = recents.reduce((acc, x) => acc + x.n, 0) / (FENETRE_TAPS / 1000);
     const sature = E.saturation(satureRef.current, vitesse, E.plafondDemande(etat, mods));
     satureRef.current = sature;
-    return { arrivees: E.fluxEntrant(etat, mods), traitement: vitesse + parTaps, sature };
+    return { arrivees: E.fluxEntrant(etat, mods), traitement: debitCollegues.current + parTaps, sature };
   }, [etat, mods, maintenant, vitesse]);
 
   const consigne = useMemo(() => ordreDuJour(etat, mods), [etat, mods]);

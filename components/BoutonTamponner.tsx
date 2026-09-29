@@ -42,7 +42,7 @@ export default function BoutonTamponner() {
 
   const rupture = etat.formulaires < mods.pieces;
   const vide = enAttente < 1;
-  const libelle = rupture ? "RUPTURE D'IMPRIMÉS" : vide ? 'AUCUN DOSSIER' : 'TAMPONNER';
+  const libelle = rupture ? 'RUPTURE D’IMPRIMÉS' : vide ? 'AUCUN DOSSIER' : 'TAMPONNER';
 
   const surAppui = useCallback(() => {
     const ev = tamponner();
