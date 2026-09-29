@@ -49,7 +49,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Rappel : tout dossier incomplet doit être rejeté',
     texte:
       "Il est rappelé qu’un dossier n’est jamais complet. L’appréciation du caractère incomplet relève de l’agent.",
-    effet: 'Débloque le Taux de rejet (jusqu’à 50 %).',
+    effet: 'Débloque le Taux de rejet (jusqu’à 50 %) et l’agent d’accueil. Dossiers rejetés : dotation +20 %.',
     cout: 0,
     instruction: 0,
     visible: (s) => s.tampons >= 250,

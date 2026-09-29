@@ -33,7 +33,7 @@ test('la file ne devient jamais négative', () => {
   }
 });
 
-test('formatEntier n\'affiche jamais de valeur négative', () => {
+test('formatEntier n’affiche jamais de valeur négative', () => {
   assert.equal(formatEntier(-1e-15), '0');
   assert.equal(formatEntier(-3), '0');
   assert.equal(formatEntier(12.7), '12');
@@ -76,7 +76,7 @@ test('saturation avec hystérésis 80 % / 70 %', () => {
   assert.equal(E.saturation(false, 1, 0), true);
 });
 
-test('multiplicateur et prochain palier d\'ancienneté', () => {
+test('multiplicateur et prochain palier d’ancienneté', () => {
   assert.equal(E.multiplicateurAnciennete(9), 1);
   assert.equal(E.multiplicateurAnciennete(10), 2);
   assert.equal(E.multiplicateurAnciennete(25), 4);
@@ -108,7 +108,7 @@ test('la note n° 1 ne débloque que le stagiaire', () => {
   assert.deepEqual(m.agentsDisponibles, ['stagiaire']);
 });
 
-test("la note n° 2 débloque l'agent d'accueil et une prime de rejet de 20 %", () => {
+test('la note n° 2 débloque l’agent d’accueil et une prime de rejet de 20 %', () => {
   const m = E.getModifiers(avecNotes(base(), ['renfort', 'rejet']), 0);
   assert.ok(m.agentsDisponibles.includes('accueil'));
   assert.ok(Math.abs(m.primeRejet - 0.2) < 1e-9);
