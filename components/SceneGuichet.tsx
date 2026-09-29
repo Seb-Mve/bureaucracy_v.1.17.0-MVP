@@ -1,5 +1,5 @@
-import React, { memo, useEffect } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Image, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -11,13 +11,17 @@ import Animated, {
 import { useGameState, type Verdict } from '@/context/GameStateContext';
 import Colors, { Charte, Fonts } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
-import TamponSvg from '@/components/scene/TamponSvg';
 import DossierCarte from '@/components/scene/DossierCarte';
+import { BRAS_GUICHET, FOND_GUICHET, LEVEE, cadrerIllustration } from '@/components/scene/illustration';
 
-const ILLUSTRATION = require('@/assets/carousel-images/administration_centrale_bureaucracy_carousel.png');
-
+/** Hauteur de la scène (pt). */
+const HAUTEUR_SCENE = 200;
+/** Durée de la levée du bras (ms). */
+const LEVEE_MS = 80;
 /** Durée de la descente du tampon jusqu'à l'impact (ms). */
 const DESCENTE = 90;
+/** Instant de l'impact sur le dossier (ms). */
+const IMPACT = LEVEE_MS + DESCENTE;
 
 /** Le dossier qui vient d'être tamponné : il reçoit l'empreinte puis quitte le bureau. */
 const DossierSortant = memo(function DossierSortant({ verdict, numerote }: { verdict: Verdict; numerote: boolean }) {
@@ -27,10 +31,10 @@ const DossierSortant = memo(function DossierSortant({ verdict, numerote }: { ver
 
   useEffect(() => {
     opacite.value = withSequence(
-      withDelay(DESCENTE, withTiming(1, { duration: 0 })),
+      withDelay(IMPACT, withTiming(1, { duration: 0 })),
       withDelay(520, withTiming(0, { duration: 220 })),
     );
-    x.value = withDelay(DESCENTE + 300, withTiming(sens * 230, { duration: 420, easing: Easing.in(Easing.quad) }));
+    x.value = withDelay(IMPACT + 300, withTiming(sens * 230, { duration: 420, easing: Easing.in(Easing.quad) }));
   }, [opacite, x, sens]);
 
   const style = useAnimatedStyle(() => ({
@@ -45,31 +49,36 @@ const DossierSortant = memo(function DossierSortant({ verdict, numerote }: { ver
   );
 });
 
-/** Scène du guichet : l'agent, le dossier sur le bureau et le tampon qui s'abat à chaque tap. */
+/** Scène du guichet : l'agent, le dossier sur le bureau et le bras qui tamponne à chaque tap. */
 export default function SceneGuichet() {
   const { tete, mods, verdict } = useGameState();
   const premier = tete[0] ?? null;
 
-  const tampon = useSharedValue(0);
+  const [largeur, setLargeur] = useState(0);
+  const surLayout = useCallback((e: LayoutChangeEvent) => setLargeur(e.nativeEvent.layout.width), []);
+  const cadres = useMemo(() => cadrerIllustration(largeur, HAUTEUR_SCENE), [largeur]);
+
+  /** 0 = bras posé sur le dossier, 1 = bras levé. */
+  const bras = useSharedValue(0);
   const secousse = useSharedValue(0);
 
   useEffect(() => {
     if (!verdict) return;
-    tampon.value = withSequence(
-      withTiming(1, { duration: DESCENTE, easing: Easing.in(Easing.quad) }),
-      withDelay(70, withTiming(0, { duration: 220, easing: Easing.out(Easing.quad) })),
+    bras.value = withSequence(
+      withTiming(1, { duration: LEVEE_MS, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: DESCENTE, easing: Easing.in(Easing.quad) }),
     );
     secousse.value = withSequence(
-      withDelay(DESCENTE, withTiming(1, { duration: 40 })),
+      withDelay(IMPACT, withTiming(1, { duration: 40 })),
       withTiming(0, { duration: 160 }),
     );
-  }, [verdict, tampon, secousse]);
+  }, [verdict, bras, secousse]);
 
-  const styleTampon = useAnimatedStyle(() => ({
+  const echelle = cadres.echelle;
+  const styleBras = useAnimatedStyle(() => ({
     transform: [
-      { translateX: -tampon.value * 38 },
-      { translateY: tampon.value * 38 },
-      { rotate: `${12 - tampon.value * 12}deg` },
+      { translateY: -bras.value * LEVEE.remontee * echelle + secousse.value * 3 },
+      { rotate: `${-bras.value * LEVEE.angle}deg` },
     ],
   }));
   const styleImage = useAnimatedStyle(() => ({
@@ -85,13 +94,14 @@ export default function SceneGuichet() {
 
   return (
     <Panneau style={styles.cadre} contenuStyle={styles.contenu} rayon={18}>
-      <Animated.View style={[StyleSheet.absoluteFill, styleImage]}>
-        <Image
-          source={ILLUSTRATION}
-          style={styles.image}
-          resizeMode="cover"
-          accessibilityLabel="Le guichet 3 : un agent derrière son bureau, entouré de piles de dossiers"
-        />
+      <Animated.View style={[StyleSheet.absoluteFill, styleImage]} onLayout={surLayout}>
+        {largeur > 0 && (
+          <Image
+            source={FOND_GUICHET}
+            style={[styles.calque, cadres.fond]}
+            accessibilityLabel="Le guichet 3 : un agent derrière son bureau, entouré de piles de dossiers"
+          />
+        )}
       </Animated.View>
 
       <View style={styles.bulle}>
@@ -105,9 +115,12 @@ export default function SceneGuichet() {
       </View>
       {verdict?.usager && <DossierSortant key={verdict.id} verdict={verdict} numerote={mods.numerotation} />}
 
-      <Animated.View style={[styles.tampon, styleTampon]} pointerEvents="none">
-        <TamponSvg taille={58} />
-      </Animated.View>
+      {largeur > 0 && (
+        <Animated.Image
+          source={BRAS_GUICHET}
+          style={[styles.calque, cadres.bras, styleBras]}
+        />
+      )}
     </Panneau>
   );
 }
@@ -117,12 +130,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   contenu: {
-    height: 200,
+    height: HAUTEUR_SCENE,
     backgroundColor: '#FDE7B8',
   },
-  image: {
-    width: '100%',
-    height: '100%',
+  calque: {
+    position: 'absolute',
   },
   bulle: {
     position: 'absolute',
@@ -151,11 +163,5 @@ const styles = StyleSheet.create({
   },
   sortant: {
     zIndex: 2,
-  },
-  tampon: {
-    position: 'absolute',
-    bottom: 78,
-    right: '14%',
-    zIndex: 3,
   },
 });
