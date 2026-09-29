@@ -126,7 +126,7 @@ export function lettreAbsence(
   return {
     id: `absence-${maintenant}`,
     objet: 'Pendant votre absence',
-    corps: `Pendant votre absence (${duree}), le guichet 3 a traité ${format(traites)} dossiers et perçu ${format(budget)} € de dotation.\n\nVotre présence n’a pas été jugée nécessaire.`,
+    corps: `Pendant votre absence (${duree}), le guichet 3 a traité ${format(traites)} dossiers et perçu ${format(budget)} € de dotation.\n\nAucun dossier n’a été rejeté : la rigueur ne se délègue pas.\n\nVotre présence n’a pas été jugée nécessaire.`,
     recue: maintenant,
     lue: false,
   };

@@ -127,3 +127,16 @@ test('la note n° 2 débloque l’agent d’accueil et une prime de rejet de 20 
   const m2 = E.getModifiers(avecNotes(base(), ['renfort', 'rejet', 'prime']), 0);
   assert.ok(Math.abs(m2.primeRejet - 0.7) < 1e-9);
 });
+
+test('hors-ligne, les collègues traitent sans rejeter ni produire de Conformité', () => {
+  let s = avecNotes(base(), ['renfort', 'rejet', 'piece']);
+  s = { ...s, agents: { stagiaire: 10, accueil: 4, instructeur: 0, titulaire: 0 } };
+  s = { ...E.reglerTauxRejet(s, 0.5, 0), derniereMaj: 0 };
+  const r = E.simulerAbsence(s, 600_000);
+  assert.ok(r.traites > 100, `traités = ${r.traites}`);
+  assert.ok(r.budget > 0);
+  assert.equal(r.s.conformitePoints, s.conformitePoints);
+  assert.equal(r.s.stats.rejetes, s.stats.rejetes);
+  assert.equal(r.s.abandons, s.abandons);
+  assert.equal(r.s.tauxRejet, 0.5, 'le réglage du joueur est conservé');
+});

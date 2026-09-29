@@ -45,7 +45,7 @@ Components must never import from `data/`. Everything goes through `useGameState
 ### GameStateContext (`context/GameStateContext.tsx`)
 
 - **Game loop:** `setInterval` at 100 ms, calls `tick(state, dt)`; a gap > 30 s (backgrounded tab) is treated as an absence.
-- **Offline progress:** `simulerAbsence` runs 1 s ticks with collègues only (capped at 2 h) and posts a courrier letter.
+- **Offline progress:** `simulerAbsence` runs 1 s ticks with collègues only, without rejection or Conformité gain (capped at 2 h) and posts a courrier letter.
 - **Save:** debounced 1 s to AsyncStorage, plus immediate save when the app goes to background.
 - **Courrier:** `nouvellesLettres` is checked every tick; each letter is sent once (`lettresEnvoyees`).
 

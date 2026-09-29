@@ -292,7 +292,10 @@ export function tick(
     }
   }
 
-  return traiter(s, vitesseCollegues(s, m) * dt, m);
+  // Hors-ligne, les collègues traitent sans rejeter ni exiger de pièces pour la
+  // Conformité : le zèle ne compte que devant témoin.
+  const mTraitement = enJeu ? m : { ...m, rejetMax: 0, confPieceMult: 0 };
+  return traiter(s, vitesseCollegues(s, m) * dt, mTraitement);
 }
 
 /** Un tap sur TAMPONNER. */
@@ -376,7 +379,7 @@ export function deposerDemission(s: GameState, maintenant: number): GameState {
 }
 
 /**
- * Simule une absence avec les collègues seuls, par pas d'une seconde,
+ * Simule une absence avec les collègues seuls (sans rejet ni Conformité), par pas d’une seconde,
  * plafonnée à BALANCE.horsLigneMax.
  */
 export function simulerAbsence(
