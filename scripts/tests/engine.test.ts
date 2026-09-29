@@ -102,3 +102,16 @@ test('à prix de base, chaque rang est plus rentable que le précédent', async 
     assert.ok(cour < prec, `${AGENTS[i].id} : ${cour} €/(d/s) ≥ ${prec}`);
   }
 });
+
+test('la note n° 1 ne débloque que le stagiaire', () => {
+  const m = E.getModifiers(avecNotes(base(), ['renfort']), 0);
+  assert.deepEqual(m.agentsDisponibles, ['stagiaire']);
+});
+
+test("la note n° 2 débloque l'agent d'accueil et une prime de rejet de 20 %", () => {
+  const m = E.getModifiers(avecNotes(base(), ['renfort', 'rejet']), 0);
+  assert.ok(m.agentsDisponibles.includes('accueil'));
+  assert.ok(Math.abs(m.primeRejet - 0.2) < 1e-9);
+  const m2 = E.getModifiers(avecNotes(base(), ['renfort', 'rejet', 'prime']), 0);
+  assert.ok(Math.abs(m2.primeRejet - 0.7) < 1e-9);
+});

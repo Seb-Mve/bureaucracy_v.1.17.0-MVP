@@ -40,7 +40,7 @@ export const NOTES: NoteDef[] = [
     visible: (s) => s.tampons >= 8,
     appliquer: (m) => {
       m.recrutementVisible = true;
-      m.agentsDisponibles.push('stagiaire', 'accueil');
+      m.agentsDisponibles.push('stagiaire');
     },
   },
   {
@@ -56,6 +56,8 @@ export const NOTES: NoteDef[] = [
     appliquer: (m) => {
       m.rejetVisible = true;
       m.rejetMax = Math.max(m.rejetMax, 0.5);
+      m.primeRejet += 0.2;
+      m.agentsDisponibles.push('accueil');
     },
   },
   {
