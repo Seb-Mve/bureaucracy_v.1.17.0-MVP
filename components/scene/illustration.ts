@@ -12,7 +12,7 @@ export const BRAS_CONTOUR_GUICHET = require('@/assets/scene/guichet-bras-contour
 const IMAGE = { largeur: 1152, hauteur: 768 };
 
 /** Calque du bras dans le repère de l'image (px), pivot en fraction du calque. */
-const BRAS = { x: 429, y: 383.25, largeur: 226, hauteur: 161, pivotX: 0.1225, pivotY: 0.3163 };
+const BRAS = { x: 462.75, y: 383.25, largeur: 193, hauteur: 161, pivotX: 0.0973, pivotY: 0.2884 };
 
 /** Centre de l'empreinte sur le papier du bureau, à droite du tampon posé (px de l'image). */
 const EMPREINTE = { x: 668, y: 512 };
