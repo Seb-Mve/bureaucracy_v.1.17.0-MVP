@@ -39,6 +39,7 @@ export function etatInitial(maintenant: number): GameState {
     acteTermine: false,
     finActeVue: false,
     fichePosteVue: false,
+    circulairesVues: [],
     stats: {
       traites: 0,
       rejetes: 0,

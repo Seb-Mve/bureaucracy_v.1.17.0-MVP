@@ -102,6 +102,8 @@ export interface GameState {
   finActeVue: boolean;
   /** La fiche de poste (explication du principe) a été lue. */
   fichePosteVue: boolean;
+  /** Circulaires déjà affichées (une seule fois par mécanique). */
+  circulairesVues: string[];
   stats: GameStats;
   /** Dernier horodatage de simulation (ms), pour le hors-ligne. */
   derniereMaj: number;
