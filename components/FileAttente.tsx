@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Frown, Meh, Smile, Ticket } from 'lucide-react-native';
 import { useGameState, type UsagerAffiche } from '@/context/GameStateContext';
 import Colors, { Charte, Fonts } from '@/constants/Colors';
-import { formatEntier } from '@/utils/formatters';
+import { formatEntier, formatNumberFrench } from '@/utils/formatters';
 
 const HUMEURS: Record<number, { Icone: typeof Smile; label: string; couleur: string }> = {
   3: { Icone: Smile, label: 'patient', couleur: Colors.vertEncre },
@@ -55,12 +55,19 @@ const UsagerCarte = memo(function UsagerCarte({ usager, numerote, auGuichet }: U
 
 /** Les trois premiers usagers de la file, puis le nombre de dossiers restants. */
 export default function FileAttente() {
-  const { tete, enAttente, mods } = useGameState();
+  const { tete, enAttente, mods, flux } = useGameState();
   const reste = Math.max(0, Math.floor(enAttente) - tete.length);
 
   return (
     <View style={styles.file}>
       <Text style={styles.titre}>Guichet 3 · file d’attente</Text>
+      <Text
+        style={[styles.flux, flux.sature && styles.fluxAlerte]}
+        accessibilityLabel={`Arrivées ${formatNumberFrench(flux.arrivees)} dossiers par seconde, traitement ${formatNumberFrench(flux.traitement)} dossiers par seconde`}
+      >
+        Arrivées {formatNumberFrench(flux.arrivees)}/s · Traitement {formatNumberFrench(flux.traitement)}/s
+      </Text>
+      {flux.sature && <Text style={styles.alerte}>Le périmètre s’épuise : il faut de nouveaux usagers.</Text>}
       {tete.length === 0 ? (
         <Text style={styles.vide}>Aucun usager. Le guichet attend.</Text>
       ) : (
@@ -79,6 +86,19 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.titre,
     fontSize: 16,
     color: Colors.anthracite,
+  },
+  flux: {
+    fontFamily: Fonts.chiffresRegular,
+    fontSize: 11,
+    color: Colors.crayon,
+  },
+  fluxAlerte: {
+    color: Colors.encreTexte,
+  },
+  alerte: {
+    fontFamily: Fonts.texteGras,
+    fontSize: 12,
+    color: Colors.encreTexte,
   },
   carte: {
     flexDirection: 'row',

@@ -41,7 +41,12 @@ const CarteAgent = memo(function CarteAgent({ agent, onAcheter }: { agent: Agent
           {agent.nom} <Text style={styles.possedes}>×{agent.possedes}</Text>
         </Text>
         <Text style={styles.description}>{agent.description}</Text>
-        <Text style={styles.detail}>{formatNumberFrench(agent.vitesse)} dossier/s chacun</Text>
+        <Text style={styles.detail}>+{formatNumberFrench(agent.gain)} dossier/s au prochain recrutement</Text>
+        <Text style={styles.anciennete}>
+          {agent.prochainPalier === null
+            ? `Ancienneté maximale · ×${agent.multiplicateur}`
+            : `Ancienneté : ×${agent.multiplicateur * 2} à ${agent.prochainPalier}`}
+        </Text>
       </View>
       <BoutonAchat
         libelle={`${formatEuros(agent.cout)} €`}
@@ -55,7 +60,7 @@ const CarteAgent = memo(function CarteAgent({ agent, onAcheter }: { agent: Agent
 
 /** Recrutement des collègues et achat de formulaires. */
 export default function RecrutementScreen() {
-  const { agents, acheterAgent, acheterRamettes, prixRamette, etat, vitesse } = useGameState();
+  const { agents, acheterAgent, acheterRamettes, prixRamette, etat, vitesse, flux } = useGameState();
 
   return (
     <View style={styles.ecran}>
@@ -90,6 +95,12 @@ export default function RecrutementScreen() {
         <Text style={styles.titre}>
           Collègues <Text style={styles.sousTitre}>· {formatNumberFrench(vitesse)} dossiers/s au total</Text>
         </Text>
+        {flux.sature && (
+          <Text style={styles.alerte}>
+            Le périmètre s’épuise : vos collègues vont bientôt manquer de dossiers. Étendez le périmètre (notes de
+            service).
+          </Text>
+        )}
         {agents.map((a) => (
           <CarteAgent key={a.id} agent={a} onAcheter={() => acheterAgent(a.id)} />
         ))}
@@ -160,6 +171,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.chiffresRegular,
     fontSize: 11,
     color: Colors.anthracite,
+  },
+  anciennete: {
+    fontFamily: Fonts.texteGras,
+    fontSize: 11,
+    color: Colors.encreTexte,
+  },
+  alerte: {
+    fontFamily: Fonts.texteGras,
+    fontSize: 12,
+    color: Colors.encreTexte,
   },
   achats: {
     gap: 6,
