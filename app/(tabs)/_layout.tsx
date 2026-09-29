@@ -9,6 +9,7 @@ import EnTete from '@/components/EnTete';
 import CerfaEcran from '@/components/CerfaEcran';
 import FinActeModal from '@/components/FinActeModal';
 import FichePoste from '@/components/FichePoste';
+import Circulaire from '@/components/Circulaire';
 
 export default function TabLayout() {
   const { pret, etat, mods, notes, notesNonVues, agents } = useGameState();
@@ -22,6 +23,7 @@ export default function TabLayout() {
     <>
       <FinActeModal />
       <FichePoste />
+      <Circulaire />
       <Tabs
         screenOptions={{
           header: () => <EnTete />,

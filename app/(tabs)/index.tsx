@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors from '@/constants/Colors';
 import Hud from '@/components/Hud';
+import OrdreDuJour from '@/components/OrdreDuJour';
 import SceneGuichet from '@/components/SceneGuichet';
 import FileAttente from '@/components/FileAttente';
 import CurseurRejet from '@/components/CurseurRejet';
@@ -18,6 +19,7 @@ export default function GuichetScreen() {
     <View style={styles.ecran}>
       <Hud />
       <ScrollView style={styles.defilement} contentContainerStyle={styles.contenu}>
+        <OrdreDuJour />
         <SceneGuichet />
         <BanniereNote />
         <Panneau style={styles.panneau} contenuStyle={styles.panneauContenu} rayon={18}>
