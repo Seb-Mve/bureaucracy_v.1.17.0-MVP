@@ -263,7 +263,7 @@ export function tick(
   // Nouvelles demandes des usagers inactifs.
   const dansLeSysteme = somme(file) + somme(retours);
   const inactifs = Math.max(0, s0.population - dansLeSysteme);
-  file[PATIENCE_MAX] += inactifs * BALANCE.demandeRate * m.demandeMult * dt;
+  file[PATIENCE_MAX] += inactifs * (1 - Math.exp(-BALANCE.demandeRate * m.demandeMult * dt));
 
   // Installation de nouveaux habitants dans la place libre du périmètre.
   const cap = perimetre(s0, maintenant);

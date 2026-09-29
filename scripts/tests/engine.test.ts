@@ -62,6 +62,18 @@ test('fluxEntrant compte les nouvelles demandes et les retours', () => {
   assert.ok(Math.abs(E.fluxEntrant(s, m) - attendu) < 1e-9, `flux = ${E.fluxEntrant(s, m)}`);
 });
 
+test('un grand pas de temps ne crée pas de dossiers fantômes', () => {
+  let s = avecNotes(base(), ['horaires']);
+  s = { ...s, population: 100, file: [0, 0, 0, 0] as [number, number, number, number] };
+  const r = E.tick(s, 20, 20_000);
+  const enAttente = E.dossiersEnAttente(r.s);
+  const enRetour = r.s.retours.reduce((a, b) => a + b, 0);
+  assert.ok(
+    enAttente + enRetour <= r.s.population + 1e-9,
+    `file + retours = ${enAttente + enRetour}, population = ${r.s.population}`,
+  );
+});
+
 test('plafondDemande = population × demandeRate × demandeMult', () => {
   const s = avecNotes(base(), ['horaires']);
   const m = E.getModifiers(s, 0);
