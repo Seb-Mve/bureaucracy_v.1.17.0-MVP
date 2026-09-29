@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build:web"
+  publish = "dist"
+
+# Application monopage (expo-router) : toutes les routes servent index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
