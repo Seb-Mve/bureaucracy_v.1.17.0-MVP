@@ -12,8 +12,8 @@ const IMAGE = { largeur: 1152, hauteur: 768 };
 /** Calque du bras dans le repère de l'image (px), pivot en fraction du calque. */
 const BRAS = { x: 430.5, y: 382.5, largeur: 226, hauteur: 163, pivotX: 0.1163, pivotY: 0.318 };
 
-/** Centre de la base du tampon, bras posé (px de l'image) : là où frappe le tampon. */
-const IMPACT = { x: 602, y: 504 };
+/** Centre de l'empreinte sur le papier du bureau, à droite du tampon posé (px de l'image). */
+const EMPREINTE = { x: 668, y: 512 };
 
 /** Bras levé : rotation (degrés, sens antihoraire) et remontée (px de l'image). */
 export const LEVEE = { angle: 28, remontee: 8 };
@@ -31,8 +31,8 @@ export interface CadresIllustration {
   fond: Cadre;
   /** Calque du bras, avec son origine de rotation (le coude). */
   bras: Cadre & { transformOrigin: string };
-  /** Point d'impact du tampon, dans le repère de la zone. */
-  impact: { x: number; y: number };
+  /** Centre de l'empreinte du tampon sur le papier, dans le repère de la zone. */
+  empreinte: { x: number; y: number };
 }
 
 /** Cadrage « cover » de l'illustration dans une zone donnée, calque du bras compris. */
@@ -52,6 +52,6 @@ export function cadrerIllustration(largeurZone: number, hauteurZone: number): Ca
       height: BRAS.hauteur * echelle,
       transformOrigin: `${BRAS.pivotX * 100}% ${BRAS.pivotY * 100}%`,
     },
-    impact: { x: left + IMPACT.x * echelle, y: top + IMPACT.y * echelle },
+    empreinte: { x: left + EMPREINTE.x * echelle, y: top + EMPREINTE.y * echelle },
   };
 }

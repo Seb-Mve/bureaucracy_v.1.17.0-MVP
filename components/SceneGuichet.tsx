@@ -8,11 +8,10 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { useGameState, type Verdict } from '@/context/GameStateContext';
+import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Fonts } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
-import DossierCarte, { CARTE_DOSSIER } from '@/components/scene/DossierCarte';
-import { BRAS_GUICHET, FOND_GUICHET, LEVEE, cadrerIllustration, type Cadre } from '@/components/scene/illustration';
+import { BRAS_GUICHET, FOND_GUICHET, LEVEE, cadrerIllustration } from '@/components/scene/illustration';
 
 /** Hauteur de la scène (pt). */
 const HAUTEUR_SCENE = 200;
@@ -20,54 +19,49 @@ const HAUTEUR_SCENE = 200;
 const LEVEE_MS = 80;
 /** Durée de la descente du tampon jusqu'à l'impact (ms). */
 const DESCENTE = 90;
-/** Instant de l'impact sur le dossier (ms). */
+/** Instant de l'impact sur le papier (ms). */
 const IMPACT = LEVEE_MS + DESCENTE;
-/** Marge minimale entre la carte du dossier et le bord de la scène (pt). */
-const MARGE_CARTE = 6;
+/** Durée pendant laquelle l'empreinte reste visible avant de s'effacer (ms). */
+const EMPREINTE_VISIBLE = 450;
+/** Taille de l'empreinte (pt). */
+const EMPREINTE = { largeur: 64, hauteur: 20 };
 
-/** Place la carte pour que son empreinte tombe sous le tampon, sans sortir de la scène. */
-function placerCarte(impact: { x: number; y: number }, largeurScene: number): Pick<Cadre, 'left' | 'top'> {
-  const left = impact.x - CARTE_DOSSIER.empreinteX;
-  const top = impact.y - CARTE_DOSSIER.empreinteY;
-  return {
-    left: Math.max(MARGE_CARTE, Math.min(largeurScene - CARTE_DOSSIER.largeur - MARGE_CARTE, left)),
-    top: Math.min(HAUTEUR_SCENE - CARTE_DOSSIER.hauteur - MARGE_CARTE, top),
-  };
+interface Position {
+  left: number;
+  top: number;
 }
 
-/** Le dossier qui vient d'être tamponné : il reçoit l'empreinte puis quitte le bureau. */
-interface DossierSortantProps {
-  verdict: Verdict;
-  numerote: boolean;
-  position: Pick<Cadre, 'left' | 'top'>;
-}
-
-const DossierSortant = memo(function DossierSortant({ verdict, numerote, position }: DossierSortantProps) {
+/** Empreinte ACCEPTÉ / REJETÉ laissée sur le papier du bureau par le tampon. */
+const Empreinte = memo(function Empreinte({ rejete, position }: { rejete: boolean; position: Position }) {
   const opacite = useSharedValue(0);
-  const x = useSharedValue(0);
-  const sens = verdict.rejete ? -1 : 1;
+  const echelle = useSharedValue(1.4);
 
   useEffect(() => {
     opacite.value = withSequence(
       withDelay(IMPACT, withTiming(1, { duration: 0 })),
-      withDelay(520, withTiming(0, { duration: 220 })),
+      withDelay(EMPREINTE_VISIBLE, withTiming(0, { duration: 250 })),
     );
-    x.value = withDelay(IMPACT + 300, withTiming(sens * 230, { duration: 420, easing: Easing.in(Easing.quad) }));
-  }, [opacite, x, sens]);
+    echelle.value = withDelay(IMPACT, withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) }));
+  }, [opacite, echelle]);
 
   const style = useAnimatedStyle(() => ({
     opacity: opacite.value,
-    transform: [{ translateX: x.value }, { rotate: `${-3 + x.value / 25}deg` }],
+    transform: [{ rotate: '-14deg' }, { scale: echelle.value }],
   }));
 
   return (
-    <Animated.View style={[styles.dossier, position, styles.sortant, style]} pointerEvents="none">
-      <DossierCarte usager={verdict.usager} numerote={numerote} empreinte={verdict.rejete ? 'rejete' : 'accepte'} />
+    <Animated.View
+      style={[styles.empreinte, rejete ? styles.rejet : styles.accepte, position, style]}
+      pointerEvents="none"
+    >
+      <Text style={[styles.empreinteTexte, rejete ? styles.rejetTexte : styles.accepteTexte]}>
+        {rejete ? 'REJETÉ' : 'ACCEPTÉ'}
+      </Text>
     </Animated.View>
   );
 });
 
-/** Scène du guichet : l'agent, le dossier sur le bureau et le bras qui tamponne à chaque tap. */
+/** Scène du guichet : l'agent tamponne le dossier posé sur son bureau à chaque tap. */
 export default function SceneGuichet() {
   const { tete, mods, verdict } = useGameState();
   const premier = tete[0] ?? null;
@@ -75,7 +69,10 @@ export default function SceneGuichet() {
   const [largeur, setLargeur] = useState(0);
   const surLayout = useCallback((e: LayoutChangeEvent) => setLargeur(e.nativeEvent.layout.width), []);
   const cadres = useMemo(() => cadrerIllustration(largeur, HAUTEUR_SCENE), [largeur]);
-  const positionCarte = useMemo(() => placerCarte(cadres.impact, largeur), [cadres, largeur]);
+  const positionEmpreinte = useMemo<Position>(
+    () => ({ left: cadres.empreinte.x - EMPREINTE.largeur / 2, top: cadres.empreinte.y - EMPREINTE.hauteur / 2 }),
+    [cadres],
+  );
 
   /** 0 = bras posé sur le dossier, 1 = bras levé. */
   const bras = useSharedValue(0);
@@ -129,14 +126,7 @@ export default function SceneGuichet() {
         </Text>
       </View>
 
-      {largeur > 0 && (
-        <View style={[styles.dossier, positionCarte]} pointerEvents="none">
-          <DossierCarte usager={premier} numerote={mods.numerotation} />
-        </View>
-      )}
-      {largeur > 0 && verdict?.usager && (
-        <DossierSortant key={verdict.id} verdict={verdict} numerote={mods.numerotation} position={positionCarte} />
-      )}
+      {largeur > 0 && verdict && <Empreinte key={verdict.id} rejete={verdict.rejete} position={positionEmpreinte} />}
 
       {largeur > 0 && (
         <Animated.Image
@@ -179,11 +169,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.anthracite,
   },
-  dossier: {
+  empreinte: {
     position: 'absolute',
-    transform: [{ rotate: '-3deg' }],
-  },
-  sortant: {
     zIndex: 2,
+    width: EMPREINTE.largeur,
+    height: EMPREINTE.hauteur,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  rejet: {
+    borderColor: Colors.rouge,
+  },
+  accepte: {
+    borderColor: Colors.vertEncre,
+  },
+  empreinteTexte: {
+    fontFamily: Fonts.titreGras,
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  rejetTexte: {
+    color: Colors.rouge,
+  },
+  accepteTexte: {
+    color: Colors.vertEncre,
   },
 });
