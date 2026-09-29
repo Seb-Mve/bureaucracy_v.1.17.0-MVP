@@ -37,6 +37,8 @@ export const BALANCE = {
   /** Plafond de simulation hors-ligne (s). */
   horsLigneMax: 2 * 60 * 60,
   croissanceCoutAgent: 1.15,
+  /** Nombre d'exemplaires d'un même collègue qui double sa vitesse. */
+  paliersAnciennete: [10, 25, 50],
 } as const;
 
 export interface AgentDef {
@@ -52,29 +54,29 @@ export const AGENTS: AgentDef[] = [
   {
     id: 'stagiaire',
     nom: 'Stagiaire',
-    description: "Motivé, non rémunéré, ne sait pas où est l’agrafeuse.",
+    description: "Motivé, non rémunéré, ne sait pas où est l'agrafeuse.",
     vitesse: 0.1,
     coutBase: 20,
   },
   {
     id: 'accueil',
-    nom: "Agent d’accueil",
+    nom: "Agent d'accueil",
     description: 'Sourit par délégation.',
     vitesse: 0.5,
-    coutBase: 150,
+    coutBase: 85,
   },
   {
     id: 'instructeur',
     nom: 'Agent instructeur',
     description: 'Instruit. Surtout des refus.',
     vitesse: 2.5,
-    coutBase: 1500,
+    coutBase: 350,
   },
   {
     id: 'titulaire',
     nom: 'Titulaire',
     description: 'Inamovible, imperturbable, indispensable.',
     vitesse: 12,
-    coutBase: 15000,
+    coutBase: 1400,
   },
 ];

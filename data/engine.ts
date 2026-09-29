@@ -11,7 +11,7 @@ import {
   type NoteId,
   type ParPatience,
 } from '../types/game';
-import { AGENTS, BALANCE } from '../constants/balance';
+import { AGENTS, BALANCE, type AgentDef } from '../constants/balance';
 import { EXTENSIONS_PERIMETRE, NOTES, NOTES_PAR_ID } from './notes';
 
 const somme = (a: ParPatience): number => a[1] + a[2] + a[3];
@@ -131,11 +131,36 @@ export function coutAgent(id: AgentId, possedes: number): number {
   return Math.ceil(def.coutBase * Math.pow(BALANCE.croissanceCoutAgent, possedes));
 }
 
+/** Multiplicateur de vitesse d'un type de collègue : ×2 par palier atteint. */
+export function multiplicateurAnciennete(possedes: number): number {
+  let mult = 1;
+  for (const palier of BALANCE.paliersAnciennete) if (possedes >= palier) mult *= 2;
+  return mult;
+}
+
+/** Prochain palier d'ancienneté, ou null si le dernier est atteint. */
+export function prochainPalier(possedes: number): number | null {
+  return BALANCE.paliersAnciennete.find((p) => p > possedes) ?? null;
+}
+
+/** Vitesse de `n` collègues d'un même type, ancienneté comprise, hors modificateurs. */
+function vitesseType(def: AgentDef, n: number): number {
+  return n * def.vitesse * multiplicateurAnciennete(n);
+}
+
 /** Dossiers traités par seconde par l'ensemble des collègues. */
 export function vitesseCollegues(s: GameState, m: Modifiers): number {
   let v = 0;
-  for (const a of AGENTS) v += s.agents[a.id] * a.vitesse;
+  for (const a of AGENTS) v += vitesseType(a, s.agents[a.id]);
   return v * m.agentSpeedMult;
+}
+
+/** Dossiers/s gagnés en recrutant un collègue de plus (palier compris). */
+export function gainAgent(s: GameState, id: AgentId, m: Modifiers): number {
+  const def = AGENTS.find((a) => a.id === id);
+  if (!def) return 0;
+  const n = s.agents[id];
+  return (vitesseType(def, n + 1) - vitesseType(def, n)) * m.agentSpeedMult;
 }
 
 export function prixRamette(m: Modifiers): number {

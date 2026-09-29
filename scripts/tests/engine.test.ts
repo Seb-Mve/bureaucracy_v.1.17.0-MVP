@@ -75,3 +75,30 @@ test('saturation avec hystérésis 80 % / 70 %', () => {
   assert.equal(E.saturation(true, 6.9, 10), false);
   assert.equal(E.saturation(false, 1, 0), true);
 });
+
+test('multiplicateur et prochain palier d\'ancienneté', () => {
+  assert.equal(E.multiplicateurAnciennete(9), 1);
+  assert.equal(E.multiplicateurAnciennete(10), 2);
+  assert.equal(E.multiplicateurAnciennete(25), 4);
+  assert.equal(E.multiplicateurAnciennete(50), 8);
+  assert.equal(E.prochainPalier(0), 10);
+  assert.equal(E.prochainPalier(10), 25);
+  assert.equal(E.prochainPalier(50), null);
+});
+
+test('le 10ᵉ stagiaire double la vitesse de tous les stagiaires', () => {
+  const s = { ...base(), agents: { stagiaire: 9, accueil: 0, instructeur: 0, titulaire: 0 } };
+  const m = E.getModifiers(s, 0);
+  assert.ok(Math.abs(E.vitesseCollegues(s, m) - 0.9) < 1e-9);
+  // 10 × 0,1 × 2 = 2 d/s, donc +1,1 d/s pour ce recrutement.
+  assert.ok(Math.abs(E.gainAgent(s, 'stagiaire', m) - 1.1) < 1e-9, `gain = ${E.gainAgent(s, 'stagiaire', m)}`);
+});
+
+test('à prix de base, chaque rang est plus rentable que le précédent', async () => {
+  const { AGENTS } = await import('../../constants/balance');
+  for (let i = 1; i < AGENTS.length; i++) {
+    const prec = AGENTS[i - 1].coutBase / AGENTS[i - 1].vitesse;
+    const cour = AGENTS[i].coutBase / AGENTS[i].vitesse;
+    assert.ok(cour < prec, `${AGENTS[i].id} : ${cour} €/(d/s) ≥ ${prec}`);
+  }
+});
