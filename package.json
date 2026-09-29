@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/resoudre-ts.ts --test 'scripts/tests/*.test.ts'"
   },
   "dependencies": {
     "@expo-google-fonts/archivo-black": "^0.2.3",

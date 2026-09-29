@@ -45,7 +45,7 @@ export function formatLargeNumber(value: number): string {
  * pas de décimale sous 1 000, puis « 1,5 k », « 2,3 M ».
  */
 export function formatEntier(value: number): string {
-  const v = Math.floor(value);
+  const v = Math.max(0, Math.floor(value));
   return v < 1000 ? v.toString() : formatNumberFrench(v);
 }
 

@@ -145,7 +145,7 @@ function traiter(s: GameState, demande: number, m: Modifiers): { s: GameState; e
   for (let p = 1; p <= PATIENCE_MAX; p++) {
     const part = (s.file[p] / enFile) * possibles;
     if (part <= 0) continue;
-    file[p] -= part;
+    file[p] = Math.max(0, file[p] - part);
     const rej = part * taux;
     rejetes += rej;
     if (p > 1) {
