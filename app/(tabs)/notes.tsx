@@ -28,6 +28,7 @@ const CarteNote = memo(function CarteNote({ note, onSigner }: { note: NoteAffich
     action = (
       <View style={[styles.etiquette, styles.etiquetteInstruction]}>
         <Text style={styles.etiquetteTexte}>En instruction · {duree(note.resteSec)}</Text>
+        <Text style={styles.relance}>Tamponnez au guichet pour relancer</Text>
       </View>
     );
   } else {
@@ -223,6 +224,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.texteGras,
     fontSize: 12,
     color: Colors.anthracite,
+  },
+  relance: {
+    fontFamily: Fonts.texte,
+    fontSize: 10,
+    color: Colors.crayon,
   },
   texteEffectif: {
     fontFamily: Fonts.titreGras,

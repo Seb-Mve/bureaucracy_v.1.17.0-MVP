@@ -137,4 +137,6 @@ export interface GameEvents {
   budget: number;
   rupture: boolean;
   fileVide: boolean;
+  /** Relance des notes en instruction : délai raccourci, plancher atteint, ou aucune note en instruction. */
+  relance: 'transmise' | 'classee' | null;
 }

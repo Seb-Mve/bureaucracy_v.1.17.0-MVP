@@ -1,15 +1,9 @@
 import React, { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Frown, Meh, Smile, Ticket } from 'lucide-react-native';
+import { Ticket } from 'lucide-react-native';
 import { useGameState, type UsagerAffiche } from '@/context/GameStateContext';
 import Colors, { Charte, Fonts } from '@/constants/Colors';
 import { formatEntier, formatNumberFrench } from '@/utils/formatters';
-
-const HUMEURS: Record<number, { Icone: typeof Smile; label: string; couleur: string }> = {
-  3: { Icone: Smile, label: 'patient', couleur: Colors.vertEncre },
-  2: { Icone: Meh, label: 'agacé', couleur: Colors.encreTexte },
-  1: { Icone: Frown, label: 'excédé', couleur: Colors.rouge },
-};
 
 interface UsagerCarteProps {
   usager: UsagerAffiche;
@@ -18,8 +12,6 @@ interface UsagerCarteProps {
 }
 
 const UsagerCarte = memo(function UsagerCarte({ usager, numerote, auGuichet }: UsagerCarteProps) {
-  const humeur = HUMEURS[usager.patience] ?? HUMEURS[3];
-  const { Icone } = humeur;
   const fond = Colors.avatars[usager.couleur % Colors.avatars.length];
   const nom = numerote ? `Usager n° ${usager.numero.toLocaleString('fr-FR')}` : `${usager.prenom} ${usager.nom}`;
 
@@ -27,7 +19,7 @@ const UsagerCarte = memo(function UsagerCarte({ usager, numerote, auGuichet }: U
     <View
       style={[styles.carte, auGuichet && styles.carteGuichet]}
       accessible
-      accessibilityLabel={`${auGuichet ? 'Au guichet : ' : ''}${nom}, ${usager.demande}, ${humeur.label}`}
+      accessibilityLabel={`${auGuichet ? 'Au guichet : ' : ''}${nom}, ${usager.demande}`}
     >
       <View style={[styles.avatar, { backgroundColor: numerote ? Colors.carton : fond }]}>
         {numerote ? (
@@ -44,10 +36,6 @@ const UsagerCarte = memo(function UsagerCarte({ usager, numerote, auGuichet }: U
         <Text style={styles.demande} numberOfLines={1}>
           {usager.demande}
         </Text>
-      </View>
-      <View style={styles.humeur}>
-        <Icone size={18} color={humeur.couleur} />
-        <Text style={[styles.humeurLabel, { color: humeur.couleur }]}>{humeur.label}</Text>
       </View>
     </View>
   );
@@ -147,14 +135,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.texte,
     fontSize: 11,
     color: Colors.crayon,
-  },
-  humeur: {
-    alignItems: 'center',
-    minWidth: 44,
-  },
-  humeurLabel: {
-    fontFamily: Fonts.texteGras,
-    fontSize: 9,
   },
   vide: {
     fontFamily: Fonts.texte,

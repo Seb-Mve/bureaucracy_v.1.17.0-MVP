@@ -140,3 +140,52 @@ test('hors-ligne, les collègues traitent sans rejeter ni produire de Conformit�
   assert.equal(r.s.abandons, s.abandons);
   assert.equal(r.s.tauxRejet, 0.5, 'le réglage du joueur est conservé');
 });
+
+test('grades : rang selon les tampons, +10 % de dotation par grade', () => {
+  assert.equal(E.rangGrade(0), 0);
+  assert.equal(E.rangGrade(999), 0);
+  assert.equal(E.rangGrade(1000), 1);
+  assert.equal(E.rangGrade(10000), 2);
+  assert.equal(E.rangGrade(150000), 4);
+  assert.equal(E.rangGrade(1e9), 4);
+  const s = base();
+  const m0 = E.getModifiers(s, 0);
+  const m2 = E.getModifiers({ ...s, tampons: 10000 }, 0);
+  assert.ok(Math.abs(m2.dotationMult / m0.dotationMult - 1.2) < 1e-9);
+});
+
+test('relance : −1 s par tap, quelle que soit la puissance du tap', () => {
+  // Dateur et double encrage effectifs (5 dossiers par tap), note n° 7 (90 s) en instruction depuis t = 0.
+  let s = avecNotes(base(), ['renfort', 'rejet', 'horaires', 'ramettes', 'dateur', 'doubleEncrage']);
+  s = { ...s, notes: { ...s.notes, tilleuls: { achetee: 0, effective: 90_000 } } };
+  assert.equal(E.getModifiers(s, 0).tapPower, 5);
+  const r = E.tamponner(s, 1000);
+  assert.equal(r.ev.relance, 'transmise');
+  assert.equal(r.ev.traites, 5);
+  assert.equal(r.s.notes.tilleuls?.effective, 89_000);
+});
+
+test('relance : jamais plus de la moitié du délai, puis classée sans suite', () => {
+  let s = { ...base(), notes: { tilleuls: { achetee: 0, effective: 90_000 } } };
+  let derniere: string | null = null;
+  for (let i = 0; i < 100; i++) {
+    const r = E.tamponner(s, 1000);
+    s = r.s;
+    derniere = r.ev.relance;
+  }
+  assert.equal(s.notes.tilleuls?.effective, 45_000);
+  assert.equal(derniere, 'classee');
+});
+
+test('relance : rien à relancer sans note en instruction', () => {
+  const s = { ...base(), notes: { tilleuls: { achetee: 0, effective: 90_000 } } };
+  const r = E.tamponner(s, 95_000);
+  assert.equal(r.ev.relance, null);
+  assert.equal(r.s.notes.tilleuls?.effective, 90_000);
+});
+
+test('le prix du stagiaire monte moins vite que celui du titulaire', () => {
+  assert.equal(E.coutAgent('stagiaire', 0), 100);
+  assert.ok(E.coutAgent('stagiaire', 10) / E.coutAgent('stagiaire', 0) < 3.2);
+  assert.ok(E.coutAgent('titulaire', 10) / E.coutAgent('titulaire', 0) > 4);
+});

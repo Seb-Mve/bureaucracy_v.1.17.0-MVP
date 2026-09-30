@@ -25,12 +25,14 @@ function dureeJeu(sec: number): string {
 
 /** Options : dossier administratif de l'agent, démission, remise à zéro. */
 export default function OptionsScreen() {
-  const { etat, deposerDemission, nouvellePartie, marquerFichePoste } = useGameState();
+  const { etat, grade, deposerDemission, nouvellePartie, marquerFichePoste } = useGameState();
   const deposee = etat.demission.deposeeLe !== null;
   const agent = etat.cerfa.prenom || 'Agent sans prénom';
 
   const lignes: [string, string][] = [
     ['Agent', agent],
+    ['Grade', grade.nom],
+    ['Prime d’avancement', grade.rang > 0 ? `+${Math.round(grade.bonus * 100)} % de dotation` : 'Néant'],
     ['Affectation', 'Guichet 3'],
     ['Dossiers traités', formatEntier(Math.floor(etat.stats.traites))],
     ['Dossiers rejetés', formatEntier(Math.floor(etat.stats.rejetes))],

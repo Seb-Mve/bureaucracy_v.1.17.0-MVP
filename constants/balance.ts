@@ -36,10 +36,30 @@ export const BALANCE = {
   confCible: 500000,
   /** Plafond de simulation hors-ligne (s). */
   horsLigneMax: 2 * 60 * 60,
-  croissanceCoutAgent: 1.15,
   /** Nombre d'exemplaires d'un même collègue qui double sa vitesse. */
   paliersAnciennete: [10, 25, 50],
+  /** Dotation supplémentaire par grade atteint (+10 % par grade). */
+  bonusGrade: 0.1,
+  /** Délai d'instruction retiré par tap (s), quelle que soit la puissance du tap. */
+  relanceParTap: 1,
+  /** Part maximale du délai d'instruction qu'on peut effacer par des relances. */
+  relanceMax: 0.5,
 } as const;
+
+export interface GradeDef {
+  nom: string;
+  /** Tampons apposés nécessaires pour atteindre ce grade. */
+  seuil: number;
+}
+
+/** Grades de l'agent, atteints au compteur de tampons. Le premier est le grade de départ. */
+export const GRADES: GradeDef[] = [
+  { nom: 'Stagiaire', seuil: 0 },
+  { nom: 'Vacataire', seuil: 1000 },
+  { nom: 'Contractuel', seuil: 10000 },
+  { nom: 'Stagiaire de la fonction publique', seuil: 50000 },
+  { nom: 'Titulaire', seuil: 150000 },
+];
 
 export interface AgentDef {
   id: AgentId;
@@ -48,6 +68,11 @@ export interface AgentDef {
   /** Dossiers traités par seconde. */
   vitesse: number;
   coutBase: number;
+  /**
+   * Hausse du prix à chaque recrutement. Plus faible pour les petits rangs,
+   * pour qu'un lot de stagiaires reste un achat valable tout l'acte.
+   */
+  croissance: number;
 }
 
 export const AGENTS: AgentDef[] = [
@@ -56,27 +81,31 @@ export const AGENTS: AgentDef[] = [
     nom: 'Stagiaire',
     description: "Motivé, non rémunéré, ne sait pas où est l’agrafeuse.",
     vitesse: 0.1,
-    coutBase: 80,
+    coutBase: 100,
+    croissance: 1.12,
   },
   {
     id: 'accueil',
     nom: "Agent d’accueil",
     description: 'Sourit par délégation.',
     vitesse: 0.5,
-    coutBase: 340,
+    coutBase: 450,
+    croissance: 1.13,
   },
   {
     id: 'instructeur',
     nom: 'Agent instructeur',
     description: 'Instruit. Surtout des refus.',
     vitesse: 2.5,
-    coutBase: 1400,
+    coutBase: 1900,
+    croissance: 1.15,
   },
   {
     id: 'titulaire',
     nom: 'Titulaire',
     description: 'Inamovible, imperturbable, indispensable.',
     vitesse: 12,
-    coutBase: 5600,
+    coutBase: 8000,
+    croissance: 1.15,
   },
 ];

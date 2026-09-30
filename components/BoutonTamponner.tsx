@@ -46,18 +46,16 @@ export default function BoutonTamponner() {
 
   const surAppui = useCallback(() => {
     const ev = tamponner();
+    const lignes: string[] = [];
     if (ev.traites > 0) {
-      setFlottants((f) =>
-        f.length >= 5
-          ? f
-          : [
-              ...f,
-              {
-                cle: cle.current++,
-                texte: `+${formatEuros(ev.budget)} € · −${Math.round(ev.traites * mods.pieces)} formulaire${ev.traites * mods.pieces >= 2 ? 's' : ''}`,
-              },
-            ],
+      lignes.push(
+        `+${formatEuros(ev.budget)} € · −${Math.round(ev.traites * mods.pieces)} formulaire${ev.traites * mods.pieces >= 2 ? 's' : ''}`,
       );
+    }
+    if (ev.relance === 'transmise') lignes.push('Relance transmise · −1 s');
+    else if (ev.relance === 'classee') lignes.push('Relance classée sans suite');
+    if (lignes.length > 0) {
+      setFlottants((f) => (f.length >= 5 ? f : [...f, { cle: cle.current++, texte: lignes.join('\n') }]));
     }
   }, [tamponner, mods.pieces]);
 
@@ -86,7 +84,9 @@ export default function BoutonTamponner() {
             ? mods.recrutementVisible
               ? 'Plus de formulaires : achetez des ramettes dans l’onglet Recrutement.'
               : 'Plus de formulaires.'
-            : 'Aucun usager au guichet. Ils arrivent… à leur rythme.'}
+            : mods.conformiteVisible
+              ? 'Pénurie d’usagers : vos collègues vont plus vite que la population. Les rejetés reviennent toujours.'
+              : 'Aucun usager au guichet. Ils arrivent… à leur rythme.'}
         </Text>
       )}
     </View>
@@ -113,6 +113,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.chiffres,
     fontSize: 13,
     color: Colors.encreTexte,
+    textAlign: 'center',
     zIndex: 2,
   },
 });

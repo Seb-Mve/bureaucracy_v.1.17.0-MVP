@@ -4,6 +4,7 @@
  */
 import type { GameState, Modifiers } from '../types/game';
 import { NOTES_PAR_ID } from './notes';
+import { dossiersEnAttente } from './engine';
 
 export interface CirculaireDef {
   id: string;
@@ -45,6 +46,23 @@ export const CIRCULAIRES: CirculaireDef[] = [
     texte:
       'Votre Conformité est désormais mesurée. Elle monte avec les rejets et les pièces exigées. À 100 %, votre dossier sera réexaminé.',
     declencheur: (_s, m) => m.conformiteVisible,
+  },
+  {
+    id: 'relance',
+    numero: 5,
+    titre: 'Relance du service instructeur',
+    texte:
+      'Une note de service est en cours d’instruction. Chaque coup de tampon vaut relance et raccourcit le délai d’une seconde. Le délai ne peut être réduit de plus de moitié : au-delà, les relances sont classées sans suite.',
+    declencheur: (s) => Object.values(s.notes).some((n) => n !== undefined && n.effective > s.derniereMaj),
+  },
+  {
+    // Fin d'acte : les collègues traitent plus vite que la population ne dépose.
+    id: 'penurie',
+    numero: 6,
+    titre: 'Pénurie d’usagers',
+    texte:
+      'Vos services traitent désormais les dossiers plus vite que la population ne parvient à les produire. Il ne s’agit pas d’une panne : il s’agit d’une réussite. Les usagers rejetés reviendront d’eux-mêmes. Ils reviennent toujours.',
+    declencheur: (s, m) => m.conformiteVisible && dossiersEnAttente(s) < 1,
   },
 ];
 

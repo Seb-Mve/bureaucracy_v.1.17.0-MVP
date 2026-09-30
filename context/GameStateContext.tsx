@@ -3,7 +3,7 @@ import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import type { AgentId, GameEvents, GameState, Lettre, Modifiers, NoteId } from '@/types/game';
-import { AGENTS, type AgentDef } from '@/constants/balance';
+import { AGENTS, BALANCE, GRADES, type AgentDef, type GradeDef } from '@/constants/balance';
 import * as E from '@/data/engine';
 import { NOTES_PAR_ID, type NoteDef } from '@/data/notes';
 import { nouvellesLettres, lettreAbsence } from '@/data/courrier';
@@ -50,6 +50,15 @@ export interface AgentAffiche extends AgentDef {
   prochainPalier: number | null;
 }
 
+export interface GradeAffiche {
+  nom: string;
+  /** 0 = grade de départ. */
+  rang: number;
+  /** Dotation supplémentaire apportée par le grade (0,1 = +10 %). */
+  bonus: number;
+  suivant: GradeDef | null;
+}
+
 export interface Verdict {
   id: number;
   rejete: boolean;
@@ -66,6 +75,7 @@ interface GameContextType {
   vitesse: number;
   perimetre: number;
   conformite: number;
+  grade: GradeAffiche;
   tete: UsagerAffiche[];
   notes: NoteAffichee[];
   notesNonVues: number;
@@ -352,6 +362,12 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return { arrivees: E.fluxEntrant(etat, mods), traitement: debitCollegues.current + parTaps, sature };
   }, [etat, mods, maintenant, vitesse]);
 
+  const rang = E.rangGrade(etat.tampons);
+  const grade = useMemo<GradeAffiche>(
+    () => ({ nom: GRADES[rang].nom, rang, bonus: rang * BALANCE.bonusGrade, suivant: GRADES[rang + 1] ?? null }),
+    [rang],
+  );
+
   const consigne = useMemo(() => ordreDuJour(etat, mods), [etat, mods]);
   const circulaire = useMemo(() => circulaireAAfficher(etat, mods), [etat, mods]);
 
@@ -365,6 +381,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       vitesse,
       perimetre: E.perimetre(etat, maintenant),
       conformite: E.conformite(etat),
+      grade,
       tete: teteDeFile(etat),
       notes,
       notesNonVues: notes.filter((n) => n.nouvelle).length,
@@ -390,7 +407,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       nouvellePartie,
     }),
     [
-      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, flux, consigne, circulaire, tamponner,
+      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, flux, grade, consigne, circulaire, tamponner,
       acheterAgent, acheterRamettes, reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa,
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste, marquerCirculaireVue,
       nouvellePartie,

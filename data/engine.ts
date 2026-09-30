@@ -11,7 +11,7 @@ import {
   type NoteId,
   type ParPatience,
 } from '../types/game';
-import { AGENTS, BALANCE, type AgentDef } from '../constants/balance';
+import { AGENTS, BALANCE, GRADES, type AgentDef } from '../constants/balance';
 import { EXTENSIONS_PERIMETRE, NOTES, NOTES_PAR_ID } from './notes';
 
 const somme = (a: ParPatience): number => a[1] + a[2] + a[3];
@@ -59,7 +59,14 @@ export function noteEffective(s: GameState, id: NoteId, maintenant: number): boo
   return n !== undefined && n.effective <= maintenant;
 }
 
-/** Modificateurs de jeu issus des notes de service effectives. */
+/** Rang du grade atteint (0 = grade de départ), selon les tampons apposés. */
+export function rangGrade(tampons: number): number {
+  let rang = 0;
+  for (let i = 1; i < GRADES.length; i++) if (tampons >= GRADES[i].seuil) rang = i;
+  return rang;
+}
+
+/** Modificateurs de jeu issus des notes de service effectives et du grade. */
 export function getModifiers(s: GameState, maintenant: number): Modifiers {
   const m: Modifiers = {
     tapPower: 1,
@@ -83,6 +90,7 @@ export function getModifiers(s: GameState, maintenant: number): Modifiers {
   for (const note of NOTES) {
     if (noteEffective(s, note.id, maintenant)) note.appliquer(m);
   }
+  m.dotationMult *= 1 + BALANCE.bonusGrade * rangGrade(s.tampons);
   return m;
 }
 
@@ -129,7 +137,7 @@ export function saturation(precedent: boolean, capacite: number, plafond: number
 export function coutAgent(id: AgentId, possedes: number): number {
   const def = AGENTS.find((a) => a.id === id);
   if (!def) return Infinity;
-  return Math.ceil(def.coutBase * Math.pow(BALANCE.croissanceCoutAgent, possedes));
+  return Math.ceil(def.coutBase * Math.pow(def.croissance, possedes));
 }
 
 /** Multiplicateur de vitesse d'un type de collègue : ×2 par palier atteint. */
@@ -173,7 +181,7 @@ export function prixRamette(m: Modifiers): number {
  * Applique rejets, retours, abandons, dotation et Conformité.
  */
 function traiter(s: GameState, demande: number, m: Modifiers): { s: GameState; ev: GameEvents } {
-  const ev: GameEvents = { traites: 0, rejetes: 0, budget: 0, rupture: false, fileVide: false };
+  const ev: GameEvents = { traites: 0, rejetes: 0, budget: 0, rupture: false, fileVide: false, relance: null };
   const enFile = somme(s.file);
   if (enFile <= 0) {
     ev.fileVide = true;
@@ -298,15 +306,43 @@ export function tick(
   return traiter(s, vitesseCollegues(s, m) * dt, mTraitement);
 }
 
-/** Un tap sur TAMPONNER. */
+/**
+ * Relance du service instructeur : chaque tap retire `relanceParTap` secondes au délai
+ * des notes en instruction, sans descendre sous (1 − relanceMax) du délai réglementaire.
+ * Indépendant de la puissance du tap : on relance un service, pas un dossier.
+ */
+export function relancer(
+  s: GameState,
+  maintenant: number,
+): { s: GameState; relance: GameEvents['relance'] } {
+  let notes: GameState['notes'] | null = null;
+  let enInstruction = false;
+  for (const [id, n] of Object.entries(s.notes)) {
+    if (!n || n.effective <= maintenant) continue;
+    enInstruction = true;
+    const def = NOTES_PAR_ID[id as NoteId];
+    const plancher = n.achetee + def.instruction * 1000 * (1 - BALANCE.relanceMax);
+    const effective = Math.max(plancher, n.effective - BALANCE.relanceParTap * 1000);
+    if (effective < n.effective) {
+      notes = notes ?? { ...s.notes };
+      notes[id as NoteId] = { ...n, effective };
+    }
+  }
+  if (!enInstruction) return { s, relance: null };
+  if (!notes) return { s, relance: 'classee' };
+  return { s: { ...s, notes }, relance: 'transmise' };
+}
+
+/** Un tap sur TAMPONNER : traite `tapPower` dossiers et relance les notes en instruction. */
 export function tamponner(s: GameState, maintenant: number): { s: GameState; ev: GameEvents } {
   const m = getModifiers(s, maintenant);
   const r = traiter(s, m.tapPower, m);
+  const rel = relancer(r.s, maintenant);
   return {
-    ev: r.ev,
+    ev: { ...r.ev, relance: rel.relance },
     s: {
-      ...r.s,
-      stats: { ...r.s.stats, taps: r.s.stats.taps + 1 },
+      ...rel.s,
+      stats: { ...rel.s.stats, taps: rel.s.stats.taps + 1 },
     },
   };
 }

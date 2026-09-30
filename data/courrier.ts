@@ -3,7 +3,8 @@
  * Une lettre part une seule fois, quand son déclencheur devient vrai.
  */
 import type { GameState, Lettre, LettreId, NoteId } from '../types/game';
-import { conformite, noteEffective } from './engine';
+import { BALANCE, GRADES } from '../constants/balance';
+import { conformite, noteEffective, rangGrade } from './engine';
 import { NOTES_PAR_ID } from './notes';
 
 interface LettreDef {
@@ -31,6 +32,22 @@ function dernierePiece(s: GameState): string {
 }
 
 const minutes = (m: number) => m * 60 * 1000;
+
+/** Texte des lettres d'avancement, par rang de grade (1 = premier avancement). */
+const AVANCEMENTS: Record<number, string> = {
+  1: 'Vous êtes nommé·e vacataire.\n\nVotre vacation est reconduite jusqu’à nouvel ordre. Aucun ordre n’est prévu.',
+  2: 'Un contrat vous est proposé.\n\nVous l’avez déjà signé.',
+  3: 'Vous êtes admis·e au stage de titularisation.\n\nVous redevenez stagiaire, à un niveau supérieur.',
+  4: 'Vous êtes titularisé·e.\n\nVotre poste vous appartient désormais. L’inverse est également vrai.',
+};
+
+const LETTRES_AVANCEMENT: LettreDef[] = GRADES.slice(1).map((g, i) => ({
+  id: `grade${i + 1}`,
+  objet: `Avancement : ${g.nom}`,
+  corps: (s: GameState) =>
+    `${nom(s)},\n\n${AVANCEMENTS[i + 1] ?? `Vous êtes promu·e ${g.nom}.`}\n\nPrime d’avancement : dotation +${Math.round((i + 1) * BALANCE.bonusGrade * 100)} % par dossier.`,
+  declencheur: (s: GameState) => rangGrade(s.tampons) >= i + 1,
+}));
 
 const LETTRES: LettreDef[] = [
   {
@@ -95,6 +112,14 @@ const LETTRES: LettreDef[] = [
       `Votre demande de démission demeure incomplète.\n\nPièce manquante : ${dernierePiece(s)}.\n\nLe S.I.C. vous remercie de votre patience, qui n’est pas illimitée.`,
     declencheur: (s, t) => s.demission.deposeeLe !== null && t - s.demission.deposeeLe >= minutes(30),
   },
+  {
+    id: 'penurie',
+    objet: 'Excédent de productivité',
+    corps: () =>
+      'Le S.I.C. constate que votre guichet manque d’usagers.\n\nUne étude est en cours pour déterminer si un dossier a réellement besoin d’un usager.\n\nLes premiers résultats sont encourageants.',
+    declencheur: (s) => s.circulairesVues.includes('penurie'),
+  },
+  ...LETTRES_AVANCEMENT,
   {
     id: 'reaffectation',
     objet: 'Réaffectation',

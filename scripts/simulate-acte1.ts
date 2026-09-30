@@ -115,4 +115,5 @@ for (const [k, t] of Object.entries(jalons).sort((a, b) => a[1] - b[1])) {
 
 console.log('\nMesures :');
 console.log(`  efficacité des taps : ${((tapsTraites / Math.max(1, tapsDemandes)) * 100).toFixed(1)} %`);
+console.log(`  collègues : ${Object.entries(s.agents).map(([id, n]) => `${id} ${n}`).join(', ')}`);
 console.log(`  plus longue file vide : ${pireSerie} s (finie à ${mn(pireSerieA)})`);

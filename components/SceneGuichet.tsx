@@ -109,7 +109,7 @@ export default function SceneGuichet() {
     transform: [{ translateY: secousse.value * 3 }, { scale: 1 + secousse.value * 0.012 }],
   }));
 
-  let bulle = 'Personne au guichet. Pour l’instant.';
+  let bulle = mods.conformiteVisible ? 'Personne au guichet. C’est un succès.' : 'Personne au guichet. Pour l’instant.';
   if (premier) {
     bulle = mods.numerotation
       ? `Ticket n° ${premier.numero.toLocaleString('fr-FR')}`
