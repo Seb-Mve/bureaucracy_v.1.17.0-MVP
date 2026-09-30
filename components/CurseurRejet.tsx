@@ -44,13 +44,12 @@ export default function CurseurRejet() {
 
   return (
     <View style={styles.bloc}>
-      <View style={styles.entete}>
-        <Text style={styles.label}>Taux de rejet</Text>
-        <Text style={styles.valeur}>
-          {pct} % <Text style={styles.plafond}>(plafond {Math.round(max * 100)} %)</Text>
-        </Text>
-      </View>
       <View style={styles.ligne}>
+        <View style={styles.entete}>
+          <Text style={styles.label}>Rejet</Text>
+          <Text style={styles.valeur}>{pct} %</Text>
+          <Text style={styles.plafond}>max {Math.round(max * 100)} %</Text>
+        </View>
         <Pressable
           style={styles.pas}
           onPress={() => regler(taux - PAS)}
@@ -95,26 +94,26 @@ export default function CurseurRejet() {
 
 const styles = StyleSheet.create({
   bloc: {
-    gap: 4,
+    marginHorizontal: 12,
+    marginTop: 8,
   },
   entete: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
+    width: 58,
   },
   label: {
     fontFamily: Fonts.texteGras,
-    fontSize: 13,
+    fontSize: 11,
     color: Colors.anthracite,
   },
   valeur: {
     fontFamily: Fonts.chiffres,
     fontSize: 14,
+    lineHeight: 17,
     color: Colors.anthracite,
   },
   plafond: {
     fontFamily: Fonts.texte,
-    fontSize: 11,
+    fontSize: 9,
     color: Colors.crayon,
   },
   ligne: {

@@ -21,7 +21,7 @@ npm run dev                              # Start Expo dev server (i=iOS, a=Andro
 npm run build:web                        # Export static web build to dist/
 npm run lint                             # Run ESLint via expo lint
 ./node_modules/.bin/tsc --noEmit -p .    # Type-check (scripts/ and specs/ are excluded)
-npm test                                 # Unit tests of data/ (node:test, scripts/tests/*.test.ts)
+npm test                                 # Unit tests of data/ and of the pixel-art scene engine (node:test, scripts/tests/*.test.ts)
 node scripts/simulate-acte1.ts [taps/s] [minutes]   # Balance simulator: bot player, prints milestones
 ```
 
@@ -70,12 +70,16 @@ Components must never import from `data/`. Everything goes through `useGameState
 ### Navigation
 
 File-based routing via `expo-router`. First launch shows `CerfaEcran` (hiring form) instead of the tabs. Tabs in `app/(tabs)/`:
-- `index.tsx` — Guichet (HUD, scene, queue, rejection slider, TAMPONNER)
+- `index.tsx` — Guichet, no scrolling: resources (`Hud`), the pixel-art scene (`SceneGuichet`: the queue itself, with the usager’s bubble, the « fil » for a new note or the ordre du jour, and the demand chip pinned on it), rejection slider, TAMPONNER
 - `recruitment.tsx` — collègues and ramettes (hidden until note n° 1)
 - `notes.tsx` — Notes de service (hidden until the first note)
 - `options.tsx` — dossier administratif, démission, reset
 
-The header (`EnTete`) holds the S.I.C. courrier envelope.
+The header (`EnTete`) holds the **Tampons apposés** counter (always at the top, on every tab) and the S.I.C. courrier envelope.
+
+### Pixel-art scene (`components/scene/`)
+
+`pixel/` is a platform-free engine (no React): `moteur.ts` keeps its own visual queue (driven by `enAttente` and each `verdict`), animates the stamp and draws each frame into a small RGBA `Toile` (≈176 × 112 px); `sprites.ts` generates usagers, the agent and the stamp; `decor.ts` paints the static layers once per size. `ScenePixel.tsx` shows the frames with `@shopify/react-native-skia` (nearest-neighbour sampling), `ScenePixel.web.tsx` with a plain `<canvas>` (no Skia on the web). Pixel colours live in `constants/PalettePixel.ts`. The loop runs only while the Guichet tab is focused and draws 30 frames/s. Usager moods are deliberately not shown in the queue; only a rejected usager leaves angry.
 
 ## Key Conventions
 
