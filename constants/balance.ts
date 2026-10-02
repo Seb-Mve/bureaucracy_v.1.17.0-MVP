@@ -35,7 +35,7 @@ export const BALANCE = {
   /** Points de Conformité correspondant à 100 %. */
   confCible: 500000,
   /** Plafond de simulation hors-ligne (s). */
-  horsLigneMax: 2 * 60 * 60,
+  horsLigneMax: 20 * 60,
   /** Nombre d'exemplaires d'un même collègue qui double sa vitesse. */
   paliersAnciennete: [10, 25, 50],
   /** Dotation supplémentaire par grade atteint (+10 % par grade). */

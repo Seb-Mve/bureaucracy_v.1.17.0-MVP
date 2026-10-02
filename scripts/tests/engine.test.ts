@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
+import { BALANCE } from '../../constants/balance';
 import { formatEntier } from '../../utils/formatters';
 import type { GameState, NoteId } from '../../types/game';
 
@@ -139,6 +140,13 @@ test('hors-ligne, les collègues traitent sans rejeter ni produire de Conformit�
   assert.equal(r.s.stats.rejetes, s.stats.rejetes);
   assert.equal(r.s.abandons, s.abandons);
   assert.equal(r.s.tauxRejet, 0.5, 'le réglage du joueur est conservé');
+});
+
+test('hors-ligne : la simulation s’arrête au plafond, même après une longue absence', () => {
+  const s = { ...base(), agents: { stagiaire: 10, accueil: 0, instructeur: 0, titulaire: 0 }, derniereMaj: 0 };
+  const r = E.simulerAbsence(s, 2 * 60 * 60 * 1000);
+  assert.equal(r.secondes, BALANCE.horsLigneMax);
+  assert.equal(r.s.derniereMaj, 2 * 60 * 60 * 1000, 'le temps au-delà du plafond est perdu, pas reporté');
 });
 
 test('grades : rang selon les tampons, +10 % de dotation par grade', () => {
