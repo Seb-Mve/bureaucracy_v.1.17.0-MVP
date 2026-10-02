@@ -13,9 +13,13 @@ interface BoutonAchatProps {
   actif: boolean;
   onPress: () => void;
   accessibilityLabel: string;
+  /** Se partage la largeur avec ses voisins (achats en lot). */
+  large?: boolean;
+  /** Seconde ligne (prix du lot). */
+  detail?: string;
 }
 
-const BoutonAchat = memo(function BoutonAchat({ libelle, actif, onPress, accessibilityLabel }: BoutonAchatProps) {
+const BoutonAchat = memo(function BoutonAchat({ libelle, actif, onPress, accessibilityLabel, large, detail }: BoutonAchatProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -23,37 +27,73 @@ const BoutonAchat = memo(function BoutonAchat({ libelle, actif, onPress, accessi
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !actif }}
-      style={({ pressed }) => [styles.achat, actif ? styles.achatActif : styles.achatInactif, pressed && styles.achatPresse]}
+      style={({ pressed }) => [styles.achat, large && styles.achatLarge, actif ? styles.achatActif : styles.achatInactif, pressed && styles.achatPresse]}
     >
-      <Text style={[styles.achatTexte, !actif && styles.achatTexteInactif]}>{libelle}</Text>
+      <Text style={[styles.achatTexte, !actif && styles.achatTexteInactif]} numberOfLines={1} adjustsFontSizeToFit>
+        {libelle}
+      </Text>
+      {detail !== undefined && (
+        <Text style={[styles.achatDetail, !actif && styles.achatTexteInactif]} numberOfLines={1} adjustsFontSizeToFit>
+          {detail}
+        </Text>
+      )}
     </Pressable>
   );
 });
 
-const CarteAgent = memo(function CarteAgent({ agent, onAcheter }: { agent: AgentAffiche; onAcheter: () => void }) {
+const CarteAgent = memo(function CarteAgent({
+  agent,
+  onAcheter,
+}: {
+  agent: AgentAffiche;
+  onAcheter: (id: AgentAffiche['id'], nb: number) => void;
+}) {
+  const max = agent.maxAchetables;
   return (
-    <Panneau contenuStyle={styles.carte} rayon={14}>
-      <View style={styles.avatar}>
-        <UserRound size={18} color={Colors.anthracite} />
+    <Panneau contenuStyle={styles.carteAgent} rayon={14}>
+      <View style={styles.ligneAgent}>
+        <View style={styles.avatar}>
+          <UserRound size={18} color={Colors.anthracite} />
+        </View>
+        <View style={styles.infos}>
+          <Text style={styles.nom}>
+            {agent.nom} <Text style={styles.possedes}>×{agent.possedes}</Text>
+          </Text>
+          <Text style={styles.description}>{agent.description}</Text>
+          <Text style={styles.detail}>+{formatNumberFrench(agent.gain)} dossier/s au prochain recrutement</Text>
+          <Text style={styles.anciennete}>
+            {agent.prochainPalier === null
+              ? `Ancienneté maximale · ×${agent.multiplicateur}`
+              : `Ancienneté : ×${agent.multiplicateur * 2} à ${agent.prochainPalier}`}
+          </Text>
+        </View>
       </View>
-      <View style={styles.infos}>
-        <Text style={styles.nom}>
-          {agent.nom} <Text style={styles.possedes}>×{agent.possedes}</Text>
-        </Text>
-        <Text style={styles.description}>{agent.description}</Text>
-        <Text style={styles.detail}>+{formatNumberFrench(agent.gain)} dossier/s au prochain recrutement</Text>
-        <Text style={styles.anciennete}>
-          {agent.prochainPalier === null
-            ? `Ancienneté maximale · ×${agent.multiplicateur}`
-            : `Ancienneté : ×${agent.multiplicateur * 2} à ${agent.prochainPalier}`}
-        </Text>
+      <View style={styles.achatsAgent}>
+        <BoutonAchat
+          libelle="×1"
+          detail={`${formatEuros(agent.cout)} €`}
+          actif={agent.achetable}
+          onPress={() => onAcheter(agent.id, 1)}
+          accessibilityLabel={`Recruter : ${agent.nom} ×1, ${formatEuros(agent.cout)} euros`}
+          large
+        />
+        <BoutonAchat
+          libelle="×10"
+          detail={`${formatEuros(agent.cout10)} €`}
+          actif={max >= 10}
+          onPress={() => onAcheter(agent.id, 10)}
+          accessibilityLabel={`Recruter : ${agent.nom} ×10, ${formatEuros(agent.cout10)} euros`}
+          large
+        />
+        <BoutonAchat
+          libelle="Max"
+          detail={max > 0 ? `×${max}` : '—'}
+          actif={max > 0}
+          onPress={() => onAcheter(agent.id, max)}
+          accessibilityLabel={`Recruter : ${agent.nom}, autant que le budget le permet (${max})`}
+          large
+        />
       </View>
-      <BoutonAchat
-        libelle={`${formatEuros(agent.cout)} €`}
-        actif={agent.achetable}
-        onPress={onAcheter}
-        accessibilityLabel={`Recruter : ${agent.nom}, ${formatEuros(agent.cout)} euros`}
-      />
     </Panneau>
   );
 });
@@ -102,7 +142,7 @@ export default function RecrutementScreen() {
           </Text>
         )}
         {agents.map((a) => (
-          <CarteAgent key={a.id} agent={a} onAcheter={() => acheterAgent(a.id)} />
+          <CarteAgent key={a.id} agent={a} onAcheter={acheterAgent} />
         ))}
       </ScrollView>
     </View>
@@ -128,6 +168,23 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.texte,
     fontSize: 12,
     color: Colors.crayon,
+  },
+  carteAgent: {
+    padding: 10,
+    gap: 10,
+  },
+  ligneAgent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  achatsAgent: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  achatLarge: {
+    flex: 1,
+    minWidth: 0,
   },
   carte: {
     flexDirection: 'row',
@@ -207,6 +264,11 @@ const styles = StyleSheet.create({
   achatTexte: {
     fontFamily: Fonts.chiffres,
     fontSize: 13,
+    color: Colors.anthracite,
+  },
+  achatDetail: {
+    fontFamily: Fonts.chiffresRegular,
+    fontSize: 11,
     color: Colors.anthracite,
   },
   achatTexteInactif: {

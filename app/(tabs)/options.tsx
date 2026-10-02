@@ -5,6 +5,8 @@ import Colors, { Charte, Fonts } from '@/constants/Colors';
 import { formatEntier } from '@/utils/formatters';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
+import ReglementInterieur from '@/components/ReglementInterieur';
+import ReglagesConfort from '@/components/ReglagesConfort';
 
 function confirmer(titre: string, message: string, ok: () => void) {
   if (Platform.OS === 'web') {
@@ -23,7 +25,7 @@ function dureeJeu(sec: number): string {
   return h > 0 ? `${h} h ${m.toString().padStart(2, '0')} min` : `${m} min`;
 }
 
-/** Options : dossier administratif de l'agent, démission, remise à zéro. */
+/** Options : dossier administratif, règlement intérieur, confort, démission, remise à zéro. */
 export default function OptionsScreen() {
   const { etat, grade, deposerDemission, nouvellePartie, marquerFichePoste } = useGameState();
   const deposee = etat.demission.deposeeLe !== null;
@@ -59,6 +61,12 @@ export default function OptionsScreen() {
           <Text style={styles.relireTexte}>Relire ma fiche de poste</Text>
         </Pressable>
       </Panneau>
+
+      <Text style={styles.titre}>Règlement intérieur</Text>
+      <ReglementInterieur />
+
+      <Text style={styles.titre}>Confort</Text>
+      <ReglagesConfort />
 
       <Text style={styles.titre}>Démission</Text>
       <Panneau contenuStyle={styles.fiche} rayon={14}>

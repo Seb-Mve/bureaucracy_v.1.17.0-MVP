@@ -9,9 +9,10 @@ import { NOTES_PAR_ID, type NoteDef } from '@/data/notes';
 import { nouvellesLettres, lettreAbsence } from '@/data/courrier';
 import { teteDeFile, type UsagerAffiche } from '@/data/usagers';
 import { CLE_SAUVEGARDE, estSauvegardeValide, normaliserSauvegarde } from '@/data/save';
-import { ordreDuJour, type Consigne, type Onglet } from '@/data/ordreDuJour';
+import { ordreDuJour, SEUIL_FORMULAIRES, type Consigne, type Onglet } from '@/data/ordreDuJour';
 import { circulaireAAfficher, type CirculaireDef } from '@/data/circulaires';
 import { formatEntier } from '@/utils/formatters';
+import { usePreferences } from '@/context/PreferencesContext';
 
 export type { UsagerAffiche, Consigne, Onglet, CirculaireDef };
 
@@ -22,6 +23,10 @@ const SEUIL_ABSENCE = 30_000;
 const DELAI_SAUVEGARDE = 1000;
 /** Fenêtre de calcul du débit des taps (ms). */
 const FENETRE_TAPS = 5000;
+/** Plafond d'un achat « Max » de collègues, par sécurité. */
+const ACHAT_MAX = 500;
+/** Le stock de formulaires est « bas » s'il tient moins que ce temps au rythme des collègues (s). */
+const AUTONOMIE_MIN = 15;
 
 export interface Flux {
   /** Dossiers arrivant par seconde. */
@@ -50,6 +55,10 @@ export interface AgentAffiche extends AgentDef {
   /** Multiplicateur d'ancienneté actuel (×1, ×2, ×4, ×8). */
   multiplicateur: number;
   prochainPalier: number | null;
+  /** Coût de dix recrutements d'affilée (le prix monte à chaque embauche). */
+  cout10: number;
+  /** Recrutements possibles d'affilée avec le budget actuel. */
+  maxAchetables: number;
 }
 
 export interface GradeAffiche {
@@ -59,6 +68,12 @@ export interface GradeAffiche {
   /** Dotation supplémentaire apportée par le grade (0,1 = +10 %). */
   bonus: number;
   suivant: GradeDef | null;
+}
+
+/** Dernière relance d'une note en instruction, provoquée par un coup de tampon. */
+export interface Relance {
+  id: number;
+  etat: 'transmise' | 'classee';
 }
 
 export interface Verdict {
@@ -85,11 +100,15 @@ interface GameContextType {
   prixRamette: number;
   lettresNonLues: number;
   verdict: Verdict | null;
+  relance: Relance | null;
   flux: Flux;
+  /** Le stock de formulaires va bientôt manquer (avant la rupture). */
+  stockBas: boolean;
   consigne: Consigne | null;
   circulaire: CirculaireDef | null;
   tamponner: () => GameEvents;
-  acheterAgent: (id: AgentId) => void;
+  /** Recrute `nb` collègues d'affilée (autant que le budget le permet). */
+  acheterAgent: (id: AgentId, nb?: number) => void;
   acheterRamettes: (nb: number) => void;
   reglerTauxRejet: (taux: number) => void;
   acheterNote: (id: NoteId) => void;
@@ -133,6 +152,14 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const [etat, setEtat] = useState<GameState>(() => E.etatInitial(Date.now()));
   const [pret, setPret] = useState(false);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [relance, setRelance] = useState<Relance | null>(null);
+  const relanceId = useRef(0);
+  const { vibrations } = usePreferences();
+  const vibrationsRef = useRef(vibrations);
+  vibrationsRef.current = vibrations;
+  const vibrerSi = useCallback((style: 'leger' | 'moyen' | 'succes') => {
+    if (vibrationsRef.current) vibrer(style);
+  }, []);
   const etatRef = useRef(etat);
   const rejetAcc = useRef(0);
   const verdictId = useRef(0);
@@ -232,28 +259,38 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       if (rejete) rejetAcc.current -= 1;
       verdictId.current += 1;
       setVerdict({ id: verdictId.current, rejete, usager: avant });
-      vibrer('leger');
+      vibrerSi('leger');
+    }
+    if (r.ev.relance) {
+      relanceId.current += 1;
+      setRelance({ id: relanceId.current, etat: r.ev.relance });
     }
     appliquer(r.s);
     return r.ev;
-  }, [appliquer]);
+  }, [appliquer, vibrerSi]);
 
   const acheterAgent = useCallback(
-    (id: AgentId) => {
-      const s = E.acheterAgent(etatRef.current, id, Date.now());
-      if (s !== etatRef.current) vibrer('moyen');
+    (id: AgentId, nb = 1) => {
+      const maintenant = Date.now();
+      let s = etatRef.current;
+      for (let i = 0; i < Math.min(nb, ACHAT_MAX); i++) {
+        const suivant = E.acheterAgent(s, id, maintenant);
+        if (suivant === s) break;
+        s = suivant;
+      }
+      if (s !== etatRef.current) vibrerSi('moyen');
       appliquer(s);
     },
-    [appliquer],
+    [appliquer, vibrerSi],
   );
 
   const acheterRamettes = useCallback(
     (nb: number) => {
       const s = E.acheterRamettes(etatRef.current, nb, Date.now());
-      if (s !== etatRef.current) vibrer('moyen');
+      if (s !== etatRef.current) vibrerSi('moyen');
       appliquer(s);
     },
-    [appliquer],
+    [appliquer, vibrerSi],
   );
 
   const reglerTauxRejet = useCallback(
@@ -264,10 +301,10 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const acheterNote = useCallback(
     (id: NoteId) => {
       const s = E.acheterNote(etatRef.current, id, Date.now());
-      if (s !== etatRef.current) vibrer('succes');
+      if (s !== etatRef.current) vibrerSi('succes');
       appliquer(s);
     },
-    [appliquer],
+    [appliquer, vibrerSi],
   );
 
   const marquerNotesVues = useCallback(() => {
@@ -280,10 +317,10 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const signerCerfa = useCallback(
     (prenom: string) => {
       const maintenant = Date.now();
-      vibrer('succes');
+      vibrerSi('succes');
       appliquer({ ...E.signerCerfa(etatRef.current, prenom, maintenant), derniereMaj: maintenant });
     },
-    [appliquer],
+    [appliquer, vibrerSi],
   );
 
   const deposerDemission = useCallback(
@@ -322,6 +359,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     satureRef.current = false;
     debitCollegues.current = 0;
     setVerdict(null);
+    setRelance(null);
     appliquer(E.etatInitial(Date.now()));
   }, [appliquer]);
 
@@ -350,6 +388,14 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       AGENTS.filter((a) => mods.agentsDisponibles.includes(a.id)).map((a) => {
         const possedes = etat.agents[a.id];
         const cout = E.coutAgent(a.id, possedes);
+        let cout10 = 0;
+        for (let i = 0; i < 10; i++) cout10 += E.coutAgent(a.id, possedes + i);
+        let maxAchetables = 0;
+        for (let reste = etat.budget; maxAchetables < ACHAT_MAX; maxAchetables++) {
+          const prix = E.coutAgent(a.id, possedes + maxAchetables);
+          if (reste < prix) break;
+          reste -= prix;
+        }
         return {
           ...a,
           possedes,
@@ -358,6 +404,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
           gain: E.gainAgent(etat, a.id, mods),
           multiplicateur: E.multiplicateurAnciennete(possedes),
           prochainPalier: E.prochainPalier(possedes),
+          cout10,
+          maxAchetables,
         };
       }),
     [etat, mods],
@@ -380,6 +428,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   );
 
   const consigne = useMemo(() => ordreDuJour(etat, mods), [etat, mods]);
+  // Seuil calé sur les collègues (stable) plutôt que sur les taps (qui retombent dès qu'on s'arrête).
+  const seuilStock = Math.max(SEUIL_FORMULAIRES, vitesse * mods.pieces * AUTONOMIE_MIN);
+  const stockBas = mods.recrutementVisible && etat.formulaires >= mods.pieces && etat.formulaires <= seuilStock;
   const circulaire = useMemo(() => circulaireAAfficher(etat, mods), [etat, mods]);
 
   const valeur = useMemo<GameContextType>(
@@ -400,7 +451,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       prixRamette: E.prixRamette(mods),
       lettresNonLues: etat.courrier.filter((l) => !l.lue).length,
       verdict,
+      relance,
       flux,
+      stockBas,
       consigne,
       circulaire,
       tamponner,
@@ -418,7 +471,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       nouvellePartie,
     }),
     [
-      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, flux, grade, consigne, circulaire, tamponner,
+      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, relance, flux, stockBas, grade, consigne, circulaire, tamponner,
       acheterAgent, acheterRamettes, reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa,
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste, marquerCirculaireVue,
       nouvellePartie,

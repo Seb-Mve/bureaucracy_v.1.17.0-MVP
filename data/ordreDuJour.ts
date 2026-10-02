@@ -16,7 +16,7 @@ export interface Consigne {
 }
 
 /** En dessous de ce stock, racheter des formulaires passe en priorité. */
-const SEUIL_FORMULAIRES = 20;
+export const SEUIL_FORMULAIRES = 20;
 
 const NOTE_EN_ATTENTE: Consigne = { id: 'note', texte: 'Une note de service vous attend.', onglet: 'notes' };
 const FORMULAIRES: Consigne = {

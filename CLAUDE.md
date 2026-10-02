@@ -35,7 +35,7 @@ Pure data-layer logic is covered by `npm test` (Node's built-in test runner, no 
 
 ```
 components/   → UI only, no game math (components/charte/ = charte primitives)
-context/      → GameStateContext: state, actions, game loop, save
+context/      → GameStateContext: state, actions, game loop, save; PreferencesContext: device settings
 data/         → Pure functions, no React dependencies (also run by the simulator under Node)
 constants/    → Colors/Fonts/Charte, balance numbers and agent definitions
 ```
@@ -48,6 +48,11 @@ Components must never import from `data/`. Everything goes through `useGameState
 - **Offline progress:** `simulerAbsence` runs 1 s ticks with collègues only, without rejection or Conformité gain (capped at 2 h) and posts a courrier letter.
 - **Save:** throttled to AsyncStorage: the first state change arms a 1 s timer that is never re-armed while pending, so the latest state is written at most once per second while playing (a debounce would never fire, since the loop changes the state every 100 ms). Plus an immediate save when the app goes to background.
 - **Courrier:** `nouvellesLettres` is checked every tick; each letter is sent once (`lettresEnvoyees`).
+- **Tap feedback:** a tap shows no floating numbers. It reads in the scene (arm, impact star, ink, shake) and in the counters, which react to `verdict.id` through `components/charte/ValeurAnimee`. TAMPONNER repeats at 3 taps/s while held (`BoutonPoussoir` `repetition`), and the space bar stamps on the web.
+
+### PreferencesContext (`context/PreferencesContext.tsx`)
+
+Vibrations and reduced animations, stored under their own AsyncStorage key (`bureaucracy_preferences_v1`) so they survive « Effacer la partie ». `reduireMouvement` also follows the system setting.
 
 ### Data layer files
 
@@ -73,7 +78,7 @@ File-based routing via `expo-router`. First launch shows `CerfaEcran` (hiring fo
 - `index.tsx` — Guichet, no scrolling: resources (`Hud`), the pixel-art scene (`SceneGuichet`: the queue itself, with the usager’s bubble, the « fil » for a new note or the ordre du jour, and the demand chip pinned on it), rejection slider, TAMPONNER
 - `recruitment.tsx` — collègues and ramettes (hidden until note n° 1)
 - `notes.tsx` — Notes de service (hidden until the first note)
-- `options.tsx` — dossier administratif, démission, reset
+- `options.tsx` — dossier administratif, règlement intérieur (help, one article per unlocked mechanic), confort settings, démission, reset
 
 The header (`EnTete`) holds the **Tampons apposés** counter (always at the top, on every tab) and the S.I.C. courrier envelope.
 

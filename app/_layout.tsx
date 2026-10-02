@@ -7,6 +7,7 @@ import { Nunito_600SemiBold, Nunito_800ExtraBold } from '@expo-google-fonts/nuni
 import { RobotoMono_500Medium, RobotoMono_700Bold } from '@expo-google-fonts/roboto-mono';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import GameStateProvider from '@/context/GameStateContext';
+import PreferencesProvider from '@/context/PreferencesContext';
 import Colors from '@/constants/Colors';
 
 SplashScreen.preventAutoHideAsync();
@@ -31,13 +32,15 @@ export default function RootLayout() {
 
   return (
     <View style={styles.fond}>
-      <GameStateProvider>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.creme } }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="dark" />
-      </GameStateProvider>
+      <PreferencesProvider>
+        <GameStateProvider>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.creme } }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="dark" />
+        </GameStateProvider>
+      </PreferencesProvider>
     </View>
   );
 }

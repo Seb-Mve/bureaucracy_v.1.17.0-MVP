@@ -12,6 +12,10 @@ const Colors = {
   // Encre de l'acte I (bouton poussoir)
   encre: '#E6904E',
   encreOmbre: '#D47A38',
+  /** Flanc du bouton poussoir, plus sombre que l'ombre pour donner du relief. */
+  encreFlanc: '#C06A2C',
+  /** Lumière sur le haut de la face du bouton poussoir. */
+  reflet: 'rgba(255,255,255,0.38)',
   encreClaire: '#F3B27E',
   encreFond: '#FDEBD8',
   /** Orange lisible pour du texte (contraste AA sur fond clair). */

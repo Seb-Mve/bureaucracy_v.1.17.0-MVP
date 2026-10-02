@@ -6,7 +6,7 @@
 import { PX } from '@/constants/PalettePixel';
 import { calque, peindreComptoir, peindreFacade, peindreFond, peindrePotelets } from './decor';
 import { hautTete, specUsager, spriteAgent, spriteTampon, spriteUsager, type SpecUsager, type VarianteAgent } from './sprites';
-import { Toile, adoucir, couleur as c, hache, texte, texteDetoure } from './toile';
+import { Toile, adoucir, couleur as c, hache, texte } from './toile';
 
 /** Ce que la scène reçoit du jeu. */
 export interface EtatScene {
@@ -33,7 +33,8 @@ interface UsagerScene {
 interface Dossier { x: number; de: number; vers: number; t0: number; duree: number; etat: 'glisse' | 'pose' | 'retour'; marque?: 'ok' | 'rej'; saut?: number }
 interface Coup { t0: number; rejete: boolean; impact: boolean }
 interface Particule { x: number; y: number; vx: number; vy: number; g: number; t0: number; vie: number; col: string; fondu?: boolean }
-interface Flottant { type: 'etoile' | 'texte'; x: number; y: number; t0: number; vie: number }
+/** Étoile d'impact du tampon (le gain s'affiche dans les compteurs, pas dans la scène). */
+interface Etoile { x: number; y: number; t0: number; vie: number }
 
 /** Dimensions du monde dessiné (px). */
 const MONDE = { largeur: 176, hauteur: 112 };
@@ -56,7 +57,7 @@ export class MoteurScene {
   private file: UsagerScene[] = [];
   private parts: UsagerScene[] = [];
   private particules: Particule[] = [];
-  private flottants: Flottant[] = [];
+  private etoiles: Etoile[] = [];
   private dossier: Dossier | null = null;
   private coup: Coup | null = null;
   private depart: { t: number; rejete: boolean } | null = null;
@@ -157,7 +158,7 @@ export class MoteurScene {
     for (let i = 0; i < 7; i++) {
       this.particules.push({ x: 111, y: 75, vx: (i - 3) * 16 + (hache(t | 0, i) % 9) - 4, vy: -40 - (hache(t | 0, i + 9) % 40), g: 260, t0: t, vie: 420, col: i % 2 ? PX.encre : PX.encreOmbre });
     }
-    this.flottants.push({ type: 'etoile', x: 111, y: 75, t0: t, vie: 130 }, { type: 'texte', x: 104, y: 60, t0: t, vie: 800 });
+    this.etoiles.push({ x: 111, y: 75, t0: t, vie: 130 });
     this.onImpact?.();
   }
 
@@ -199,7 +200,7 @@ export class MoteurScene {
       p.x += (p.vx * dt) / 1000; p.y += (p.vy * dt) / 1000; p.vy += (p.g * dt) / 1000;
       return t - p.t0 < p.vie;
     });
-    this.flottants = this.flottants.filter((f) => t - f.t0 < f.vie);
+    this.etoiles = this.etoiles.filter((f) => t - f.t0 < f.vie);
   }
 
   private positionTampon(): { x: number; y: number; ecrase: boolean; trainee: boolean } {
@@ -358,15 +359,11 @@ export class MoteurScene {
       const a = p.fondu ? Math.max(0, 1 - (t - p.t0) / p.vie) : 1;
       T.point(p.x, p.y, c(p.col, Math.round(a * 10) / 10));
     }
-    for (const f of this.flottants) {
+    for (const f of this.etoiles) {
       const k = (t - f.t0) / f.vie;
-      if (f.type === 'etoile') {
-        const r = k < 0.5 ? 4 : 2, b = c(PX.blanc);
-        T.rect(f.x - r, f.y, r * 2 + 1, 1, b); T.rect(f.x, f.y - r, 1, r + 1, b);
-        T.point(f.x - r + 1, f.y - r + 1, b); T.point(f.x + r - 1, f.y - r + 1, b);
-      } else if (k < 0.5 || Math.floor(t / 60) % 2 === 0) {
-        texteDetoure(T, '+1', f.x, Math.round(f.y - k * 14), c(PX.sangle[0]));
-      }
+      const r = k < 0.5 ? 4 : 2, b = c(PX.blanc);
+      T.rect(f.x - r, f.y, r * 2 + 1, 1, b); T.rect(f.x, f.y - r, 1, r + 1, b);
+      T.point(f.x - r + 1, f.y - r + 1, b); T.point(f.x + r - 1, f.y - r + 1, b);
     }
   }
 }

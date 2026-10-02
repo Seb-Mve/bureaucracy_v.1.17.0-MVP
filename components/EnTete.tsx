@@ -6,13 +6,14 @@ import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Fonts } from '@/constants/Colors';
 import NotificationBadge from '@/components/NotificationBadge';
 import CourrierModal from '@/components/CourrierModal';
+import ValeurAnimee from '@/components/charte/ValeurAnimee';
 
 /**
  * En-tête commun à tous les onglets : le compteur « Tampons apposés »
  * (repère qui ne quitte jamais le haut de l'écran) et l'enveloppe du S.I.C.
  */
 export default function EnTete() {
-  const { etat, lettresNonLues } = useGameState();
+  const { etat, lettresNonLues, verdict } = useGameState();
   const [courrier, setCourrier] = useState(false);
   const insets = useSafeAreaInsets();
   const tampons = Math.floor(etat.tampons);
@@ -21,9 +22,13 @@ export default function EnTete() {
     <View style={[styles.entete, { paddingTop: insets.top + 6 }]}>
       <View style={styles.compteur} accessible accessibilityRole="header" accessibilityLabel={`Tampons apposés : ${tampons}`}>
         <Text style={styles.label}>TAMPONS APPOSÉS</Text>
-        <Text style={styles.valeur} numberOfLines={1} adjustsFontSizeToFit>
-          {tampons.toLocaleString('fr-FR')}
-        </Text>
+        <ValeurAnimee
+          texte={tampons.toLocaleString('fr-FR')}
+          declencheur={verdict?.id}
+          style={styles.valeur}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        />
       </View>
       <Pressable
         onPress={() => setCourrier(true)}
@@ -64,6 +69,8 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 30,
     color: Colors.anthracite,
+    alignSelf: 'flex-start',
+    transformOrigin: 'left center',
   },
   enveloppe: {
     width: 44,

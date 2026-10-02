@@ -6,6 +6,7 @@ import ScenePixel from '@/components/scene/ScenePixel';
 import BulleGuichet from '@/components/guichet/BulleGuichet';
 import FilScene from '@/components/guichet/FilScene';
 import PuceFlux from '@/components/guichet/PuceFlux';
+import { usePreferences } from '@/context/PreferencesContext';
 
 /**
  * La scène du guichet occupe tout le milieu de l'écran : la file elle-même,
@@ -14,10 +15,12 @@ import PuceFlux from '@/components/guichet/PuceFlux';
  */
 export default function SceneGuichet() {
   const secousse = useSharedValue(0);
+  const { reduireMouvement } = usePreferences();
   const surImpact = useCallback(() => {
+    if (reduireMouvement) return;
     // Retour visuel de la charte : l'écran tremble de 2 px.
     secousse.value = withSequence(withTiming(2, { duration: 30 }), withTiming(-2, { duration: 40 }), withTiming(0, { duration: 40 }));
-  }, [secousse]);
+  }, [secousse, reduireMouvement]);
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: secousse.value }, { translateY: -secousse.value / 2 }] }));
 
   return (

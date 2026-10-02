@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Fonts } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
@@ -18,15 +18,20 @@ export default function Circulaire() {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={fermer}>
       <View style={styles.voile}>
         <ScrollView contentContainerStyle={styles.defilement}>
-          <Panneau contenuStyle={styles.fiche} rayon={12}>
-            <Text style={styles.reference}>Circulaire n° {circulaire.numero} · S.I.C.</Text>
-            <Text style={styles.titre} accessibilityRole="header">
-              {circulaire.titre}
-            </Text>
-            <View style={styles.separateur} />
-            <Text style={styles.texte}>{circulaire.texte}</Text>
-            <BoutonPoussoir libelle="PRIS CONNAISSANCE" taille={16} hauteur={48} onPress={fermer} />
-          </Panneau>
+          {/* Toucher à côté de la circulaire vaut « Pris connaissance ». */}
+          <Pressable style={styles.zone} onPress={fermer} accessible={false}>
+            <Pressable onPress={() => undefined} accessible={false}>
+              <Panneau contenuStyle={styles.fiche} rayon={12}>
+                <Text style={styles.reference}>Circulaire n° {circulaire.numero} · S.I.C.</Text>
+                <Text style={styles.titre} accessibilityRole="header">
+                  {circulaire.titre}
+                </Text>
+                <View style={styles.separateur} />
+                <Text style={styles.texte}>{circulaire.texte}</Text>
+                <BoutonPoussoir libelle="PRIS CONNAISSANCE" taille={16} hauteur={48} onPress={fermer} />
+              </Panneau>
+            </Pressable>
+          </Pressable>
         </ScrollView>
       </View>
     </Modal>
@@ -39,6 +44,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(45,52,54,0.55)',
   },
   defilement: {
+    flexGrow: 1,
+  },
+  zone: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 18,
