@@ -18,6 +18,8 @@ export type { UsagerAffiche, Consigne, Onglet, CirculaireDef };
 const INTERVALLE = 100;
 /** Au-delà de cet écart entre deux ticks, on considère une absence (onglet en veille). */
 const SEUIL_ABSENCE = 30_000;
+/** Délai maximal entre une modification de l'état et son écriture sur le disque (ms). */
+const DELAI_SAUVEGARDE = 1000;
 /** Fenêtre de calcul du débit des taps (ms). */
 const FENETRE_TAPS = 5000;
 
@@ -169,14 +171,23 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     };
   }, [appliquer]);
 
-  // Sauvegarde différée (1 s).
+  // Sauvegarde limitée à une écriture par seconde. La boucle de jeu modifie l'état toutes
+  // les 100 ms : on ne réarme donc pas un minuteur déjà en attente (sinon il ne partirait
+  // jamais) ; il écrira l'état le plus récent au moment où il se déclenche.
   useEffect(() => {
-    if (!pret) return;
-    if (sauvegardeTimer.current) clearTimeout(sauvegardeTimer.current);
+    if (!pret || sauvegardeTimer.current) return;
     sauvegardeTimer.current = setTimeout(() => {
+      sauvegardeTimer.current = null;
       AsyncStorage.setItem(CLE_SAUVEGARDE, JSON.stringify(etatRef.current)).catch(() => undefined);
-    }, 1000);
+    }, DELAI_SAUVEGARDE);
   }, [etat, pret]);
+
+  useEffect(
+    () => () => {
+      if (sauvegardeTimer.current) clearTimeout(sauvegardeTimer.current);
+    },
+    [],
+  );
 
   // Boucle de jeu.
   useEffect(() => {

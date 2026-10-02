@@ -46,7 +46,7 @@ Components must never import from `data/`. Everything goes through `useGameState
 
 - **Game loop:** `setInterval` at 100 ms, calls `tick(state, dt)`; a gap > 30 s (backgrounded tab) is treated as an absence.
 - **Offline progress:** `simulerAbsence` runs 1 s ticks with collègues only, without rejection or Conformité gain (capped at 2 h) and posts a courrier letter.
-- **Save:** debounced 1 s to AsyncStorage, plus immediate save when the app goes to background.
+- **Save:** throttled to AsyncStorage: the first state change arms a 1 s timer that is never re-armed while pending, so the latest state is written at most once per second while playing (a debounce would never fire, since the loop changes the state every 100 ms). Plus an immediate save when the app goes to background.
 - **Courrier:** `nouvellesLettres` is checked every tick; each letter is sent once (`lettresEnvoyees`).
 
 ### Data layer files
