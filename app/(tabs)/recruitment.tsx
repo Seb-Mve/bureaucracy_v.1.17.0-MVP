@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FileStack, UserRound } from 'lucide-react-native';
 import { useGameState, type AgentAffiche } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import { BALANCE } from '@/constants/balance';
 import { formatEuros, formatNumberFrench } from '@/utils/formatters';
 import Hud from '@/components/Hud';
@@ -50,7 +50,7 @@ const CarteAgent = memo(function CarteAgent({
 }) {
   const max = agent.maxAchetables;
   return (
-    <Panneau contenuStyle={styles.carteAgent} rayon={14}>
+    <Panneau contenuStyle={styles.carteAgent} rayon={Charte.rayon}>
       <View style={styles.ligneAgent}>
         <View style={styles.avatar}>
           <UserRound size={18} color={Colors.anthracite} />
@@ -107,7 +107,7 @@ export default function RecrutementScreen() {
       <Hud />
       <ScrollView contentContainerStyle={styles.contenu}>
         <Text style={styles.titre}>Fournitures</Text>
-        <Panneau contenuStyle={styles.carte} rayon={14}>
+        <Panneau contenuStyle={styles.carte} rayon={Charte.rayon}>
           <View style={[styles.avatar, styles.avatarRamette]}>
             <FileStack size={18} color={Colors.anthracite} />
           </View>
@@ -155,32 +155,32 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.creme,
   },
   contenu: {
-    padding: 12,
-    gap: 10,
+    padding: Espace.m,
+    gap: Espace.m,
   },
   titre: {
     fontFamily: Fonts.titre,
-    fontSize: 17,
+    fontSize: Typo.titre,
     color: Colors.anthracite,
-    marginTop: 4,
+    marginTop: Espace.xs,
   },
   sousTitre: {
     fontFamily: Fonts.texte,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
   },
   carteAgent: {
-    padding: 10,
-    gap: 10,
+    padding: Espace.m,
+    gap: Espace.m,
   },
   ligneAgent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: Espace.m,
   },
   achatsAgent: {
     flexDirection: 'row',
-    gap: 6,
+    gap: Espace.s,
   },
   achatLarge: {
     flex: 1,
@@ -189,13 +189,13 @@ const styles = StyleSheet.create({
   carte: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 10,
+    gap: Espace.m,
+    padding: Espace.m,
   },
   avatar: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Charte.rayon,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
     backgroundColor: Colors.encreFond,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarRamette: {
-    backgroundColor: '#A0C4FF',
+    backgroundColor: Colors.pastelBleu,
   },
   infos: {
     flex: 1,
@@ -211,36 +211,36 @@ const styles = StyleSheet.create({
   },
   nom: {
     fontFamily: Fonts.texteGras,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   possedes: {
     fontFamily: Fonts.chiffres,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.encreTexte,
   },
   description: {
     fontFamily: Fonts.texte,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
   },
   detail: {
     fontFamily: Fonts.chiffresRegular,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.anthracite,
   },
   anciennete: {
     fontFamily: Fonts.texteGras,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.encreTexte,
   },
   alerte: {
     fontFamily: Fonts.texteGras,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.encreTexte,
   },
   achats: {
-    gap: 6,
+    gap: Espace.s,
   },
   achat: {
     minWidth: 64,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.anthracite,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: Espace.s,
   },
   achatActif: {
     backgroundColor: Colors.vert,
@@ -263,12 +263,12 @@ const styles = StyleSheet.create({
   },
   achatTexte: {
     fontFamily: Fonts.chiffres,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.anthracite,
   },
   achatDetail: {
     fontFamily: Fonts.chiffresRegular,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.anthracite,
   },
   achatTexteInactif: {

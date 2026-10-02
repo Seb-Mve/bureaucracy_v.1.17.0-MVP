@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { PanResponder, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { Minus, Plus } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import JaugeHachuree from '@/components/charte/JaugeHachuree';
 
 const PAS = 0.05;
@@ -94,36 +94,36 @@ export default function CurseurRejet() {
 
 const styles = StyleSheet.create({
   bloc: {
-    marginHorizontal: 12,
-    marginTop: 8,
+    marginHorizontal: Espace.m,
+    marginTop: Espace.s,
   },
   entete: {
     width: 58,
   },
   label: {
     fontFamily: Fonts.texteGras,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.anthracite,
   },
   valeur: {
     fontFamily: Fonts.chiffres,
-    fontSize: 14,
-    lineHeight: 17,
+    fontSize: Typo.corps,
+    lineHeight: Interligne.corps,
     color: Colors.anthracite,
   },
   plafond: {
     fontFamily: Fonts.texte,
-    fontSize: 9,
+    fontSize: Typo.micro,
     color: Colors.crayon,
   },
   ligne: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: Espace.s,
   },
   piste: {
     flex: 1,
-    paddingVertical: 11,
+    paddingVertical: Espace.m,
   },
   pas: {
     width: 44,

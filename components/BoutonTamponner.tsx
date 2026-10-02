@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 import { formatEuros } from '@/utils/formatters';
 
@@ -70,7 +70,7 @@ export default function BoutonTamponner() {
         libelle={libelle}
         onPress={tamponner}
         repetition
-        taille={libelle === 'TAMPONNER' ? 24 : 18}
+        taille={libelle === 'TAMPONNER' ? Typo.grand : Typo.titre}
         couleur={rupture || vide ? Colors.carton : Colors.encre}
         couleurOmbre={rupture || vide ? Colors.crayonClair : Colors.encreFlanc}
         couleurTexte={rupture || vide ? Colors.crayon : Colors.anthracite}
@@ -92,21 +92,21 @@ export default function BoutonTamponner() {
 
 const styles = StyleSheet.create({
   zone: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 10,
-    gap: 8,
+    paddingHorizontal: Espace.m,
+    paddingTop: Espace.s,
+    paddingBottom: Espace.m,
+    gap: Espace.s,
   },
   alerte: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: Espace.m,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
     borderRadius: Charte.rayonPetit,
-    paddingLeft: 10,
-    paddingRight: 4,
-    paddingVertical: 4,
+    paddingLeft: Espace.m,
+    paddingRight: Espace.xs,
+    paddingVertical: Espace.xs,
     minHeight: 52,
   },
   alerteBas: {
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   alerteTexte: {
     flex: 1,
     fontFamily: Fonts.texteGras,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.encreTexte,
   },
   alerteTexteRupture: {
@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
   achat: {
     minHeight: 44,
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingHorizontal: Espace.m,
+    borderRadius: Charte.rayonPetit,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
     backgroundColor: Colors.vert,
@@ -138,12 +138,12 @@ const styles = StyleSheet.create({
   },
   achatTexte: {
     fontFamily: Fonts.chiffres,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.anthracite,
   },
   aide: {
     fontFamily: Fonts.texteGras,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
     textAlign: 'center',
   },

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import ValeurAnimee from '@/components/charte/ValeurAnimee';
 
 function duree(sec: number): string {
@@ -11,11 +12,11 @@ function duree(sec: number): string {
 }
 
 /**
- * Un seul emplacement pour ce qui réclame l'attention, épinglé sur la scène :
+ * Une seule ligne pour ce qui réclame l'attention, sous les ressources :
  * une nouvelle note de service, sinon la note en instruction (que chaque coup
  * de tampon relance), sinon l'ordre du jour.
  */
-export default function FilScene() {
+export default function FilDuJour() {
   const { notes, consigne, relance } = useGameState();
   const router = useRouter();
   const nouvelle = [...notes].reverse().find((n) => n.nouvelle);
@@ -60,7 +61,12 @@ export default function FilScene() {
       accessibilityRole={onglet ? 'button' : 'text'}
       accessibilityLabel={`${sur}${compte ? `, ${compte} restantes` : ''} : ${texte}`}
     >
-      <Text style={styles.sur}>{sur}</Text>
+      <View style={styles.textes}>
+        <Text style={styles.sur}>{sur}</Text>
+        <Text style={styles.texte} numberOfLines={2}>
+          {texte}
+        </Text>
+      </View>
       {compte !== null && (
         <ValeurAnimee
           texte={compte}
@@ -68,56 +74,46 @@ export default function FilScene() {
           style={styles.compte}
         />
       )}
-      <Text style={styles.texte} numberOfLines={3}>
-        {texte}
-        {onglet ? ' ›' : ''}
-      </Text>
+      {onglet && <ChevronRight size={18} color={Colors.anthracite} />}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   fil: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    maxWidth: '42%',
-    backgroundColor: Colors.papier,
-    borderWidth: Charte.traitFin,
-    borderColor: Colors.anthracite,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    transform: [{ rotate: '1.5deg' }],
-    shadowColor: Colors.anthracite,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Espace.s,
+    minHeight: 44,
+    paddingHorizontal: Espace.l,
+    paddingVertical: Espace.s,
   },
   note: {
     backgroundColor: Colors.encreFond,
   },
   presse: {
-    transform: [{ rotate: '1.5deg' }, { translateY: 2 }],
+    opacity: 0.7,
+  },
+  textes: {
+    flex: 1,
   },
   sur: {
     fontFamily: Fonts.texteGras,
-    fontSize: 8.5,
-    letterSpacing: 0.4,
+    fontSize: Typo.micro,
+    lineHeight: Interligne.micro,
+    letterSpacing: 0.6,
     color: Colors.encreTexte,
-  },
-  compte: {
-    fontFamily: Fonts.chiffres,
-    fontSize: 15,
-    color: Colors.anthracite,
-    alignSelf: 'flex-start',
-    transformOrigin: 'left center',
   },
   texte: {
     fontFamily: Fonts.texteGras,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: Typo.corps,
+    lineHeight: Interligne.corps,
+    color: Colors.anthracite,
+  },
+  compte: {
+    fontFamily: Fonts.chiffres,
+    fontSize: Typo.titre,
+    lineHeight: Interligne.titre,
     color: Colors.anthracite,
   },
 });

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import { BALANCE } from '@/constants/balance';
 import { PATIENCE_MAX } from '@/types/game';
 import Panneau from '@/components/charte/Panneau';
@@ -64,7 +64,7 @@ export default function ReglementInterieur() {
   }
 
   return (
-    <Panneau contenuStyle={styles.fiche} rayon={14}>
+    <Panneau contenuStyle={styles.fiche} rayon={Charte.rayon}>
       <Pressable
         onPress={() => setOuvert((o) => !o)}
         style={styles.entete}
@@ -91,8 +91,8 @@ export default function ReglementInterieur() {
 
 const styles = StyleSheet.create({
   fiche: {
-    padding: 12,
-    gap: 10,
+    padding: Espace.m,
+    gap: Espace.m,
     backgroundColor: Colors.papierChaud,
   },
   entete: {
@@ -100,37 +100,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: Espace.s,
   },
   reference: {
     flex: 1,
     fontFamily: Fonts.texteGras,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   article: {
     gap: 2,
     borderTopWidth: 1,
     borderTopColor: Colors.carton,
-    paddingTop: 8,
+    paddingTop: Espace.s,
   },
   titre: {
     fontFamily: Fonts.texteGras,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.encreTexte,
   },
   texte: {
     fontFamily: Fonts.texte,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: Typo.corps,
+    lineHeight: Interligne.corps,
     color: Colors.anthracite,
   },
   astuce: {
     fontFamily: Fonts.texte,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
     borderTopWidth: Charte.traitFin,
     borderTopColor: Colors.carton,
-    paddingTop: 8,
+    paddingTop: Espace.s,
   },
 });

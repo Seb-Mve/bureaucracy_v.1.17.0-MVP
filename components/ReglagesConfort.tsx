@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, StyleSheet, Switch, Text, View, type SwitchProps } from 'react-native';
 import { usePreferences } from '@/context/PreferencesContext';
-import Colors, { Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 
 /** Sur le web, la pastille de l'interrupteur actif a sa propre couleur (bleu-vert par défaut). */
@@ -38,7 +38,7 @@ export default function ReglagesConfort() {
   const { vibrations, animationsReduites, regler } = usePreferences();
 
   return (
-    <Panneau contenuStyle={styles.fiche} rayon={14}>
+    <Panneau contenuStyle={styles.fiche} rayon={Charte.rayon}>
       {Platform.OS !== 'web' && (
         <Ligne
           titre="Vibrations"
@@ -59,14 +59,14 @@ export default function ReglagesConfort() {
 
 const styles = StyleSheet.create({
   fiche: {
-    padding: 12,
-    gap: 12,
+    padding: Espace.m,
+    gap: Espace.m,
     backgroundColor: Colors.papierChaud,
   },
   ligne: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Espace.m,
     minHeight: 44,
   },
   textes: {
@@ -75,12 +75,12 @@ const styles = StyleSheet.create({
   },
   titre: {
     fontFamily: Fonts.texteGras,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   aide: {
     fontFamily: Fonts.texte,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
   },
 });

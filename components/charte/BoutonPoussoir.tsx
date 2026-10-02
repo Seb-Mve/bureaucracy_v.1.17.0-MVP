@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import Colors, { Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 
 interface BoutonPoussoirProps {
   libelle: string;
@@ -20,7 +20,6 @@ interface BoutonPoussoirProps {
   accessibilityHint?: string;
 }
 
-const RAYON = 20;
 const TRAIT = 3;
 /** Avant de répéter, le doigt doit rester posé ce temps (ms). */
 const DELAI_REPETITION = 400;
@@ -38,7 +37,7 @@ export default function BoutonPoussoir({
   couleurOmbre = Colors.encreFlanc,
   couleurTexte = Colors.anthracite,
   hauteur = 66,
-  taille = 22,
+  taille = Typo.grand,
   desactive = false,
   repetition = false,
   style,
@@ -134,7 +133,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: RAYON,
+    borderRadius: Charte.rayon,
     borderWidth: TRAIT,
     borderBottomWidth: TRAIT + 2,
     borderColor: Colors.anthracite,
@@ -144,13 +143,13 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    borderRadius: RAYON,
+    borderRadius: Charte.rayon,
     borderWidth: TRAIT,
     borderColor: Colors.anthracite,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: Espace.m,
   },
   reflet: {
     position: 'absolute',

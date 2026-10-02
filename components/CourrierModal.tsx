@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 
 interface CourrierModalProps {
@@ -40,7 +40,7 @@ export default function CourrierModal({ visible, onFermer }: CourrierModalProps)
             <Text style={styles.vide}>Aucun courrier. Le S.I.C. ne vous a pas encore remarqué.</Text>
           )}
           {etat.courrier.map((l) => (
-            <Panneau key={`${l.id}-${l.recue}`} contenuStyle={styles.lettre} rayon={10}>
+            <Panneau key={`${l.id}-${l.recue}`} contenuStyle={styles.lettre} rayon={Charte.rayonPetit}>
               <View style={styles.lettreEntete}>
                 <Text style={styles.expediteur}>SERVICE INCONNU DE COORDINATION</Text>
                 {!l.lue && <View style={styles.pastille} accessibilityLabel="Non lue" />}
@@ -66,15 +66,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: Espace.l,
+    paddingVertical: Espace.m,
     borderBottomWidth: Charte.trait,
     borderBottomColor: Colors.anthracite,
     backgroundColor: Colors.creme,
   },
   titre: {
     fontFamily: Fonts.titreGras,
-    fontSize: 20,
+    fontSize: Typo.titre,
     color: Colors.anthracite,
   },
   fermer: {
@@ -84,20 +84,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   liste: {
-    padding: 14,
-    gap: 14,
+    padding: Espace.l,
+    gap: Espace.l,
   },
   vide: {
     fontFamily: Fonts.texte,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.crayon,
     textAlign: 'center',
-    paddingVertical: 40,
+    paddingVertical: Espace.xxl,
   },
   lettre: {
-    padding: 14,
-    gap: 6,
-    backgroundColor: '#FFFEF9',
+    padding: Espace.l,
+    gap: Espace.s,
+    backgroundColor: Colors.papierFiche,
   },
   lettreEntete: {
     flexDirection: 'row',
@@ -106,37 +106,37 @@ const styles = StyleSheet.create({
   },
   expediteur: {
     fontFamily: Fonts.chiffres,
-    fontSize: 10,
+    fontSize: Typo.micro,
     color: Colors.crayon,
     letterSpacing: 1,
   },
   pastille: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: Charte.rayonMini,
     backgroundColor: Colors.rouge,
     borderWidth: 1.5,
     borderColor: Colors.anthracite,
   },
   date: {
     fontFamily: Fonts.texte,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.crayon,
   },
   objet: {
     fontFamily: Fonts.texteGras,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   corps: {
     fontFamily: Fonts.texte,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: Typo.corps,
+    lineHeight: Interligne.corps,
     color: Colors.anthracite,
   },
   signature: {
     fontFamily: Fonts.texteGras,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.crayon,
     textAlign: 'right',
   },

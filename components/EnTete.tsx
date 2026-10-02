@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Mail } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import NotificationBadge from '@/components/NotificationBadge';
 import CourrierModal from '@/components/CourrierModal';
 import ValeurAnimee from '@/components/charte/ValeurAnimee';
@@ -48,9 +48,9 @@ const styles = StyleSheet.create({
   entete: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingBottom: 8,
+    gap: Espace.m,
+    paddingHorizontal: Espace.l,
+    paddingBottom: Espace.s,
     backgroundColor: Colors.creme,
     borderBottomWidth: Charte.trait,
     borderBottomColor: Colors.anthracite,
@@ -60,14 +60,14 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: Fonts.texteGras,
-    fontSize: 10,
+    fontSize: Typo.micro,
     letterSpacing: 0.8,
     color: Colors.crayon,
   },
   valeur: {
     fontFamily: Fonts.chiffres,
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: Typo.heros,
+    lineHeight: Interligne.heros,
     color: Colors.anthracite,
     alignSelf: 'flex-start',
     transformOrigin: 'left center',

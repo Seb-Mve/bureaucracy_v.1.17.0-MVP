@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Colors, { Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 
 /** Pastille de nouveauté (onglets, enveloppe du courrier). */
 export default function NotificationBadge({ count }: { count: number }) {
@@ -18,19 +18,19 @@ const styles = StyleSheet.create({
     top: -6,
     right: -10,
     backgroundColor: Colors.rouge,
-    borderRadius: 10,
+    borderRadius: Charte.rayonPetit,
     borderWidth: 1.5,
     borderColor: Colors.anthracite,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: Espace.xs,
     zIndex: 1,
   },
   texte: {
     color: Colors.papier,
-    fontSize: 11,
+    fontSize: Typo.micro,
     fontFamily: Fonts.texteGras,
   },
 });

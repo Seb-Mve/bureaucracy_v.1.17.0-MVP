@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import { formatEntier } from '@/utils/formatters';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
@@ -45,7 +45,7 @@ export default function OptionsScreen() {
   return (
     <ScrollView style={styles.ecran} contentContainerStyle={styles.contenu}>
       <Text style={styles.titre}>Dossier administratif</Text>
-      <Panneau contenuStyle={styles.fiche} rayon={14}>
+      <Panneau contenuStyle={styles.fiche} rayon={Charte.rayon}>
         {lignes.map(([k, v]) => (
           <View key={k} style={styles.ligne}>
             <Text style={styles.cle}>{k}</Text>
@@ -69,7 +69,7 @@ export default function OptionsScreen() {
       <ReglagesConfort />
 
       <Text style={styles.titre}>Démission</Text>
-      <Panneau contenuStyle={styles.fiche} rayon={14}>
+      <Panneau contenuStyle={styles.fiche} rayon={Charte.rayon}>
         <Text style={styles.cerfa}>Cerfa n° 00001*02 — Demande de cessation volontaire de fonctions</Text>
         {deposee ? (
           <>
@@ -84,8 +84,8 @@ export default function OptionsScreen() {
             </Text>
             <BoutonPoussoir
               libelle="DÉPOSER MA DÉMISSION"
-              taille={16}
-              hauteur={50}
+              taille={Typo.titre}
+              hauteur={54}
               couleur={Colors.carton}
               couleurOmbre={Colors.crayonClair}
               couleurTexte={Colors.anthracite}
@@ -102,7 +102,7 @@ export default function OptionsScreen() {
       </Panneau>
 
       <Text style={styles.titre}>Remise à zéro</Text>
-      <Panneau contenuStyle={styles.fiche} rayon={14}>
+      <Panneau contenuStyle={styles.fiche} rayon={Charte.rayon}>
         <Text style={styles.texte}>Efface la partie en cours et recommence au Cerfa d’embauche.</Text>
         <Pressable
           style={({ pressed }) => [styles.danger, pressed && styles.presse]}
@@ -125,18 +125,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.creme,
   },
   contenu: {
-    padding: 12,
-    gap: 10,
+    padding: Espace.m,
+    gap: Espace.m,
   },
   titre: {
     fontFamily: Fonts.titre,
-    fontSize: 17,
+    fontSize: Typo.titre,
     color: Colors.anthracite,
-    marginTop: 6,
+    marginTop: Espace.s,
   },
   fiche: {
-    padding: 12,
-    gap: 8,
+    padding: Espace.m,
+    gap: Espace.s,
     backgroundColor: Colors.papierChaud,
   },
   ligne: {
@@ -144,31 +144,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: Colors.carton,
-    paddingBottom: 4,
+    paddingBottom: Espace.xs,
   },
   cle: {
     fontFamily: Fonts.texteGras,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.crayon,
   },
   valeur: {
     fontFamily: Fonts.chiffres,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.anthracite,
   },
   cerfa: {
     fontFamily: Fonts.chiffres,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.crayon,
   },
   texte: {
     fontFamily: Fonts.texte,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   aide: {
     fontFamily: Fonts.texte,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
   },
   relire: {
@@ -179,11 +179,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.papier,
-    marginTop: 4,
+    marginTop: Espace.xs,
   },
   relireTexte: {
     fontFamily: Fonts.texteGras,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   danger: {
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   dangerTexte: {
     fontFamily: Fonts.texteGras,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.rougeTexte,
   },
 });

@@ -1,5 +1,6 @@
 import { Link, Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import Colors, { Espace, Fonts, Typo } from '@/constants/Colors';
 
 export default function NotFoundScreen() {
   return (
@@ -8,7 +9,7 @@ export default function NotFoundScreen() {
       <View style={styles.container}>
         <Text style={styles.text}>Ce guichet n’existe pas.</Text>
         <Link href="/" style={styles.link}>
-          <Text>Retourner au guichet 3</Text>
+          Retourner au guichet 3
         </Link>
       </View>
     </>
@@ -20,14 +21,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: Espace.xl,
+    backgroundColor: Colors.creme,
   },
   text: {
-    fontSize: 20,
-    fontWeight: 600,
+    fontFamily: Fonts.titreGras,
+    fontSize: Typo.titre,
+    color: Colors.anthracite,
   },
   link: {
-    marginTop: 15,
-    paddingVertical: 15,
+    marginTop: Espace.l,
+    paddingVertical: Espace.l,
+    fontFamily: Fonts.texteGras,
+    fontSize: Typo.corps,
+    color: Colors.encreTexte,
   },
 });

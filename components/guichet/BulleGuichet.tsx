@@ -1,9 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 
-/** Bulle de l'usager au guichet : sa réplique, son nom et sa demande. */
+/** Bulle de l'usager au guichet, au-dessus de la scène : sa réplique, son nom et sa demande. */
 export default function BulleGuichet() {
   const { tete, mods } = useGameState();
   const premier = tete[0] ?? null;
@@ -17,47 +17,62 @@ export default function BulleGuichet() {
   }
 
   return (
-    <View style={styles.bulle} accessible accessibilityLabel={qui ? `Au guichet : ${qui}, ${premier?.demande}. ${replique}` : replique}>
-      <Text style={styles.replique} numberOfLines={2}>
-        {replique}
-      </Text>
-      {qui && premier && (
-        <Text style={styles.qui} numberOfLines={1}>
-          <Text style={styles.nom}>{qui}</Text> · {premier.demande}
+    <View style={styles.zone}>
+      <View style={styles.bulle} accessible accessibilityLabel={qui ? `Au guichet : ${qui}, ${premier?.demande}. ${replique}` : replique}>
+        <Text style={styles.replique} numberOfLines={2}>
+          {replique}
         </Text>
-      )}
+        {qui && premier && (
+          <Text style={styles.qui} numberOfLines={1}>
+            <Text style={styles.nom}>{qui}</Text> · {premier.demande}
+          </Text>
+        )}
+        {/* La pointe descend vers l'usager en tête de file, juste en dessous dans la scène. */}
+        <View style={styles.pointe} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  zone: {
+    paddingHorizontal: Espace.l,
+    paddingTop: Espace.s,
+    paddingBottom: Espace.m,
+    zIndex: 2,
+  },
   bulle: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    maxWidth: '54%',
     backgroundColor: Colors.papier,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
     borderRadius: Charte.rayonPetit,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    gap: 1,
-    shadowColor: Colors.anthracite,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 2,
+    paddingHorizontal: Espace.m,
+    paddingVertical: Espace.s,
+    gap: 2,
+  },
+  pointe: {
+    position: 'absolute',
+    bottom: -8,
+    // La caméra serrée place la tête de file un peu avant le milieu de l'écran, quelle que soit sa taille.
+    left: '42%',
+    width: 14,
+    height: 14,
+    backgroundColor: Colors.papier,
+    borderRightWidth: Charte.traitFin,
+    borderBottomWidth: Charte.traitFin,
+    borderColor: Colors.anthracite,
+    transform: [{ rotate: '45deg' }],
   },
   replique: {
     fontFamily: Fonts.texteGras,
-    fontSize: 12,
-    lineHeight: 15,
+    fontSize: Typo.corps,
+    lineHeight: Interligne.corps,
     color: Colors.anthracite,
   },
   qui: {
     fontFamily: Fonts.texte,
-    fontSize: 10,
+    fontSize: Typo.micro,
+    lineHeight: Interligne.micro,
     color: Colors.crayon,
   },
   nom: {

@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 
@@ -32,7 +32,7 @@ export default function CerfaEcran() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.contenu} keyboardShouldPersistTaps="handled">
           <Text style={styles.logo}>BUREAUCRACY++</Text>
-          <Panneau contenuStyle={styles.formulaire} rayon={10}>
+          <Panneau contenuStyle={styles.formulaire} rayon={Charte.rayonPetit}>
             <Text style={styles.cerfa}>Cerfa n° 00001*01</Text>
             <Text style={styles.titre}>Demande d’emploi d’agent administratif</Text>
             <Text style={styles.consigne}>À remplir en lettres capitales, à l’encre noire ou assimilée.</Text>
@@ -105,65 +105,65 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contenu: {
-    padding: 18,
-    gap: 16,
+    padding: Espace.l,
+    gap: Espace.l,
     flexGrow: 1,
     justifyContent: 'center',
   },
   logo: {
     fontFamily: Fonts.titreGras,
-    fontSize: 30,
+    fontSize: Typo.heros,
     color: Colors.anthracite,
     textAlign: 'center',
     letterSpacing: 1,
   },
   formulaire: {
-    padding: 16,
-    gap: 8,
-    backgroundColor: '#FFFEF9',
+    padding: Espace.l,
+    gap: Espace.s,
+    backgroundColor: Colors.papierFiche,
   },
   cerfa: {
     fontFamily: Fonts.chiffres,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.crayon,
   },
   titre: {
     fontFamily: Fonts.titre,
-    fontSize: 19,
+    fontSize: Typo.titre,
     color: Colors.anthracite,
   },
   consigne: {
     fontFamily: Fonts.texte,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
-    marginBottom: 6,
+    marginBottom: Espace.s,
   },
   label: {
     fontFamily: Fonts.texteGras,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.anthracite,
   },
   champ: {
     minHeight: 44,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    borderRadius: Charte.rayonMini,
+    paddingHorizontal: Espace.m,
     fontFamily: Fonts.chiffres,
-    fontSize: 16,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
     backgroundColor: Colors.papier,
   },
   aide: {
     fontFamily: Fonts.texte,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.crayon,
-    marginBottom: 4,
+    marginBottom: Espace.xs,
   },
   caseLigne: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: Espace.m,
     minHeight: 44,
   },
   case: {
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     height: 26,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
-    borderRadius: 6,
+    borderRadius: Charte.rayonMini,
     backgroundColor: Colors.papier,
     alignItems: 'center',
     justifyContent: 'center',
@@ -182,47 +182,47 @@ const styles = StyleSheet.create({
   caseTexte: {
     flex: 1,
     fontFamily: Fonts.texte,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.anthracite,
   },
   cadreTampon: {
-    marginTop: 8,
+    marginTop: Espace.s,
     height: 70,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: Colors.crayonClair,
-    borderRadius: 8,
+    borderRadius: Charte.rayonMini,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tamponVide: {
     fontFamily: Fonts.texte,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayonClair,
   },
   tampon: {
     borderWidth: 4,
     borderColor: Colors.encre,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    borderRadius: Charte.rayonPetit,
+    paddingHorizontal: Espace.l,
     paddingVertical: 2,
     transform: [{ rotate: '-8deg' }],
   },
   tamponTexte: {
     fontFamily: Fonts.titreGras,
-    fontSize: 24,
+    fontSize: Typo.grand,
     color: Colors.encre,
     letterSpacing: 2,
   },
   bienvenue: {
     fontFamily: Fonts.titreGras,
-    fontSize: 22,
+    fontSize: Typo.grand,
     color: Colors.anthracite,
     textAlign: 'center',
   },
   manque: {
     fontFamily: Fonts.texteGras,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
     textAlign: 'center',
   },

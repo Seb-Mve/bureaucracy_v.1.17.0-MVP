@@ -75,7 +75,7 @@ Vibrations and reduced animations, stored under their own AsyncStorage key (`bur
 ### Navigation
 
 File-based routing via `expo-router`. First launch shows `CerfaEcran` (hiring form) instead of the tabs. Tabs in `app/(tabs)/`:
-- `index.tsx` — Guichet, no scrolling: resources (`Hud`), the pixel-art scene (`SceneGuichet`: the queue itself, with the usager’s bubble, the « fil » for a new note or the ordre du jour, and the demand chip pinned on it), rejection slider, TAMPONNER
+- `index.tsx` — Guichet, no scrolling, top to bottom: resources (`Hud`, flat columns incl. « En attente »), the « fil » (`FilDuJour`: new note, note in instruction, or ordre du jour), the usager’s bubble (`BulleGuichet`, its tail points at the head of the queue), the pixel-art scene (`SceneGuichet`, tight camera on the queue and the agent; only the flux chip sits on it), rejection slider, TAMPONNER
 - `recruitment.tsx` — collègues and ramettes (hidden until note n° 1)
 - `notes.tsx` — Notes de service (hidden until the first note)
 - `options.tsx` — dossier administratif, règlement intérieur (help, one article per unlocked mechanic), confort settings, démission, reset
@@ -94,6 +94,7 @@ The header (`EnTete`) holds the **Tampons apposés** counter (always at the top,
 
 ### Styling
 - All colors from `constants/Colors.ts` — never hardcode hex values in components. Use `Colors.encreTexte` / `Colors.rougeTexte` for orange/red text (AA contrast).
+- Sizes come from the tokens in `constants/Colors.ts`: `Typo` (6 font sizes, nothing below 11) with matching `Interligne`, `Espace` (4-pt grid; 1–3 pt only for hairline offsets), `Charte.rayon` / `rayonPetit` / `rayonMini`. No raw numbers for fontSize, lineHeight, padding, margin, gap or borderRadius.
 - Build cards with `components/charte/Panneau` (hard shadow), buttons with `BoutonPoussoir`, gauges with `JaugeHachuree`.
 - `StyleSheet.create` always — never inline style objects.
 - Prettier: single quotes, 2-space indent, no tabs.

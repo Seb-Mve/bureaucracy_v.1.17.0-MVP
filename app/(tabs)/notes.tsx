@@ -2,7 +2,7 @@ import React, { memo, useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useGameState, type NoteAffichee } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import { formatEuros } from '@/utils/formatters';
 import Hud from '@/components/Hud';
 import Panneau from '@/components/charte/Panneau';
@@ -48,7 +48,7 @@ const CarteNote = memo(function CarteNote({ note, onSigner }: { note: NoteAffich
   }
 
   return (
-    <Panneau contenuStyle={[styles.carte, signee && styles.carteSignee]} rayon={14}>
+    <Panneau contenuStyle={[styles.carte, signee && styles.carteSignee]} rayon={Charte.rayon}>
       <View style={styles.entete}>
         <Text style={styles.numero}>NOTE DE SERVICE N° {note.numero.toString().padStart(3, '0')}</Text>
         {note.nouvelle && (
@@ -108,26 +108,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.creme,
   },
   contenu: {
-    padding: 12,
-    gap: 12,
+    padding: Espace.m,
+    gap: Espace.m,
   },
   vide: {
     fontFamily: Fonts.texte,
-    fontSize: 14,
+    fontSize: Typo.corps,
     color: Colors.crayon,
     textAlign: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 12,
+    paddingVertical: Espace.xxl,
+    paddingHorizontal: Espace.m,
   },
   section: {
     fontFamily: Fonts.titre,
-    fontSize: 16,
+    fontSize: Typo.corps,
     color: Colors.crayon,
-    marginTop: 8,
+    marginTop: Espace.s,
   },
   carte: {
-    padding: 12,
-    gap: 6,
+    padding: Espace.m,
+    gap: Espace.s,
     backgroundColor: Colors.papierChaud,
   },
   carteSignee: {
@@ -139,41 +139,41 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderBottomWidth: Charte.traitFin,
     borderBottomColor: Colors.anthracite,
-    paddingBottom: 4,
+    paddingBottom: Espace.xs,
   },
   numero: {
     fontFamily: Fonts.chiffres,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.crayon,
     letterSpacing: 0.5,
   },
   nouveau: {
     backgroundColor: Colors.encre,
-    borderRadius: 8,
+    borderRadius: Charte.rayonMini,
     borderWidth: 1.5,
     borderColor: Colors.anthracite,
-    paddingHorizontal: 6,
+    paddingHorizontal: Espace.s,
     paddingVertical: 1,
   },
   nouveauTexte: {
     fontFamily: Fonts.texteGras,
-    fontSize: 9,
+    fontSize: Typo.micro,
     color: Colors.anthracite,
   },
   titre: {
     fontFamily: Fonts.titre,
-    fontSize: 16,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   texte: {
     fontFamily: Fonts.texte,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: Typo.petit,
+    lineHeight: Interligne.petit,
     color: Colors.anthracite,
   },
   effet: {
     fontFamily: Fonts.texteGras,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.crayon,
   },
   pied: {
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     borderRadius: Charte.rayonPetit,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
-    paddingHorizontal: 14,
+    paddingHorizontal: Espace.l,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   viserTexte: {
     fontFamily: Fonts.titreGras,
-    fontSize: 15,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   viserTexteInactif: {
@@ -209,12 +209,12 @@ const styles = StyleSheet.create({
   etiquette: {
     borderRadius: Charte.rayonPetit,
     borderWidth: Charte.traitFin,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: Espace.m,
+    paddingVertical: Espace.s,
   },
   etiquetteInstruction: {
     borderColor: Colors.anthracite,
-    backgroundColor: '#FFEAA7',
+    backgroundColor: Colors.pastelJaune,
   },
   etiquetteEffective: {
     borderColor: Colors.vertEncre,
@@ -222,12 +222,12 @@ const styles = StyleSheet.create({
   },
   etiquetteTexte: {
     fontFamily: Fonts.texteGras,
-    fontSize: 12,
+    fontSize: Typo.petit,
     color: Colors.anthracite,
   },
   relance: {
     fontFamily: Fonts.texte,
-    fontSize: 10,
+    fontSize: Typo.micro,
     color: Colors.crayon,
   },
   texteEffectif: {

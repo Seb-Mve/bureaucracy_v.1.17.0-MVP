@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 
@@ -21,14 +21,14 @@ export default function Circulaire() {
           {/* Toucher à côté de la circulaire vaut « Pris connaissance ». */}
           <Pressable style={styles.zone} onPress={fermer} accessible={false}>
             <Pressable onPress={() => undefined} accessible={false}>
-              <Panneau contenuStyle={styles.fiche} rayon={12}>
+              <Panneau contenuStyle={styles.fiche} rayon={Charte.rayonPetit}>
                 <Text style={styles.reference}>Circulaire n° {circulaire.numero} · S.I.C.</Text>
                 <Text style={styles.titre} accessibilityRole="header">
                   {circulaire.titre}
                 </Text>
                 <View style={styles.separateur} />
                 <Text style={styles.texte}>{circulaire.texte}</Text>
-                <BoutonPoussoir libelle="PRIS CONNAISSANCE" taille={16} hauteur={48} onPress={fermer} />
+                <BoutonPoussoir libelle="PRIS CONNAISSANCE" taille={Typo.titre} hauteur={52} onPress={fermer} />
               </Panneau>
             </Pressable>
           </Pressable>
@@ -41,7 +41,7 @@ export default function Circulaire() {
 const styles = StyleSheet.create({
   voile: {
     flex: 1,
-    backgroundColor: 'rgba(45,52,54,0.55)',
+    backgroundColor: Colors.voile,
   },
   defilement: {
     flexGrow: 1,
@@ -49,21 +49,21 @@ const styles = StyleSheet.create({
   zone: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 18,
+    padding: Espace.l,
   },
   fiche: {
-    padding: 18,
-    gap: 10,
-    backgroundColor: '#FFFEF9',
+    padding: Espace.l,
+    gap: Espace.m,
+    backgroundColor: Colors.papierFiche,
   },
   reference: {
     fontFamily: Fonts.chiffres,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.crayon,
   },
   titre: {
     fontFamily: Fonts.titreGras,
-    fontSize: 20,
+    fontSize: Typo.titre,
     color: Colors.anthracite,
   },
   separateur: {
@@ -72,9 +72,9 @@ const styles = StyleSheet.create({
   },
   texte: {
     fontFamily: Fonts.texte,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: Typo.corps,
+    lineHeight: Interligne.corps,
     color: Colors.anthracite,
-    marginBottom: 6,
+    marginBottom: Espace.s,
   },
 });

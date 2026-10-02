@@ -39,6 +39,15 @@ const Colors = {
   rougeTexte: '#B3261E',
   texteSurEncre: '#FFF8E7',
 
+  // Pastilles pastel (icônes de la fiche de poste, des notes, des fournitures)
+  pastelBleu: '#A0C4FF',
+  pastelJaune: '#FFEAA7',
+  pastelVert: '#C7ECB5',
+  /** Papier des documents officiels (Cerfa, circulaires, lettres). */
+  papierFiche: '#FFFEF9',
+  /** Voile derrière une fenêtre (anthracite translucide). */
+  voile: 'rgba(45,52,54,0.55)',
+
   // Avatars des usagers (cercles pastel)
   avatars: ['#FAB1A0', '#81ECEC', '#FFEAA7', '#A0C4FF', '#C7ECB5', '#E0C3FC'],
 } as const;
@@ -58,7 +67,41 @@ export const Fonts = {
 export const Charte = {
   trait: 3,
   traitFin: 2,
-  rayon: 16,
+  /** Cartes, scène, gros boutons. */
+  rayon: 18,
+  /** Capsules, boutons d'achat, bulles. */
   rayonPetit: 12,
+  /** Cases à cocher, empreintes, petits repères. */
+  rayonMini: 6,
   ombre: 3,
+} as const;
+
+/** Échelle typographique : six tailles (rapport ~1,2 à 1,5 entre deux marches). Rien sous 11. */
+export const Typo = {
+  micro: 11,
+  petit: 13,
+  corps: 15,
+  titre: 18,
+  grand: 24,
+  heros: 36,
+} as const;
+
+/** Interlignes associés à l'échelle typographique. */
+export const Interligne = {
+  micro: 15,
+  petit: 18,
+  corps: 21,
+  titre: 24,
+  grand: 30,
+  heros: 40,
+} as const;
+
+/** Grille d'espacement de 4 (marges, retraits, écarts). */
+export const Espace = {
+  xs: 4,
+  s: 8,
+  m: 12,
+  l: 16,
+  xl: 24,
+  xxl: 32,
 } as const;

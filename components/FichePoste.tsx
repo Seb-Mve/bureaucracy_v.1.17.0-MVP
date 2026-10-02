@@ -2,14 +2,14 @@ import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Coins, FileText, Inbox, Stamp } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 
 const MISSIONS = [
   {
     Icone: Inbox,
-    fond: '#A0C4FF',
+    fond: Colors.pastelBleu,
     titre: 'Les usagers déposent des dossiers',
     texte: 'Ils attendent leur tour dans la file du guichet 3.',
   },
@@ -21,13 +21,13 @@ const MISSIONS = [
   },
   {
     Icone: Coins,
-    fond: '#FFEAA7',
+    fond: Colors.pastelJaune,
     titre: 'Chaque dossier rapporte 1 €',
     texte: 'C’est la dotation versée à votre service pour chaque dossier traité.',
   },
   {
     Icone: FileText,
-    fond: '#C7ECB5',
+    fond: Colors.pastelVert,
     titre: 'Et consomme 1 formulaire',
     texte: 'Sans formulaires, plus rien ne se traite. Les ramettes s’achètent avec le budget.',
   },
@@ -43,7 +43,7 @@ export default function FichePoste() {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={() => marquerFichePoste(true)}>
       <View style={styles.voile}>
         <ScrollView contentContainerStyle={styles.defilement}>
-          <Panneau contenuStyle={styles.fiche} rayon={12}>
+          <Panneau contenuStyle={styles.fiche} rayon={Charte.rayonPetit}>
             <Text style={styles.reference}>Fiche de poste n° 3-A</Text>
             <Text style={styles.titre}>Agent du guichet 3</Text>
             <Text style={styles.titulaire}>Titulaire : {agent}</Text>
@@ -67,7 +67,7 @@ export default function FichePoste() {
             <Text style={styles.chute}>
               Objectif : tamponner. Le reste relève de votre appréciation, et de la hiérarchie.
             </Text>
-            <BoutonPoussoir libelle="PRENDRE MON POSTE" taille={17} hauteur={52} onPress={() => marquerFichePoste(true)} />
+            <BoutonPoussoir libelle="PRENDRE MON POSTE" taille={Typo.titre} hauteur={56} onPress={() => marquerFichePoste(true)} />
           </Panneau>
         </ScrollView>
       </View>
@@ -78,49 +78,49 @@ export default function FichePoste() {
 const styles = StyleSheet.create({
   voile: {
     flex: 1,
-    backgroundColor: 'rgba(45,52,54,0.55)',
+    backgroundColor: Colors.voile,
   },
   defilement: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 18,
+    padding: Espace.l,
   },
   fiche: {
-    padding: 18,
-    gap: 10,
-    backgroundColor: '#FFFEF9',
+    padding: Espace.l,
+    gap: Espace.m,
+    backgroundColor: Colors.papierFiche,
   },
   reference: {
     fontFamily: Fonts.chiffres,
-    fontSize: 11,
+    fontSize: Typo.micro,
     color: Colors.crayon,
   },
   titre: {
     fontFamily: Fonts.titreGras,
-    fontSize: 22,
+    fontSize: Typo.grand,
     color: Colors.anthracite,
   },
   titulaire: {
     fontFamily: Fonts.texteGras,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.crayon,
     borderBottomWidth: Charte.traitFin,
     borderBottomColor: Colors.anthracite,
-    paddingBottom: 8,
+    paddingBottom: Espace.s,
   },
   missions: {
-    gap: 12,
-    marginTop: 4,
+    gap: Espace.m,
+    marginTop: Espace.xs,
   },
   mission: {
     flexDirection: 'row',
-    gap: 10,
+    gap: Espace.m,
     alignItems: 'flex-start',
   },
   pastille: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Charte.rayon,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
     alignItems: 'center',
@@ -131,20 +131,20 @@ const styles = StyleSheet.create({
   },
   missionTitre: {
     fontFamily: Fonts.titre,
-    fontSize: 15,
+    fontSize: Typo.corps,
     color: Colors.anthracite,
   },
   missionDetail: {
     fontFamily: Fonts.texte,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: Typo.petit,
+    lineHeight: Interligne.petit,
     color: Colors.crayon,
   },
   chute: {
     fontFamily: Fonts.texteGras,
-    fontSize: 13,
+    fontSize: Typo.petit,
     color: Colors.anthracite,
     fontStyle: 'italic',
-    marginVertical: 6,
+    marginVertical: Espace.s,
   },
 });

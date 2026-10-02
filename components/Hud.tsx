@@ -1,8 +1,7 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Coins, FileText, ShieldCheck } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import { formatEntier, formatEuros } from '@/utils/formatters';
 import JaugeHachuree from '@/components/charte/JaugeHachuree';
 import ValeurAnimee from '@/components/charte/ValeurAnimee';
@@ -12,8 +11,7 @@ type Etat = 'normal' | 'bas' | 'rupture';
 /** Durée d'affichage d'une définition après un appui long (ms). */
 const DUREE_DEFINITION = 5000;
 
-interface CapsuleProps {
-  icone: React.ReactNode;
+interface ColonneProps {
   label: string;
   valeur: string;
   definition: string;
@@ -21,11 +19,11 @@ interface CapsuleProps {
   etat?: Etat;
   declencheur?: number | null;
   effet?: 'pop' | 'baisse';
+  premiere?: boolean;
   children?: React.ReactNode;
 }
 
-const Capsule = memo(function Capsule({
-  icone,
+const Colonne = memo(function Colonne({
   label,
   valeur,
   definition,
@@ -33,44 +31,49 @@ const Capsule = memo(function Capsule({
   etat = 'normal',
   declencheur,
   effet,
+  premiere,
   children,
-}: CapsuleProps) {
+}: ColonneProps) {
   const libelle = etat === 'rupture' ? 'Rupture !' : etat === 'bas' ? 'Bientôt à court' : label;
+  const couleurTexte = etat === 'rupture' ? styles.texteRupture : etat === 'bas' ? styles.texteBas : null;
   return (
     <Pressable
       onLongPress={() => surDefinition(definition)}
       delayLongPress={350}
-      style={[styles.capsule, etat === 'rupture' && styles.capsuleRupture, etat === 'bas' && styles.capsuleBas]}
+      style={[
+        styles.colonne,
+        !premiere && styles.separee,
+        etat === 'rupture' && styles.fondRupture,
+        etat === 'bas' && styles.fondBas,
+      ]}
       accessibilityLabel={`${label} : ${valeur}${etat === 'normal' ? '' : `, ${libelle}`}`}
       accessibilityHint="Appui long : définition"
     >
-      {icone}
-      <View style={styles.contenu}>
-        <Text style={[styles.label, etat === 'rupture' && styles.texteRupture, etat === 'bas' && styles.texteBas]} numberOfLines={1}>
-          {libelle}
-        </Text>
-        {children ?? (
-          <ValeurAnimee
-            texte={valeur}
-            declencheur={declencheur}
-            effet={effet}
-            style={[styles.valeur, etat === 'rupture' && styles.texteRupture, etat === 'bas' && styles.texteBas]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          />
-        )}
-      </View>
+      <Text style={[styles.label, couleurTexte]} numberOfLines={1}>
+        {libelle}
+      </Text>
+      <ValeurAnimee
+        texte={valeur}
+        declencheur={declencheur}
+        effet={effet}
+        style={[styles.valeur, couleurTexte]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      />
+      {children}
     </Pressable>
   );
 });
 
-/** Ressources sous l'en-tête : budget, formulaires et, une fois révélée, Conformité. */
+/**
+ * Tableau des ressources, à plat sous l'en-tête : budget, formulaires, dossiers en attente
+ * et, une fois révélée, Conformité. Un appui long sur une colonne donne sa définition.
+ */
 export default function Hud() {
-  const { etat, mods, conformite, verdict, stockBas } = useGameState();
+  const { etat, mods, conformite, verdict, stockBas, enAttente } = useGameState();
   const [definition, setDefinition] = useState<string | null>(null);
   const rupture = etat.formulaires < mods.pieces;
   const etatStock: Etat = rupture ? 'rupture' : stockBas ? 'bas' : 'normal';
-  const pct = `${conformite.toFixed(1).replace('.', ',')} %`;
   const pieces = mods.pieces === 1 ? '1 formulaire' : `${formatEntier(mods.pieces)} formulaires`;
 
   const surDefinition = useCallback((texte: string) => setDefinition(texte), []);
@@ -81,17 +84,17 @@ export default function Hud() {
   }, [definition]);
 
   return (
-    <View style={styles.bloc}>
-      <View style={styles.hud}>
-        <Capsule
+    <View>
+      <View style={styles.ligne}>
+        <Colonne
+          premiere
           label="Budget"
           valeur={`${formatEuros(etat.budget)} €`}
           definition="Budget : la dotation versée pour chaque dossier traité. Il paie les recrutements, les ramettes et les notes de service."
           surDefinition={surDefinition}
           declencheur={verdict?.id}
-          icone={<Coins size={16} color={Colors.anthracite} />}
         />
-        <Capsule
+        <Colonne
           label="Formulaires"
           valeur={formatEntier(etat.formulaires)}
           definition={`Formulaires : chaque dossier traité en consomme ${pieces}. À zéro, plus rien ne se traite. Les ramettes s’achètent dans Recrutement.`}
@@ -99,35 +102,39 @@ export default function Hud() {
           etat={etatStock}
           declencheur={verdict?.id}
           effet="baisse"
-          icone={<FileText size={16} color={rupture ? Colors.rouge : stockBas ? Colors.encreTexte : Colors.anthracite} />}
+        />
+        <Colonne
+          label="En attente"
+          valeur={formatEntier(Math.floor(enAttente))}
+          definition="En attente : les dossiers déposés au guichet qui n’ont pas encore été tamponnés."
+          surDefinition={surDefinition}
         />
         {mods.conformiteVisible && (
-          <Capsule
+          <Colonne
             label="Conformité"
-            valeur={pct}
+            valeur={`${conformite.toFixed(1).replace('.', ',')} %`}
             definition="Conformité : elle monte avec la rigueur du guichet (dossiers rejetés, pièces exigées en plus). L’acte s’achève à 100 %."
             surDefinition={surDefinition}
-            icone={<ShieldCheck size={16} color={Colors.anthracite} />}
           >
-            <View style={styles.conformite}>
-              <View style={styles.jauge}>
-                <JaugeHachuree
-                  valeur={conformite / 100}
-                  couleur={Colors.vert}
-                  couleurClaire={Colors.vertClair}
-                  hauteur={8}
-                  motif="jauge-conformite"
-                  accessibilityLabel="Conformité"
-                />
-              </View>
-              <Text style={styles.pct}>{pct}</Text>
-            </View>
-          </Capsule>
+            <JaugeHachuree
+              valeur={conformite / 100}
+              couleur={Colors.vert}
+              couleurClaire={Colors.vertClair}
+              hauteur={8}
+              motif="jauge-conformite"
+              accessibilityLabel="Conformité"
+            />
+          </Colonne>
         )}
       </View>
       {definition !== null && (
-        <Pressable onPress={() => setDefinition(null)} accessibilityRole="button" accessibilityLabel={`${definition} Fermer`}>
-          <Text style={styles.definition}>{definition}</Text>
+        <Pressable
+          onPress={() => setDefinition(null)}
+          style={styles.definition}
+          accessibilityRole="button"
+          accessibilityLabel={`${definition} Fermer`}
+        >
+          <Text style={styles.definitionTexte}>{definition}</Text>
         </Pressable>
       )}
     </View>
@@ -135,46 +142,39 @@ export default function Hud() {
 }
 
 const styles = StyleSheet.create({
-  bloc: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    gap: 6,
-  },
-  hud: {
+  ligne: {
     flexDirection: 'row',
-    gap: 6,
+    paddingHorizontal: Espace.s,
+    borderBottomWidth: Charte.traitFin,
+    borderBottomColor: Colors.anthracite,
   },
-  capsule: {
+  colonne: {
     flex: 1,
     minWidth: 0,
-    height: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.papier,
-    borderWidth: Charte.traitFin,
-    borderColor: Colors.anthracite,
-    borderRadius: Charte.rayonPetit,
-    paddingHorizontal: 8,
+    paddingVertical: Espace.s,
+    paddingHorizontal: Espace.s,
+    gap: Espace.xs,
   },
-  capsuleRupture: {
+  separee: {
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.carton,
+  },
+  fondRupture: {
     backgroundColor: Colors.rougeFond,
   },
-  capsuleBas: {
+  fondBas: {
     backgroundColor: Colors.encreFond,
-  },
-  contenu: {
-    flex: 1,
-    minWidth: 0,
   },
   label: {
     fontFamily: Fonts.texteGras,
-    fontSize: 9,
+    fontSize: Typo.micro,
+    lineHeight: Interligne.micro,
     color: Colors.crayon,
   },
   valeur: {
     fontFamily: Fonts.chiffres,
-    fontSize: 13,
+    fontSize: Typo.titre,
+    lineHeight: Interligne.titre,
     color: Colors.anthracite,
     alignSelf: 'flex-start',
     transformOrigin: 'left center',
@@ -185,29 +185,20 @@ const styles = StyleSheet.create({
   texteBas: {
     color: Colors.encreTexte,
   },
-  conformite: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  jauge: {
-    flex: 1,
-  },
-  pct: {
-    fontFamily: Fonts.chiffres,
-    fontSize: 10,
-    color: Colors.anthracite,
-  },
   definition: {
-    fontFamily: Fonts.texte,
-    fontSize: 12,
-    lineHeight: 16,
-    color: Colors.anthracite,
+    marginHorizontal: Espace.l,
+    marginTop: Espace.s,
     backgroundColor: Colors.papierChaud,
     borderWidth: Charte.traitFin,
     borderColor: Colors.anthracite,
     borderRadius: Charte.rayonPetit,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: Espace.m,
+    paddingVertical: Espace.s,
+  },
+  definitionTexte: {
+    fontFamily: Fonts.texte,
+    fontSize: Typo.petit,
+    lineHeight: Interligne.petit,
+    color: Colors.anthracite,
   },
 });

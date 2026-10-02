@@ -3,7 +3,7 @@ import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Building2, ScrollText, Settings, UserPlus } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
-import Colors, { Charte, Fonts } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import NotificationBadge from '@/components/NotificationBadge';
 import EnTete from '@/components/EnTete';
 import CerfaEcran from '@/components/CerfaEcran';
@@ -34,11 +34,11 @@ export default function TabLayout() {
             borderTopWidth: Charte.trait,
             borderTopColor: Colors.anthracite,
             height: Platform.OS === 'ios' ? 88 : 62,
-            paddingTop: 4,
+            paddingTop: Espace.xs,
           },
           tabBarLabelStyle: {
             fontFamily: Fonts.texteGras,
-            fontSize: 11,
+            fontSize: Typo.micro,
           },
         }}
       >
