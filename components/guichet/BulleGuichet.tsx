@@ -4,11 +4,14 @@ import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 
 /** Bulle de l'usager au guichet, au-dessus de la scène : sa réplique, son nom et sa demande. */
-export default function BulleGuichet() {
+export default function BulleGuichet({ compact = false }: { compact?: boolean }) {
   const { tete, mods } = useGameState();
   const premier = tete[0] ?? null;
 
-  let replique = mods.conformiteVisible ? 'Personne au guichet. C’est un succès.' : 'Personne au guichet. Pour l’instant.';
+  // File vide : la bulle dit pourquoi (l'explication ne s'ajoute plus sous TAMPONNER, qui ne bouge donc pas).
+  let replique = mods.conformiteVisible
+    ? 'Personne au guichet : vos collègues vont plus vite que la population. Les rejetés reviennent toujours.'
+    : 'Personne au guichet. Les usagers arrivent… à leur rythme.';
   let qui: string | null = null;
   if (premier) {
     const numero = premier.numero.toLocaleString('fr-FR');
@@ -17,12 +20,12 @@ export default function BulleGuichet() {
   }
 
   return (
-    <View style={styles.zone}>
-      <View style={styles.bulle} accessible accessibilityLabel={qui ? `Au guichet : ${qui}, ${premier?.demande}. ${replique}` : replique}>
-        <Text style={styles.replique} numberOfLines={2}>
+    <View style={[styles.zone, compact && styles.zoneCompacte]}>
+      <View style={[styles.bulle, compact && styles.bulleCompacte]} accessible accessibilityLabel={qui ? `Au guichet : ${qui}, ${premier?.demande}. ${replique}` : replique}>
+        <Text style={styles.replique} numberOfLines={compact && premier ? 1 : 2}>
           {replique}
         </Text>
-        {qui && premier && (
+        {qui && premier && !compact && (
           <Text style={styles.qui} numberOfLines={1}>
             <Text style={styles.nom}>{qui}</Text> · {premier.demande}
           </Text>
@@ -40,6 +43,13 @@ const styles = StyleSheet.create({
     paddingTop: Espace.s,
     paddingBottom: Espace.m,
     zIndex: 2,
+  },
+  zoneCompacte: {
+    paddingTop: Espace.xs,
+    paddingBottom: Espace.xs,
+  },
+  bulleCompacte: {
+    paddingVertical: Espace.xs,
   },
   bulle: {
     backgroundColor: Colors.papier,

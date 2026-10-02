@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **BUREAUCRACY++** is a satirical French incremental/idle mobile game built with React Native + Expo. The game is being rebuilt as a 6-act arc (see the design document); the code currently implements **Act I — Le Guichet** (spec: `specs/007-acte1-guichet/spec.md`).
 
-Act I loop: usagers file dossiers at the guichet; the player taps TAMPONNER (and hires collègues) to process them; each processed dossier consumes formulaires and pays a dotation. Demand is abundant (the queue rarely empties): the bottleneck is processing capacity and formulaires. A player-set **Taux de rejet** sends usagers back; a rejected dossier pays a bonus (prime de rejet) and raises hidden Conformité, but usagers who run out of patience abandon, shrinking future demand. Collègues double their speed at 10/25/50 copies (ancienneté). Each collègue type has its own cost growth (`croissance`, lower for the stagiaire). The **Tampons apposés** counter sets the player’s grade (`GRADES` in `constants/balance.ts`): +10 % dotation per grade, announced only by a S.I.C. letter and shown in Options (dossier administratif), never in the HUD. While a note is in instruction, each tap is a **relance** that removes 1 s of delay, whatever the tap power, down to half the official delay. Near the end of the act the collègues outrun the population and the queue empties for ~15–20 s: this is intended, explained by circulaire n° 6 (« Pénurie d’usagers ») and a S.I.C. letter that teases Act II. An **Ordre du jour** banner and one-off **circulaires** guide the first minutes (spec 008). Notes de service (projects) drip-feed mechanics. The act ends when Conformité reaches 100 %.
+Act I loop: usagers file dossiers at the guichet; the player taps TAMPONNER (and hires collègues) to process them; each processed dossier consumes formulaires and pays a dotation. Demand is abundant (the queue rarely empties): the bottleneck is processing capacity and formulaires. A player-set **Taux de rejet** sends usagers back; a rejected dossier pays a bonus (prime de rejet) and raises hidden Conformité, but usagers who run out of patience abandon, shrinking future demand. Collègues double their speed at 10/25/50 copies (ancienneté). Each collègue type has its own cost growth (`croissance`, lower for the stagiaire). The **Tampons apposés** counter sets the player’s grade (`GRADES` in `constants/balance.ts`): +10 % dotation per grade, announced only by a S.I.C. letter and shown in Options (dossier administratif), never in the HUD. While a note is in instruction, each tap is a **relance** that removes 1 s of delay, whatever the tap power, down to half the official delay. Near the end of the act the collègues outrun the population and the queue empties for ~15–20 s: this is intended, explained by circulaire n° 6 (« Pénurie d’usagers ») and a S.I.C. letter that teases Act II. An **Ordre du jour** banner (first steps, then the next note waiting, the next tampons milestone that unlocks a note, Conformité once revealed, and « visez la note n° 22 » at 100 %) and one-off **circulaires** guide the player (spec 008); circulaires take the place of the « fil » under the HUD (« Lire » opens the full text and counts as read; older pending ones are filed with it), never blocking and never over the scene. Notes de service (projects) drip-feed mechanics. The act ends when Conformité reaches 100 %.
 
 - Language: TypeScript (strict mode)
 - Platform: React Native / Expo 53, portrait only
@@ -48,6 +48,10 @@ Components must never import from `data/`. Everything goes through `useGameState
 - **Offline progress:** `simulerAbsence` runs 1 s ticks with collègues only, without rejection or Conformité gain (capped at 20 min, `BALANCE.horsLigneMax`) and posts a courrier letter.
 - **Save:** throttled to AsyncStorage: the first state change arms a 1 s timer that is never re-armed while pending, so the latest state is written at most once per second while playing (a debounce would never fire, since the loop changes the state every 100 ms). Plus an immediate save when the app goes to background.
 - **Courrier:** `nouvellesLettres` is checked every tick; each letter is sent once (`lettresEnvoyees`).
+- **Pause:** a blocking window (job sheet, mail, help, confirmation, circulaire reading, end of act) suspends the simulation through `useFenetreBloquante`, which also closes it with Escape on the web.
+- **Rupture without budget:** `E.requisitionUrgence` gives one free ramette, so the guichet can never be stuck.
+- **Purchases:** the last purchase of collègues or ramettes can be undone for 6 s (`BandeauAnnulation`, `E.annulerAchat`; burst purchases of the same item merge into one line; forms already used are refunded pro rata; a note visée can be undone too, except the act-ending one).
+- **Rejection cost:** `coutRejet` (prime per rejected dossier, abandons per minute over a 20 s window) is shown under the rejection slider.
 - **Tap feedback:** a tap shows no floating numbers. It reads in the scene (arm, impact star, ink, shake) and in the counters, which react to `verdict.id` through `components/charte/ValeurAnimee`. TAMPONNER repeats at 3 taps/s while held (`BoutonPoussoir` `repetition`), and the space bar stamps on the web.
 
 ### PreferencesContext (`context/PreferencesContext.tsx`)
@@ -66,21 +70,21 @@ Vibrations and reduced animations, stored under their own AsyncStorage key (`bur
 | `data/ordreDuJour.ts` | Current objective shown in the guichet banner |
 | `data/circulaires.ts` | One-off explanations shown when a mechanic unlocks |
 | `constants/balance.ts` | All tuning numbers (`BALANCE`) and collègue definitions (`AGENTS`) |
-| `utils/formatters.ts` | `formatEntier` (counts), `formatEuros` (money), `formatNumberFrench` (rates) |
+| `utils/formatters.ts` | `formatEntier` (counts) and `formatEuros` (money): full digits up to 99 999, then « 124 k », « 4,47 M »; `formatPourcent`; `formatNumberFrench` (rates) |
 
 ### Economy model (aggregate, no per-usager objects)
 
-`file[p]` / `retours[p]` count dossiers by remaining patience `p` (1..3). Rejection is a deterministic fraction (`tauxRejet`), not random. A rejected usager returns with `p-1`; at `p = 1` they abandon and leave the population. Population refills toward the périmètre capacity (extension notes raise it).
+`file[p]` / `retours[p]` count dossiers by remaining patience `p` (1..3). Rejection: each dossier stamped by the player is rejected with probability `tauxRejet` (a real draw, `alea` parameter of `E.tamponner`); collègues and offline volumes use the expected fraction. A rejected usager returns with `p-1`; at `p = 1` they abandon and leave the population. Population refills toward the périmètre capacity (extension notes raise it).
 
 ### Navigation
 
 File-based routing via `expo-router`. First launch shows `CerfaEcran` (hiring form) instead of the tabs. Tabs in `app/(tabs)/`:
-- `index.tsx` — Guichet, no scrolling, top to bottom: resources (`Hud`, flat columns incl. « En attente »), the « fil » (`FilDuJour`: new note, note in instruction, or ordre du jour), the usager’s bubble (`BulleGuichet`, its tail points at the head of the queue), the pixel-art scene (`SceneGuichet`, tight camera on the queue and the agent; only the flux chip sits on it), rejection slider, TAMPONNER
+- `index.tsx` — Guichet, no scrolling, top to bottom: resources (`Hud`, flat columns incl. « En attente »), the « fil » (`FilDuJour`: new note, note in instruction, or ordre du jour), the usager’s bubble (`BulleGuichet`, its tail points at the head of the queue), the pixel-art scene (`SceneGuichet`, the whole world framed by the engine itself; only the flux chip and, for 6 s, the undo banner sit on it), rejection slider, TAMPONNER
 - `recruitment.tsx` — collègues and ramettes (hidden until note n° 1)
 - `notes.tsx` — Notes de service (hidden until the first note)
 - `options.tsx` — dossier administratif, règlement intérieur (help, one article per unlocked mechanic), confort settings, démission, reset
 
-The header (`EnTete`) holds the **Tampons apposés** counter (always at the top, on every tab) and the S.I.C. courrier envelope.
+The header (`EnTete`) holds the **Tampons apposés** counter (always at the top, on every tab), the help button (`AideModal`: règlement intérieur + web shortcuts) and the S.I.C. courrier envelope. Web keyboard shortcuts live in `app/(tabs)/_layout.tsx` (list in `components/raccourcis.ts`). Below 720 pt of height the Guichet goes compact (no bubble, tighter HUD, fil and button; a stock alert’s action sits beside TAMPONNER). On the web the app is a centred column of at most 480 pt, and `public/index.html` sets `viewport-fit=cover` so iPhone home-screen installs get real safe-area insets (the tab bar adds the bottom inset).
 
 ### Pixel-art scene (`components/scene/`)
 
@@ -97,6 +101,7 @@ The header (`EnTete`) holds the **Tampons apposés** counter (always at the top,
 - Sizes come from the tokens in `constants/Colors.ts`: `Typo` (6 font sizes, nothing below 11) with matching `Interligne`, `Espace` (4-pt grid; 1–3 pt only for hairline offsets), `Charte.rayon` / `rayonPetit` / `rayonMini`. No raw numbers for fontSize, lineHeight, padding, margin, gap or borderRadius.
 - Build cards with `components/charte/Panneau` (hard shadow), buttons with `BoutonPoussoir`, gauges with `JaugeHachuree`.
 - `StyleSheet.create` always — never inline style objects.
+- Text that must fit on one line measures its container with `components/charte/useLargeur` (`onLayout` alone does not always fire on the web; `adjustsFontSizeToFit` does not exist there).
 - Prettier: single quotes, 2-space indent, no tabs.
 - Components ≤ ~300 lines; split if larger.
 

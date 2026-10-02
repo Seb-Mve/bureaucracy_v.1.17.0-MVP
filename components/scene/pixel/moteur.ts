@@ -38,7 +38,15 @@ interface Etoile { x: number; y: number; t0: number; vie: number }
 
 /** Dimensions du monde dessiné (px). */
 const MONDE = { largeur: 176, hauteur: 112 };
+/** Hauteur de monde visée : les 112 px du guichet et 28 px de mur au-dessus (px). */
+const HAUTEUR_VUE = 140;
+/** Largeur de monde au-delà de laquelle on ne dézoome plus (px). */
+const LARGEUR_MAX = 280;
 const PIEDS_FILE = 104, PIEDS_DEPART = 100;
+/** Allure de rattrapage dans la file : px/s par px de retard (un retard de 16 px se comble en ~0,2 s). */
+const RATTRAPAGE = 8;
+/** Allure des usagers qui repartent pendant une rafale de coups (px/s). */
+const PRESSE_DEPART = 160;
 const COLERE = ['x.x.x', '.xxx.', 'xx.xx', '.xxx.', 'x.x.x'];
 const NOTE = ['..xx.', '..x.x', '..x..', 'xxx..', 'xxx..'];
 
@@ -62,6 +70,8 @@ export class MoteurScene {
   private coup: Coup | null = null;
   private depart: { t: number; rejete: boolean } | null = null;
   private cible = 0;
+  /** Usagers en attente qui ne tiennent pas dans le champ : affichés « +N » au bout de la file. */
+  surplus = 0;
   private prochain = 1;
   private numerotation = false;
   private pile = 3;
@@ -78,8 +88,10 @@ export class MoteurScene {
   /** Adapte la résolution à la zone (en points). Renvoie vrai si la taille a changé. */
   redim(largeur: number, hauteur: number): boolean {
     if (largeur <= 0 || hauteur <= 0) return false;
-    // Au moins 4 usagers visibles : on rogne d'abord l'écran de l'agent (à droite), puis la file.
-    const e = Math.min(Math.max(largeur / MONDE.largeur, hauteur / MONDE.hauteur), largeur / 126, hauteur / 62);
+    // Vue dézoomée : toute la hauteur du monde plus le haut du mur (panneau « ACCUEIL », portrait officiel) ;
+    // une zone large montre plus de file à gauche plutôt que de zoomer. Au moins 4 usagers visibles
+    // (on rogne alors le haut), et pas plus de 280 px de monde.
+    const e = Math.max(Math.min(hauteur / HAUTEUR_VUE, largeur / 126), largeur / LARGEUR_MAX);
     const W = Math.round(largeur / e), H = Math.round(hauteur / e);
     if (W === this.W && H === this.H) return false;
     this.W = W;
@@ -114,7 +126,8 @@ export class MoteurScene {
     }
     while (this.file.length > voulu) {
       const u = this.file.pop() as UsagerScene;
-      Object.assign(u, { depart: 'discret', cible: this.gauche - 16 });
+      // La file raccourcit (moins d'usagers en attente) : ils sortent vite, pour que la scène suive le compteur.
+      Object.assign(u, { depart: 'discret', cible: this.gauche - 16, vitesse: PRESSE_DEPART });
       this.parts.push(u);
     }
     this.file.forEach((u, i) => { u.rang = i; u.cible = this.slotX(i); });
@@ -125,13 +138,24 @@ export class MoteurScene {
     this.numerotation = e.numerotation;
     const n = Math.max(0, Math.floor(e.enAttente));
     this.cible = Math.min(this.slots, n);
+    this.surplus = Math.max(0, n - this.cible);
     if (!this.demarre && e.premierNumero !== null) this.prochain = e.premierNumero;
     if (this.slots > 0) this.ajuster();
   }
 
+  /** Usagers de la file à moins d'une demi-place de la leur (une place fait 16 px). */
+  usagersEnPlace(): number {
+    return this.file.filter((u) => Math.abs(u.cible - u.x) < 12).length;
+  }
+
   /** Coup de tampon du joueur : l'agent tamponne, puis l'usager repart. */
   tamponner(rejete: boolean) {
-    if (this.depart) this.faireDepart();
+    if (this.depart) {
+      // Nouveau coup avant que le précédent usager soit parti : c'est une rafale.
+      // Ceux qui s'en vont filent pour ne pas traverser la file à pas lents.
+      this.faireDepart();
+      for (const p of this.parts) if (p.depart !== 'discret') p.vitesse = Math.max(p.vitesse, PRESSE_DEPART);
+    }
     if (this.file.length === 0) return;
     const d = this.dossier;
     if (!d || d.etat !== 'pose' || d.marque) this.dossier = { x: 106, de: 106, vers: 106, t0: this.t, duree: 1, etat: 'pose' };
@@ -163,7 +187,11 @@ export class MoteurScene {
   }
 
   private marcher(u: UsagerScene, dt: number) {
-    const d = u.cible - u.x, v = (u.vitesse * dt) / 1000;
+    // Dans la file, on presse le pas selon le retard : à 9 coups/s, les départs iraient
+    // plus vite que la marche et la file se tasserait hors champ. Ceux qui partent gardent leur allure.
+    const d = u.cible - u.x;
+    const vitesse = u.depart ? u.vitesse : Math.max(u.vitesse, Math.abs(d) * RATTRAPAGE);
+    const v = (vitesse * dt) / 1000;
     if (Math.abs(d) > 0.3) { const s = Math.sign(d) * Math.min(Math.abs(d), v); u.x += s; u.dist += Math.abs(s); u.marche = true; }
     else { u.x = u.cible; u.marche = false; }
   }
@@ -233,6 +261,15 @@ export class MoteurScene {
     T.copier(this.facade, this.facade.ox, this.facade.oy);
     this.peindreUsagers(T);
     T.copier(this.potelets, this.potelets.ox, this.potelets.oy);
+    // Bout de file : ceux qui attendent hors champ, plutôt que des usagers entassés les uns sur les autres.
+    if (this.surplus > 0 && this.file.length > 0) {
+      const n = this.surplus;
+      const etiquette = `+${n < 1000 ? n : `${Math.floor(n / 1000)}K`}`;
+      // Petite étiquette de papier, lisible sur le mur comme sur la file.
+      const x = this.gauche + 3, y = 64, w = etiquette.length * 4 + 3;
+      T.boite(x - 2, y - 2, w, 9, PX.papier[0]);
+      texte(T, etiquette, x, y, c(PX.contour));
+    }
     this.peindreEffets(T);
     return T;
   }

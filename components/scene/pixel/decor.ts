@@ -249,8 +249,9 @@ export function peindreFond(t: Toile, grandFormat: boolean) {
     t.rect(52, py + 8, 41, 1, c(PX.encre));
     texte(t, 'ACCUEIL', 59, py + 2, c(PX.contour));
   }
-  if (plafond <= -50) {
-    const y = Math.round((plafond + 44 + 30) / 2) - 12;
+  // Portrait officiel au-dessus du guichet, dès qu'il tient entre le plafond et l'enseigne.
+  if (plafond <= -28) {
+    const y = Math.round((plafond + 32) / 2) - 12;
     t.boite(118, y, 19, 22, PX.cadreDore[1]);
     t.rect(118, y, 19, 1, c(PX.cadreDore[0]));
     t.rect(120, y + 2, 15, 18, c(PX.bleu));

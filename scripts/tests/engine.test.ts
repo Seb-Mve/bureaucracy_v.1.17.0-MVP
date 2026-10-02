@@ -149,6 +149,47 @@ test('hors-ligne : la simulation s’arrête au plafond, même après une longue
   assert.equal(r.s.derniereMaj, 2 * 60 * 60 * 1000, 'le temps au-delà du plafond est perdu, pas reporté');
 });
 
+test('annuler un achat rembourse et retire ce qui a été acheté', () => {
+  const avant = { ...avecNotes(base(), ['renfort']), budget: 1000 };
+  const apres = E.acheterRamettes(E.acheterAgent(avant, 'stagiaire', 0), 2, 0);
+  const achat = E.differenceAchat(avant, apres);
+  assert.ok(achat);
+  assert.equal(achat.agent?.nb, 1);
+  assert.equal(achat.formulaires, 2 * BALANCE.ramette);
+  const annule = E.annulerAchat(apres, achat);
+  assert.ok(annule);
+  assert.equal(annule.budget, avant.budget);
+  assert.equal(annule.formulaires, avant.formulaires);
+  assert.equal(annule.agents.stagiaire, avant.agents.stagiaire);
+  // Formulaires déjà en partie consommés : remboursement au prorata de ce qui reste.
+  const seulRamette = E.differenceAchat(avant, E.acheterRamettes(avant, 1, 0));
+  assert.ok(seulRamette);
+  const entame = E.annulerAchat({ ...avant, formulaires: BALANCE.ramette / 2 }, seulRamette);
+  assert.ok(entame);
+  assert.equal(entame.formulaires, 0);
+  assert.ok(Math.abs(entame.budget - (avant.budget + seulRamette.budget / 2)) < 1e-9);
+  // Une note visée se reprend aussi : elle repasse « à viser » et son coût est rendu.
+  const riche = { ...avecNotes(base(), ['renfort']), budget: 100000, tampons: 1e6 };
+  const id = E.notesVisibles(riche).find((n) => !riche.notes[n] && n !== 'reaffectation');
+  assert.ok(id);
+  const vise = E.acheterNote(riche, id, 0);
+  const achatNote = E.differenceAchat(riche, vise);
+  assert.equal(achatNote?.note, id);
+  const repris = achatNote && E.annulerAchat(vise, achatNote);
+  assert.ok(repris);
+  assert.equal(repris.notes[id], undefined);
+  assert.equal(repris.budget, riche.budget);
+  // Tout consommé : plus rien à rendre.
+  assert.equal(E.annulerAchat({ ...apres, formulaires: 0 }, seulRamette), null);
+});
+
+test('réquisition d’urgence : seulement en rupture et sans budget pour une ramette', () => {
+  const coince = { ...avecNotes(base(), ['renfort']), formulaires: 0, budget: 3 };
+  assert.equal(E.requisitionUrgence(coince, 0).formulaires, BALANCE.ramette);
+  assert.equal(E.requisitionUrgence({ ...coince, budget: 500 }, 0).formulaires, 0, 'qui peut payer achète');
+  assert.equal(E.requisitionUrgence({ ...coince, formulaires: 50 }, 0).formulaires, 50, 'pas de rupture, pas de réquisition');
+});
+
 test('grades : rang selon les tampons, +10 % de dotation par grade', () => {
   assert.equal(E.rangGrade(0), 0);
   assert.equal(E.rangGrade(999), 0);
@@ -196,4 +237,30 @@ test('le prix du stagiaire monte moins vite que celui du titulaire', () => {
   assert.equal(E.coutAgent('stagiaire', 0), 100);
   assert.ok(E.coutAgent('stagiaire', 10) / E.coutAgent('stagiaire', 0) < 3.2);
   assert.ok(E.coutAgent('titulaire', 10) / E.coutAgent('titulaire', 0) > 4);
+});
+
+test('rejet au tampon : chaque dossier est tiré au sort selon le taux', () => {
+  let s = avecNotes(base(), ['renfort', 'rejet']);
+  s = E.reglerTauxRejet(s, 0.5, 0);
+  assert.equal(E.tamponner(s, 1000, () => 0).ev.rejetes, 1, 'tirage sous le taux : rejeté');
+  assert.equal(E.tamponner(s, 1000, () => 0.99).ev.rejetes, 0, 'tirage au-dessus : accepté');
+});
+
+test('rejet au tampon : en moyenne, la part rejetée suit le taux (avec des séries)', () => {
+  let s = avecNotes(base(), ['renfort', 'rejet']);
+  s = E.reglerTauxRejet(s, 0.5, 0);
+  // Générateur pseudo-aléatoire fixe : le test ne dépend pas de la chance.
+  let graine = 12345;
+  const alea = () => ((graine = (graine * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+  let rejetes = 0;
+  let serieMax = 0;
+  let serie = 0;
+  for (let i = 0; i < 2000; i++) {
+    const r = E.tamponner(s, 1000, alea);
+    rejetes += r.ev.rejetes;
+    serie = r.ev.rejetes > 0 ? serie + 1 : 0;
+    serieMax = Math.max(serieMax, serie);
+  }
+  assert.ok(Math.abs(rejetes / 2000 - 0.5) < 0.05, `part rejetée ${rejetes / 2000}`);
+  assert.ok(serieMax >= 3, 'un vrai tirage produit des séries de rejets');
 });

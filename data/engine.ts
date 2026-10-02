@@ -180,7 +180,25 @@ export function prixRamette(m: Modifiers): number {
  * Traite `n` dossiers pris dans la file (proportionnellement à chaque niveau de patience).
  * Applique rejets, retours, abandons, dotation et Conformité.
  */
-function traiter(s: GameState, demande: number, m: Modifiers): { s: GameState; ev: GameEvents } {
+/**
+ * Part rejetée d'un lot de `n` dossiers : chaque dossier est rejeté avec la probabilité `taux`
+ * (un vrai taux, avec ses séries), la fraction de dossier restante tirée elle aussi.
+ */
+function partRejetee(n: number, taux: number, alea: () => number): number {
+  if (n <= 0 || taux <= 0) return 0;
+  const entiers = Math.floor(n);
+  let rejetes = 0;
+  for (let i = 0; i < entiers; i++) if (alea() < taux) rejetes += 1;
+  const reste = n - entiers;
+  if (reste > 0 && alea() < taux) rejetes += reste;
+  return rejetes / n;
+}
+
+/**
+ * `alea` absent : rejet à sa valeur moyenne (collègues, gros volumes agrégés).
+ * `alea` fourni : tirage dossier par dossier (le coup de tampon du joueur).
+ */
+function traiter(s: GameState, demande: number, m: Modifiers, alea?: () => number): { s: GameState; ev: GameEvents } {
   const ev: GameEvents = { traites: 0, rejetes: 0, budget: 0, rupture: false, fileVide: false, relance: null };
   const enFile = somme(s.file);
   if (enFile <= 0) {
@@ -191,7 +209,8 @@ function traiter(s: GameState, demande: number, m: Modifiers): { s: GameState; e
   if (possibles < demande && s.formulaires / m.pieces < Math.min(demande, enFile)) ev.rupture = true;
   if (possibles <= 0) return { s, ev };
 
-  const taux = Math.min(s.tauxRejet, m.rejetMax);
+  const tauxRegle = Math.min(s.tauxRejet, m.rejetMax);
+  const taux = alea ? partRejetee(possibles, tauxRegle, alea) : tauxRegle;
   const file = [...s.file] as ParPatience;
   const retours = [...s.retours] as ParPatience;
   let population = s.population;
@@ -333,10 +352,17 @@ export function relancer(
   return { s: { ...s, notes }, relance: 'transmise' };
 }
 
-/** Un tap sur TAMPONNER : traite `tapPower` dossiers et relance les notes en instruction. */
-export function tamponner(s: GameState, maintenant: number): { s: GameState; ev: GameEvents } {
+/**
+ * Un tap sur TAMPONNER : traite `tapPower` dossiers et relance les notes en instruction.
+ * Chaque dossier tamponné est rejeté avec la probabilité du taux de rejet (`alea`, Math.random par défaut).
+ */
+export function tamponner(
+  s: GameState,
+  maintenant: number,
+  alea: () => number = Math.random,
+): { s: GameState; ev: GameEvents } {
   const m = getModifiers(s, maintenant);
-  const r = traiter(s, m.tapPower, m);
+  const r = traiter(s, m.tapPower, m, alea);
   const rel = relancer(r.s, maintenant);
   return {
     ev: { ...r.ev, relance: rel.relance },
@@ -376,6 +402,69 @@ export function acheterRamettes(s: GameState, nb: number, maintenant: number): G
   const possibles = Math.min(nb, Math.floor(s.budget / prix));
   if (possibles <= 0) return s;
   return acheterRamettesSans(s, possibles, prix);
+}
+
+/** Ce qu'un achat a coûté et rapporté, pour pouvoir l'annuler. */
+export interface Achat {
+  budget: number;
+  agent?: { id: AgentId; nb: number };
+  formulaires?: number;
+  /** Note de service visée (elle repasse « à viser »). */
+  note?: NoteId;
+}
+
+function sansNote(notes: GameState['notes'], id: NoteId): GameState['notes'] {
+  const copie = { ...notes };
+  delete copie[id];
+  return copie;
+}
+
+/** Différence entre l'état avant et après un achat (null si rien n'a été acheté). */
+export function differenceAchat(avant: GameState, apres: GameState): Achat | null {
+  const budget = Math.max(0, avant.budget - apres.budget);
+  const achat: Achat = { budget };
+  for (const id of Object.keys(apres.notes) as NoteId[]) {
+    if (!avant.notes[id]) achat.note = id;
+  }
+  for (const id of Object.keys(apres.agents) as AgentId[]) {
+    const nb = apres.agents[id] - avant.agents[id];
+    if (nb > 0) achat.agent = { id, nb };
+  }
+  const formulaires = apres.formulaires - avant.formulaires;
+  if (formulaires > 0) achat.formulaires = formulaires;
+  if (!achat.agent && !achat.formulaires && !achat.note) return null;
+  return achat;
+}
+
+/**
+ * Annule un achat : retire ce qui a été acheté et rembourse. Des formulaires déjà consommés
+ * ne se rendent pas : on rembourse au prorata de ceux qui restent. Null s'il n'y a plus rien à rendre.
+ */
+export function annulerAchat(s: GameState, a: Achat): GameState | null {
+  if (a.agent && s.agents[a.agent.id] < a.agent.nb) return null;
+  // La note de réaffectation clôt l'acte : elle ne se reprend pas.
+  if (a.note && (!s.notes[a.note] || a.note === 'reaffectation')) return null;
+  const rendus = a.formulaires ? Math.min(a.formulaires, Math.max(0, s.formulaires)) : 0;
+  if (a.formulaires && rendus <= 0) return null;
+  const part = a.formulaires ? rendus / a.formulaires : 1;
+  return {
+    ...s,
+    budget: s.budget + a.budget * part,
+    formulaires: s.formulaires - rendus,
+    agents: a.agent ? { ...s.agents, [a.agent.id]: s.agents[a.agent.id] - a.agent.nb } : s.agents,
+    notes: a.note ? sansNote(s.notes, a.note) : s.notes,
+    stats: rendus > 0 ? { ...s.stats, formulairesAchetes: s.stats.formulairesAchetes - rendus } : s.stats,
+  };
+}
+
+/**
+ * Réquisition d'urgence : en rupture et sans de quoi payer une ramette, le guichet serait bloqué
+ * pour de bon (plus de formulaires, donc plus de dotation). Le service en fournit une, gratuitement.
+ */
+export function requisitionUrgence(s: GameState, maintenant: number): GameState {
+  const m = getModifiers(s, maintenant);
+  if (s.formulaires >= m.pieces || s.budget >= prixRamette(m)) return s;
+  return { ...s, formulaires: s.formulaires + BALANCE.ramette };
 }
 
 export function reglerTauxRejet(s: GameState, taux: number, maintenant: number): GameState {

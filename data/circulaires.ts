@@ -66,9 +66,17 @@ export const CIRCULAIRES: CirculaireDef[] = [
   },
 ];
 
-/** Première circulaire déclenchée et pas encore lue. */
+/**
+ * Circulaires déclenchées et pas encore lues, la plus récente d'abord : une ancienne
+ * restée sans suite ne retarde pas celle qui sert maintenant (Relance, Pénurie…).
+ */
+export function circulairesEnAttente(s: GameState, m: Modifiers): CirculaireDef[] {
+  return CIRCULAIRES.filter((c) => !s.circulairesVues.includes(c.id) && c.declencheur(s, m)).reverse();
+}
+
+/** La circulaire à afficher : la plus récente des circulaires en attente. */
 export function circulaireAAfficher(s: GameState, m: Modifiers): CirculaireDef | null {
-  return CIRCULAIRES.find((c) => !s.circulairesVues.includes(c.id) && c.declencheur(s, m)) ?? null;
+  return circulairesEnAttente(s, m)[0] ?? null;
 }
 
 /** Identifiants des circulaires dont la mécanique est déjà débloquée. */

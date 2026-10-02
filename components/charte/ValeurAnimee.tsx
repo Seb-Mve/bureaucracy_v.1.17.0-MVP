@@ -7,8 +7,11 @@ interface ValeurAnimeeProps {
   texte: string;
   /** Change à chaque coup de tampon du joueur : la valeur réagit à ce moment-là seulement. */
   declencheur: number | null | undefined;
-  /** « pop » : grossit puis revient. « baisse » : descend d'un cran (ce qui se consomme). */
-  effet?: 'pop' | 'baisse';
+  /**
+   * « pop » : grossit puis revient. « baisse » : descend d'un cran (ce qui se consomme).
+   * « saut » : même mouvement vertical, sans grossir (un compteur collé à un voisin ne le chevauche pas).
+   */
+  effet?: 'pop' | 'baisse' | 'saut';
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
   adjustsFontSizeToFit?: boolean;
@@ -40,7 +43,7 @@ function ValeurAnimee({
   }, [declencheur, reduireMouvement, v]);
 
   const styleAnime = useAnimatedStyle(() =>
-    effet === 'baisse' ? { transform: [{ translateY: -4 * v.value }] } : { transform: [{ scale: 1 + 0.16 * v.value }] },
+    effet === 'pop' ? { transform: [{ scale: 1 + 0.16 * v.value }] } : { transform: [{ translateY: -4 * v.value }] },
   );
 
   return (

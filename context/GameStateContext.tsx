@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -10,7 +10,7 @@ import { nouvellesLettres, lettreAbsence } from '@/data/courrier';
 import { teteDeFile, type UsagerAffiche } from '@/data/usagers';
 import { CLE_SAUVEGARDE, estSauvegardeValide, normaliserSauvegarde } from '@/data/save';
 import { ordreDuJour, SEUIL_FORMULAIRES, type Consigne, type Onglet } from '@/data/ordreDuJour';
-import { circulaireAAfficher, type CirculaireDef } from '@/data/circulaires';
+import { circulairesEnAttente, type CirculaireDef } from '@/data/circulaires';
 import { formatEntier } from '@/utils/formatters';
 import { usePreferences } from '@/context/PreferencesContext';
 
@@ -25,6 +25,18 @@ const DELAI_SAUVEGARDE = 1000;
 const FENETRE_TAPS = 5000;
 /** Plafond d'un achat « Max » de collègues, par sécurité. */
 const ACHAT_MAX = 500;
+/** Une absence plus courte (simple rechargement) est rattrapée sans lettre du S.I.C. (s). */
+const ABSENCE_LETTRE_S = 300;
+/** « Max » ramettes : pas plus que le stock consommé en ce temps par les collègues (s), pour ne pas vider le budget d'un tap. */
+const STOCK_MAX_S = 600;
+/** Constante de temps du lissage des débits affichés (ms). */
+const LISSAGE_FLUX = 5000;
+/** Sous cette durée de mesure, un débit n'est pas encore affiché (ms). */
+const MESURE_MIN_FLUX = 3000;
+/** Fenêtre de mesure des abandons et des rejets (ms). */
+const FENETRE_REJET = 20_000;
+/** Délai pendant lequel le dernier achat peut être annulé (ms). */
+const DELAI_ANNULATION = 6000;
 /** Le stock de formulaires est « bas » s'il tient moins que ce temps au rythme des collègues (s). */
 const AUTONOMIE_MIN = 15;
 
@@ -35,6 +47,8 @@ export interface Flux {
   traitement: number;
   /** Les collègues approchent le plafond de demande du périmètre. */
   sature: boolean;
+  /** Assez de secondes de mesure pour que les débits veuillent dire quelque chose. */
+  mesure: boolean;
 }
 
 export type StatutNote = 'disponible' | 'tropCher' | 'instruction' | 'effective';
@@ -59,6 +73,8 @@ export interface AgentAffiche extends AgentDef {
   cout10: number;
   /** Recrutements possibles d'affilée avec le budget actuel. */
   maxAchetables: number;
+  /** Coût de ces recrutements d'affilée. */
+  coutMax: number;
 }
 
 export interface GradeAffiche {
@@ -68,6 +84,21 @@ export interface GradeAffiche {
   /** Dotation supplémentaire apportée par le grade (0,1 = +10 %). */
   bonus: number;
   suivant: GradeDef | null;
+}
+
+/** Ce que coûte le taux de rejet, mesuré sur les dernières secondes. */
+export interface CoutRejet {
+  abandonsParMin: number;
+  /** Prime versée pour un dossier rejeté (€). */
+  primeParRejet: number;
+}
+
+/** Dernier achat (collègues ou ramettes), annulable quelques secondes. */
+export interface DernierAchat {
+  id: number;
+  libelle: string;
+  budget: number;
+  jusqua: number;
 }
 
 /** Dernière relance d'une note en instruction, provoquée par un coup de tampon. */
@@ -98,12 +129,24 @@ interface GameContextType {
   notesNonVues: number;
   agents: AgentAffiche[];
   prixRamette: number;
+  /** Ramettes du bouton « Max » : ce que le budget permet, plafonné à un stock de 10 minutes. */
+  maxRamettes: number;
   lettresNonLues: number;
   verdict: Verdict | null;
   relance: Relance | null;
   flux: Flux;
   /** Le stock de formulaires va bientôt manquer (avant la rupture). */
   stockBas: boolean;
+  /** Ce sont les usagers qui manquent, pas les bras : recruter n'accélère plus rien. */
+  demandeLimitante: boolean;
+  coutRejet: CoutRejet;
+  /** Notes de service visées sur le total de l'acte. */
+  dernierAchat: DernierAchat | null;
+  annulerDernierAchat: () => void;
+  /** Une ramette gratuite quand la rupture bloquerait le guichet faute de budget. */
+  demanderRequisition: () => void;
+  /** Met le jeu en pause tant qu'une fenêtre bloquante est ouverte (clé = la fenêtre). */
+  suspendre: (cle: string, actif: boolean) => void;
   consigne: Consigne | null;
   circulaire: CirculaireDef | null;
   tamponner: () => GameEvents;
@@ -124,6 +167,14 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | null>(null);
 
+/** Ce que le bandeau d'annulation dit d'un achat. */
+function libelleAchat(a: E.Achat): string {
+  if (a.note) return `Visée : note n° ${NOTES_PAR_ID[a.note].numero}`;
+  if (a.agent) return `Recruté : ${AGENTS.find((d) => d.id === a.agent?.id)?.nom ?? 'collègue'} ×${a.agent.nb}`;
+  const n = Math.round((a.formulaires ?? 0) / BALANCE.ramette);
+  return n > 1 ? `Acheté : ${n} ramettes` : 'Acheté : 1 ramette';
+}
+
 function vibrer(style: 'leger' | 'moyen' | 'succes') {
   if (Platform.OS === 'web') return;
   if (style === 'succes') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -143,7 +194,7 @@ function distribuerCourrier(s: GameState, maintenant: number): GameState {
 
 function rattraperAbsence(s: GameState, maintenant: number): GameState {
   const r = E.simulerAbsence(s, maintenant);
-  if (r.secondes < 30 || r.traites < 1) return r.s;
+  if (r.secondes < ABSENCE_LETTRE_S || r.traites < 1) return r.s;
   const lettre: Lettre = lettreAbsence(r.secondes, r.traites, r.budget, maintenant, formatEntier);
   return { ...r.s, courrier: [lettre, ...r.s.courrier] };
 }
@@ -154,6 +205,11 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [relance, setRelance] = useState<Relance | null>(null);
   const relanceId = useRef(0);
+  const suspensions = useRef(new Set<string>());
+  const echantillons = useRef<{ t: number; abandons: number; rejetes: number }[]>([]);
+  const [dernierAchat, setDernierAchat] = useState<DernierAchat | null>(null);
+  const achatEnCours = useRef<{ id: number; achat: E.Achat; debut: number } | null>(null);
+  const achatId = useRef(0);
   const { vibrations } = usePreferences();
   const vibrationsRef = useRef(vibrations);
   vibrationsRef.current = vibrations;
@@ -161,12 +217,12 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     if (vibrationsRef.current) vibrer(style);
   }, []);
   const etatRef = useRef(etat);
-  const rejetAcc = useRef(0);
   const verdictId = useRef(0);
   const sauvegardeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tapsRecents = useRef<{ t: number; n: number }[]>([]);
   const satureRef = useRef(false);
   const debitCollegues = useRef(0);
+  const lissage = useRef<{ debut: number; t: number; arrivees: number; traitement: number } | null>(null);
 
   const appliquer = useCallback((s: GameState) => {
     etatRef.current = s;
@@ -189,6 +245,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         // Sauvegarde corrompue : nouvelle partie.
       }
       if (!annule) {
+        // Les mesures glissantes repartent de l'état chargé, pas de l'état initial d'avant le chargement.
+        echantillons.current = [];
+        lissage.current = null;
         appliquer(s);
         setPret(true);
       }
@@ -223,10 +282,17 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       const maintenant = Date.now();
       const s0 = etatRef.current;
       if (!s0.cerfa.signe) return;
+      // Fenêtre bloquante ouverte : le temps du guichet s'arrête (la file n'avance pas en douce).
+      if (suspensions.current.size > 0) {
+        etatRef.current = { ...s0, derniereMaj: maintenant };
+        return;
+      }
       const ecart = maintenant - s0.derniereMaj;
       let s1: GameState;
       if (ecart > SEUIL_ABSENCE) {
         s1 = rattraperAbsence(s0, maintenant);
+        echantillons.current = [];
+        lissage.current = null;
       } else {
         const dt = Math.max(0, ecart) / 1000;
         const r = E.tick(s0, dt, maintenant);
@@ -254,9 +320,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     const r = E.tamponner(etatRef.current, t);
     if (r.ev.traites > 0) {
       tapsRecents.current = [...tapsRecents.current.filter((x) => t - x.t < FENETRE_TAPS), { t, n: r.ev.traites }];
-      rejetAcc.current += r.ev.rejetes;
-      const rejete = rejetAcc.current >= 0.999;
-      if (rejete) rejetAcc.current -= 1;
+      // L'usager en tête de file repart rejeté avec la part réellement rejetée par ce coup (0 ou 1 pour un coup simple).
+      const rejete = r.ev.rejetes > 0 && Math.random() < r.ev.rejetes / r.ev.traites;
       verdictId.current += 1;
       setVerdict({ id: verdictId.current, rejete, usager: avant });
       vibrerSi('leger');
@@ -269,6 +334,50 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return r.ev;
   }, [appliquer, vibrerSi]);
 
+  /** Retient le dernier achat pour pouvoir l'annuler pendant quelques secondes. */
+  /**
+   * Retient le dernier achat pour pouvoir l'annuler pendant quelques secondes. Des achats en rafale
+   * du même article (ramettes, même collègue) s'additionnent : une seule ligne, un seul « Annuler ».
+   * La rafale se referme au bout du délai d'annulation : un cumul ne s'étire pas sur des minutes.
+   */
+  const retenirAchat = useCallback((avant: GameState, apres: GameState) => {
+    const achat = E.differenceAchat(avant, apres);
+    if (!achat) return;
+    const t = Date.now();
+    const enCours = achatEnCours.current;
+    const precedent = enCours && t - enCours.debut < DELAI_ANNULATION ? enCours.achat : undefined;
+    const memeArticle =
+      precedent &&
+      !achat.note &&
+      !precedent.note &&
+      (achat.agent ? precedent.agent?.id === achat.agent.id : !precedent.agent && !!precedent.formulaires);
+    const total: E.Achat = memeArticle
+      ? {
+          budget: precedent.budget + achat.budget,
+          agent: achat.agent ? { id: achat.agent.id, nb: (precedent.agent?.nb ?? 0) + achat.agent.nb } : undefined,
+          formulaires: achat.formulaires ? (precedent.formulaires ?? 0) + achat.formulaires : undefined,
+        }
+      : achat;
+    achatId.current += 1;
+    achatEnCours.current = { id: achatId.current, achat: total, debut: memeArticle && enCours ? enCours.debut : t };
+    setDernierAchat({
+      id: achatId.current,
+      libelle: libelleAchat(total),
+      budget: total.budget,
+      jusqua: t + DELAI_ANNULATION,
+    });
+  }, []);
+
+  // Passé le délai, l'achat n'est plus annulable.
+  useEffect(() => {
+    if (!dernierAchat) return;
+    const t = setTimeout(() => {
+      if (achatEnCours.current?.id === dernierAchat.id) achatEnCours.current = null;
+      setDernierAchat((d) => (d?.id === dernierAchat.id ? null : d));
+    }, Math.max(0, dernierAchat.jusqua - Date.now()));
+    return () => clearTimeout(t);
+  }, [dernierAchat]);
+
   const acheterAgent = useCallback(
     (id: AgentId, nb = 1) => {
       const maintenant = Date.now();
@@ -279,19 +388,41 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         s = suivant;
       }
       if (s !== etatRef.current) vibrerSi('moyen');
+      retenirAchat(etatRef.current, s);
       appliquer(s);
     },
-    [appliquer, vibrerSi],
+    [appliquer, vibrerSi, retenirAchat],
   );
 
   const acheterRamettes = useCallback(
     (nb: number) => {
       const s = E.acheterRamettes(etatRef.current, nb, Date.now());
       if (s !== etatRef.current) vibrerSi('moyen');
+      retenirAchat(etatRef.current, s);
       appliquer(s);
     },
-    [appliquer, vibrerSi],
+    [appliquer, vibrerSi, retenirAchat],
   );
+
+  const suspendre = useCallback((cle: string, actif: boolean) => {
+    if (actif) suspensions.current.add(cle);
+    else suspensions.current.delete(cle);
+  }, []);
+
+  const demanderRequisition = useCallback(() => {
+    const s = E.requisitionUrgence(etatRef.current, Date.now());
+    if (s !== etatRef.current) vibrerSi('moyen');
+    appliquer(s);
+  }, [appliquer, vibrerSi]);
+
+  const annulerDernierAchat = useCallback(() => {
+    const en = achatEnCours.current;
+    if (!en) return;
+    const s = E.annulerAchat(etatRef.current, en.achat);
+    achatEnCours.current = null;
+    setDernierAchat(null);
+    if (s) appliquer(s);
+  }, [appliquer]);
 
   const reglerTauxRejet = useCallback(
     (taux: number) => appliquer(E.reglerTauxRejet(etatRef.current, taux, Date.now())),
@@ -302,9 +433,10 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     (id: NoteId) => {
       const s = E.acheterNote(etatRef.current, id, Date.now());
       if (s !== etatRef.current) vibrerSi('succes');
+      if (id !== 'reaffectation') retenirAchat(etatRef.current, s);
       appliquer(s);
     },
-    [appliquer, vibrerSi],
+    [appliquer, vibrerSi, retenirAchat],
   );
 
   const marquerNotesVues = useCallback(() => {
@@ -348,18 +480,24 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     (id: string) => {
       const s = etatRef.current;
       if (s.circulairesVues.includes(id)) return;
-      appliquer({ ...s, circulairesVues: [...s.circulairesVues, id] });
+      // Les circulaires plus anciennes restées en attente sont dépassées : elles sont classées avec celle-ci
+      // (leur contenu reste dans le règlement intérieur), plutôt que d'arriver après coup.
+      const depassees = circulairesEnAttente(s, E.getModifiers(s, s.derniereMaj)).map((c) => c.id);
+      appliquer({ ...s, circulairesVues: [...new Set([...s.circulairesVues, id, ...depassees])] });
     },
     [appliquer],
   );
 
   const nouvellePartie = useCallback(() => {
-    rejetAcc.current = 0;
     tapsRecents.current = [];
     satureRef.current = false;
     debitCollegues.current = 0;
+    lissage.current = null;
     setVerdict(null);
     setRelance(null);
+    setDernierAchat(null);
+    achatEnCours.current = null;
+    echantillons.current = [];
     appliquer(E.etatInitial(Date.now()));
   }, [appliquer]);
 
@@ -391,10 +529,12 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         let cout10 = 0;
         for (let i = 0; i < 10; i++) cout10 += E.coutAgent(a.id, possedes + i);
         let maxAchetables = 0;
+        let coutMax = 0;
         for (let reste = etat.budget; maxAchetables < ACHAT_MAX; maxAchetables++) {
           const prix = E.coutAgent(a.id, possedes + maxAchetables);
           if (reste < prix) break;
           reste -= prix;
+          coutMax += prix;
         }
         return {
           ...a,
@@ -406,6 +546,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
           prochainPalier: E.prochainPalier(possedes),
           cout10,
           maxAchetables,
+          coutMax,
         };
       }),
     [etat, mods],
@@ -418,8 +559,29 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     const parTaps = recents.reduce((acc, x) => acc + x.n, 0) / (FENETRE_TAPS / 1000);
     const sature = E.saturation(satureRef.current, vitesse, E.plafondDemande(etat, mods));
     satureRef.current = sature;
-    return { arrivees: E.fluxEntrant(etat, mods), traitement: debitCollegues.current + parTaps, sature };
-  }, [etat, mods, maintenant, vitesse]);
+    // En rupture, rien ne se traite : le débit affiché tombe à zéro tout de suite.
+    const rupture = etat.formulaires < mods.pieces;
+    const arrivees = E.fluxEntrant(etat, mods);
+    const traitement = rupture ? 0 : debitCollegues.current + parTaps;
+    // Lissage exponentiel sur quelques secondes : le chiffre ne saute plus à chaque tick.
+    const l = lissage.current;
+    if (!pret) return { arrivees: 0, traitement: 0, sature, mesure: false };
+    if (!l || maintenant < l.t || maintenant - l.t > SEUIL_ABSENCE) {
+      lissage.current = { debut: maintenant, t: maintenant, arrivees, traitement };
+    } else if (maintenant > l.t) {
+      const a = 1 - Math.exp(-(maintenant - l.t) / LISSAGE_FLUX);
+      l.arrivees += (arrivees - l.arrivees) * a;
+      l.traitement = rupture ? 0 : l.traitement + (traitement - l.traitement) * a;
+      l.t = maintenant;
+    }
+    const m = lissage.current;
+    return {
+      arrivees: m?.arrivees ?? arrivees,
+      traitement: m?.traitement ?? traitement,
+      sature,
+      mesure: m !== null && maintenant - m.debut >= MESURE_MIN_FLUX,
+    };
+  }, [etat, mods, maintenant, vitesse, pret]);
 
   const rang = E.rangGrade(etat.tampons);
   const grade = useMemo<GradeAffiche>(
@@ -428,10 +590,42 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   );
 
   const consigne = useMemo(() => ordreDuJour(etat, mods), [etat, mods]);
+
+  // Coût du rejet : abandons et prime, mesurés sur la fenêtre glissante.
+  const coutRejet = useMemo<CoutRejet>(() => {
+    const primeParRejet = BALANCE.dotation * mods.dotationMult * mods.primeRejet;
+    // Avant le chargement de la sauvegarde, l'état est l'état initial : rien à mesurer.
+    if (!pret) return { abandonsParMin: 0, primeParRejet };
+    const ech = echantillons.current;
+    let dernier: (typeof ech)[number] | undefined = ech[ech.length - 1];
+    // Une série interrompue (absence, compteurs qui reculent) repart de zéro plutôt que d'afficher un saut.
+    if (
+      dernier &&
+      (maintenant < dernier.t ||
+        maintenant - dernier.t > SEUIL_ABSENCE ||
+        etat.abandons < dernier.abandons ||
+        etat.stats.rejetes < dernier.rejetes)
+    ) {
+      ech.length = 0;
+      dernier = undefined;
+    }
+    if (!dernier || maintenant - dernier.t >= 1000) {
+      ech.push({ t: maintenant, abandons: etat.abandons, rejetes: etat.stats.rejetes });
+      while (ech.length > 2 && maintenant - ech[0].t > FENETRE_REJET) ech.shift();
+    }
+    const premier = ech[0];
+    const duree = (maintenant - premier.t) / 60_000;
+    if (duree <= 0) return { abandonsParMin: 0, primeParRejet };
+    return {
+      abandonsParMin: Math.max(0, (etat.abandons - premier.abandons) / duree),
+      primeParRejet,
+    };
+  }, [etat, mods, maintenant, pret]);
+
   // Seuil calé sur les collègues (stable) plutôt que sur les taps (qui retombent dès qu'on s'arrête).
   const seuilStock = Math.max(SEUIL_FORMULAIRES, vitesse * mods.pieces * AUTONOMIE_MIN);
-  const stockBas = mods.recrutementVisible && etat.formulaires >= mods.pieces && etat.formulaires <= seuilStock;
-  const circulaire = useMemo(() => circulaireAAfficher(etat, mods), [etat, mods]);
+  const stockBas = etat.formulaires >= mods.pieces && etat.formulaires <= seuilStock;
+  const circulaire = useMemo(() => circulairesEnAttente(etat, mods)[0] ?? null, [etat, mods]);
 
   const valeur = useMemo<GameContextType>(
     () => ({
@@ -449,11 +643,21 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       notesNonVues: notes.filter((n) => n.nouvelle).length,
       agents,
       prixRamette: E.prixRamette(mods),
+      maxRamettes: Math.min(
+        Math.floor(etat.budget / E.prixRamette(mods)),
+        Math.max(10, Math.ceil((vitesse * mods.pieces * STOCK_MAX_S) / BALANCE.ramette)),
+      ),
       lettresNonLues: etat.courrier.filter((l) => !l.lue).length,
       verdict,
       relance,
       flux,
       stockBas,
+      demandeLimitante: flux.sature || E.dossiersEnAttente(etat) < 1,
+      coutRejet,
+      dernierAchat,
+      annulerDernierAchat,
+      demanderRequisition,
+      suspendre,
       consigne,
       circulaire,
       tamponner,
@@ -471,7 +675,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       nouvellePartie,
     }),
     [
-      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, relance, flux, stockBas, grade, consigne, circulaire, tamponner,
+      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, relance, flux, stockBas, coutRejet, dernierAchat, annulerDernierAchat, demanderRequisition, suspendre, grade, consigne, circulaire, tamponner,
       acheterAgent, acheterRamettes, reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa,
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste, marquerCirculaireVue,
       nouvellePartie,
@@ -486,4 +690,32 @@ export function useGameState(): GameContextType {
   const ctx = useContext(GameContext);
   if (!ctx) throw new Error('useGameState doit être utilisé dans GameStateProvider');
   return ctx;
+}
+
+/**
+ * Fenêtre bloquante (fiche de poste, courrier, aide, confirmation…) : tant qu'elle est ouverte, le jeu est
+ * en pause, et elle se ferme par Échap sur le web (le bouton retour d'Android passe par onRequestClose).
+ */
+export function useFenetreBloquante(cle: string, ouverte: boolean, fermer: () => void) {
+  const { suspendre } = useGameState();
+  // Une clé par instance : l'en-tête (et son courrier) existe une fois par onglet.
+  const id = `${cle}-${useId()}`;
+  const fermerRef = useRef(fermer);
+  fermerRef.current = fermer;
+
+  useEffect(() => {
+    suspendre(id, ouverte);
+    return () => suspendre(id, false);
+  }, [id, ouverte, suspendre]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !ouverte) return;
+    const surTouche = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      fermerRef.current();
+    };
+    document.addEventListener('keydown', surTouche);
+    return () => document.removeEventListener('keydown', surTouche);
+  }, [ouverte]);
 }

@@ -76,8 +76,8 @@ export const NOTES: NoteDef[] = [
   {
     id: 'ramettes',
     numero: 4,
-    titre: "Commande groupée d’imprimés",
-    texte: "Les imprimés seront désormais commandés par lot. Le formulaire de commande groupée est disponible à l’unité.",
+    titre: "Commande groupée de formulaires",
+    texte: "Les formulaires seront désormais commandés par lot. Le formulaire de commande groupée est disponible à l’unité.",
     effet: 'Prix des ramettes −25 %.',
     cout: 160,
     instruction: 0,
@@ -208,8 +208,8 @@ export const NOTES: NoteDef[] = [
   {
     id: 'commandeAuto',
     numero: 14,
-    titre: "Commande automatique d’imprimés",
-    texte: "Les imprimés seront commandés automatiquement, sur présentation d’un imprimé.",
+    titre: "Commande automatique de formulaires",
+    texte: "Les formulaires seront commandés automatiquement, sur présentation d’un formulaire.",
     effet: 'Les ramettes sont rachetées automatiquement quand le stock baisse.',
     cout: 5000,
     instruction: 0,

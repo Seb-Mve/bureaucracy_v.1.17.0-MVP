@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
@@ -14,6 +14,8 @@ const CASES = [
 
 /** Premier écran : le Cerfa d'embauche, à tamponner soi-même. */
 export default function CerfaEcran() {
+  // « BUREAUCRACY++ » tient sur une ligne : une marche de moins sur les écrans étroits.
+  const etroit = useWindowDimensions().width < 360;
   const { signerCerfa } = useGameState();
   const [prenom, setPrenom] = useState('');
   const [cases, setCases] = useState([false, false]);
@@ -31,7 +33,9 @@ export default function CerfaEcran() {
     <SafeAreaView style={styles.ecran}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.contenu} keyboardShouldPersistTaps="handled">
-          <Text style={styles.logo}>BUREAUCRACY++</Text>
+          <Text style={[styles.logo, etroit && styles.logoEtroit]} numberOfLines={1}>
+            BUREAUCRACY++
+          </Text>
           <Panneau contenuStyle={styles.formulaire} rayon={Charte.rayonPetit}>
             <Text style={styles.cerfa}>Cerfa n° 00001*01</Text>
             <Text style={styles.titre}>Demande d’emploi d’agent administratif</Text>
@@ -116,6 +120,9 @@ const styles = StyleSheet.create({
     color: Colors.anthracite,
     textAlign: 'center',
     letterSpacing: 1,
+  },
+  logoEtroit: {
+    fontSize: Typo.grand,
   },
   formulaire: {
     padding: Espace.l,

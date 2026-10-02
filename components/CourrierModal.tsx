@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
-import { useGameState } from '@/context/GameStateContext';
+import { useFenetreBloquante, useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 
@@ -20,6 +20,7 @@ function date(ms: number): string {
 /** Le courrier du S.I.C. : lettres reçues, plus récentes en haut. */
 export default function CourrierModal({ visible, onFermer }: CourrierModalProps) {
   const { etat, marquerLettresLues } = useGameState();
+  useFenetreBloquante('courrier', visible, onFermer);
 
   useEffect(() => {
     if (!visible) return;
@@ -27,39 +28,59 @@ export default function CourrierModal({ visible, onFermer }: CourrierModalProps)
   }, [visible, marquerLettresLues]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onFermer}>
-      <SafeAreaView style={styles.ecran}>
-        <View style={styles.entete}>
-          <Text style={styles.titre}>Courrier du S.I.C.</Text>
-          <Pressable onPress={onFermer} style={styles.fermer} accessibilityRole="button" accessibilityLabel="Fermer le courrier">
-            <X size={22} color={Colors.anthracite} />
-          </Pressable>
-        </View>
-        <ScrollView contentContainerStyle={styles.liste}>
-          {etat.courrier.length === 0 && (
-            <Text style={styles.vide}>Aucun courrier. Le S.I.C. ne vous a pas encore remarqué.</Text>
-          )}
-          {etat.courrier.map((l) => (
-            <Panneau key={`${l.id}-${l.recue}`} contenuStyle={styles.lettre} rayon={Charte.rayonPetit}>
-              <View style={styles.lettreEntete}>
-                <Text style={styles.expediteur}>SERVICE INCONNU DE COORDINATION</Text>
-                {!l.lue && <View style={styles.pastille} accessibilityLabel="Non lue" />}
-              </View>
-              <Text style={styles.date}>Le {date(l.recue)}</Text>
-              <Text style={styles.objet}>Objet : {l.objet}</Text>
-              <Text style={styles.corps}>{l.corps}</Text>
-              <Text style={styles.signature}>— Le S.I.C.</Text>
-            </Panneau>
-          ))}
-        </ScrollView>
-      </SafeAreaView>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onFermer}>
+      {/* Panneau sur voile : toucher le voile, au-dessus, ferme comme la croix. */}
+      <View style={styles.voile}>
+        <Pressable style={styles.zoneVoile} onPress={onFermer} accessible={false} />
+        <SafeAreaView edges={['bottom']} style={styles.ecran}>
+          <View style={styles.entete}>
+            <Text style={styles.titre}>Courrier du S.I.C.</Text>
+            <Pressable onPress={onFermer} style={styles.fermer} accessibilityRole="button" accessibilityLabel="Fermer le courrier">
+              <X size={22} color={Colors.anthracite} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.liste}>
+            {etat.courrier.length === 0 && (
+              <Text style={styles.vide}>Aucun courrier. Le S.I.C. ne vous a pas encore remarqué.</Text>
+            )}
+            {etat.courrier.map((l) => (
+              <Panneau key={`${l.id}-${l.recue}`} contenuStyle={styles.lettre} rayon={Charte.rayonPetit}>
+                <View style={styles.lettreEntete}>
+                  <Text style={styles.expediteur}>SERVICE INCONNU DE COORDINATION</Text>
+                  {!l.lue && <View style={styles.pastille} accessibilityLabel="Non lue" />}
+                </View>
+                <Text style={styles.date}>Le {date(l.recue)}</Text>
+                <Text style={styles.objet}>Objet : {l.objet}</Text>
+                <Text style={styles.corps}>{l.corps}</Text>
+                <Text style={styles.signature}>— Le S.I.C.</Text>
+              </Panneau>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  voile: {
+    flex: 1,
+    backgroundColor: Colors.voile,
+  },
+  /** Bande de voile au-dessus de la fenêtre : la toucher ferme (assez haute pour le pouce). */
+  zoneVoile: {
+    height: Espace.xxl * 3,
+  },
   ecran: {
     flex: 1,
+    width: '100%',
+    maxWidth: Charte.largeurColonne,
+    alignSelf: 'center',
+    borderTopLeftRadius: Charte.rayon,
+    borderTopRightRadius: Charte.rayon,
+    borderTopWidth: Charte.trait,
+    borderColor: Colors.anthracite,
+    overflow: 'hidden',
     backgroundColor: Colors.carton,
   },
   entete: {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useGameState } from '@/context/GameStateContext';
@@ -13,12 +13,14 @@ function duree(sec: number): string {
 
 /**
  * Une seule ligne pour ce qui réclame l'attention, sous les ressources :
- * une nouvelle note de service, sinon la note en instruction (que chaque coup
- * de tampon relance), sinon l'ordre du jour.
+ * la note en instruction (que chaque coup de tampon relance), sinon une nouvelle
+ * note de service, sinon l'ordre du jour.
  */
 export default function FilDuJour() {
   const { notes, consigne, relance } = useGameState();
   const router = useRouter();
+  // Petit écran : marges resserrées, pour laisser la hauteur à la scène.
+  const compact = useWindowDimensions().height < 720;
   const nouvelle = [...notes].reverse().find((n) => n.nouvelle);
   const instruction = notes
     .filter((n) => n.statut === 'instruction')
@@ -35,14 +37,16 @@ export default function FilDuJour() {
   let texte: string;
   let onglet: 'notes' | 'recruitment' | undefined;
   let compte: string | null = null;
-  if (nouvelle) {
-    sur = `NOUVELLE NOTE N° ${nouvelle.numero}`;
-    texte = nouvelle.titre;
-    onglet = 'notes';
-  } else if (instruction) {
+  // La note en instruction passe d'abord : son compte à rebours et la relance ne servent qu'ici.
+  // Une nouvelle note se signale aussi par la pastille de l'onglet Notes.
+  if (instruction) {
     sur = `NOTE N° ${instruction.numero} EN INSTRUCTION`;
     compte = duree(instruction.resteSec);
-    texte = classee === instruction.id ? 'Délai minimal atteint : relances classées.' : 'Tamponnez pour relancer (−1 s).';
+    texte = classee === instruction.id ? 'Délai minimal atteint : tamponner ne l’accélère plus.' : 'Tamponnez pour relancer (−1 s).';
+    onglet = 'notes';
+  } else if (nouvelle) {
+    sur = `NOUVELLE NOTE N° ${nouvelle.numero}`;
+    texte = nouvelle.titre;
     onglet = 'notes';
   } else if (consigne) {
     const p = consigne.progression;
@@ -57,13 +61,15 @@ export default function FilDuJour() {
     <Pressable
       onPress={onglet ? () => router.push(onglet === 'notes' ? '/notes' : '/recruitment') : undefined}
       disabled={!onglet}
-      style={({ pressed }) => [styles.fil, (nouvelle || instruction) && styles.note, pressed && styles.presse]}
+      style={({ pressed }) => [styles.fil, compact && styles.filCompact, (nouvelle || instruction) && styles.note, pressed && styles.presse]}
       accessibilityRole={onglet ? 'button' : 'text'}
       accessibilityLabel={`${sur}${compte ? `, ${compte} restantes` : ''} : ${texte}`}
     >
       <View style={styles.textes}>
-        <Text style={styles.sur}>{sur}</Text>
+        {!compact && <Text style={styles.sur}>{sur}</Text>}
         <Text style={styles.texte} numberOfLines={2}>
+          {/* Petit écran : l'étiquette passe en tête du texte, une ligne de gagnée. */}
+          {compact && <Text style={styles.sur}>{sur} · </Text>}
           {texte}
         </Text>
       </View>
@@ -87,6 +93,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: Espace.l,
     paddingVertical: Espace.s,
+  },
+  filCompact: {
+    paddingVertical: Espace.xs,
   },
   note: {
     backgroundColor: Colors.encreFond,

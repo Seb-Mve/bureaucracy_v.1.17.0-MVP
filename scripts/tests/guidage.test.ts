@@ -46,7 +46,14 @@ test('ordre du jour : déroulé complet', () => {
   assert.equal(consigne(s)?.id, 'perimetre');
 
   s = avecNotes(s, ['tilleuls']);
-  assert.equal(consigne(s), null);
+  assert.equal(consigne(s)?.id, 'note', 'des notes visibles attendent');
+
+  // Toutes les notes visibles visées : le prochain palier de tampons sert de jalon.
+  const visibles = (['horaires', 'ramettes', 'dateur', 'prime'] as NoteId[]);
+  const s2 = avecNotes({ ...s, tampons: 1600 }, visibles);
+  const c = consigne(s2);
+  assert.equal(c?.id, 'prochaineNote', JSON.stringify(c));
+  assert.equal(c?.progression?.cible, 2000);
 });
 
 test('ordre du jour : les formulaires passent devant quand le stock est bas', () => {
@@ -60,6 +67,20 @@ test('circulaires : une à la fois, puis plus jamais', () => {
   assert.equal(c?.id, 'collegues');
   s = { ...s, circulairesVues: ['collegues'] };
   assert.equal(circulaireAAfficher(s, E.getModifiers(s, 0)), null);
+});
+
+test('circulaires en attente : la plus récente passe devant', () => {
+  const s = avecNotes(base(), ['renfort', 'rejet']);
+  assert.equal(circulaireAAfficher(s, E.getModifiers(s, 0))?.id, 'rejet');
+  const s2 = { ...s, circulairesVues: ['rejet'] };
+  assert.equal(circulaireAAfficher(s2, E.getModifiers(s2, 0))?.id, 'collegues');
+});
+
+test('ordre du jour : à 100 % de Conformité, viser la note n° 22 passe avant tout', () => {
+  const s = avecNotes(base(), ['renfort', 'rejet', 'piece', 'audit']);
+  const fin = { ...s, formulaires: 0, conformitePoints: 1e12 };
+  const c = consigne(fin);
+  assert.equal(c?.id, 'fin', JSON.stringify(c));
 });
 
 test('sauvegarde ancienne : les circulaires déjà débloquées sont marquées vues', () => {

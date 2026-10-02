@@ -54,11 +54,12 @@ export interface GradeDef {
 
 /** Grades de l'agent, atteints au compteur de tampons. Le premier est le grade de départ. */
 export const GRADES: GradeDef[] = [
-  { nom: 'Stagiaire', seuil: 0 },
+  // Aucun nom de grade n'est aussi un nom de collègue (Stagiaire, Titulaire…).
+  { nom: 'Auxiliaire', seuil: 0 },
   { nom: 'Vacataire', seuil: 1000 },
   { nom: 'Contractuel', seuil: 10000 },
-  { nom: 'Stagiaire de la fonction publique', seuil: 50000 },
-  { nom: 'Titulaire', seuil: 150000 },
+  { nom: 'Agent de catégorie B', seuil: 50000 },
+  { nom: 'Agent de catégorie A', seuil: 150000 },
 ];
 
 export interface AgentDef {

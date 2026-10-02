@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useLargeur } from '@/components/charte/useLargeur';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 
@@ -21,6 +22,10 @@ interface BoutonPoussoirProps {
 }
 
 const TRAIT = 3;
+/** Largeur moyenne d'une capitale en Fredoka gras, en fraction de la taille (estimation prudente). */
+const CHASSE = 0.74;
+/** Espacement des lettres du libellé (pt). */
+const INTERLETTRE = 2;
 /** Avant de répéter, le doigt doit rester posé ce temps (ms). */
 const DELAI_REPETITION = 400;
 /** Une répétition toutes les… (ms) : 3 coups/s, le rythme d'un joueur qui tape normalement. */
@@ -45,6 +50,12 @@ export default function BoutonPoussoir({
   accessibilityHint,
 }: BoutonPoussoirProps) {
   const course = hauteur >= 60 ? 10 : 7;
+  // Le libellé tient toujours sur une ligne : on réduit la taille s'il serait trop large
+  // (adjustsFontSizeToFit n'existe pas sur le web).
+  const { ref: refSocle, largeur, surLayout } = useLargeur();
+  const place = largeur - 2 * 12 - 2 * TRAIT;
+  const estime = libelle.length * (taille * CHASSE + INTERLETTRE);
+  const tailleAjustee = largeur > 0 && estime > place ? Math.max(11, Math.floor((taille * place) / estime)) : taille;
   const enfonce = useSharedValue(0);
   const action = useRef(onPress);
   action.current = onPress;
@@ -109,11 +120,12 @@ export default function BoutonPoussoir({
       accessibilityState={{ disabled: desactive }}
       style={[styles.cadre, { height: hauteur }, style]}
     >
-      <View style={[styles.socle, { top: course, backgroundColor: flanc }]} />
+      {/* Le socle (une View simple, pleine largeur) sert à mesurer la place du libellé. */}
+      <View ref={refSocle} style={[styles.socle, { top: course, backgroundColor: flanc }]} onLayout={surLayout} />
       <Animated.View style={[styles.face, { height: hauteur - course, backgroundColor: fond }, styleFace]}>
         <Animated.View style={[styles.reflet, styleReflet]} pointerEvents="none" />
         <Text
-          style={[styles.libelle, { fontSize: taille, color: desactive ? Colors.crayon : couleurTexte }]}
+          style={[styles.libelle, { fontSize: tailleAjustee, color: desactive ? Colors.crayon : couleurTexte }]}
           numberOfLines={1}
           adjustsFontSizeToFit
         >
@@ -161,6 +173,6 @@ const styles = StyleSheet.create({
   },
   libelle: {
     fontFamily: Fonts.titreGras,
-    letterSpacing: 2,
+    letterSpacing: INTERLETTRE,
   },
 });

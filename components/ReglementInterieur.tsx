@@ -6,6 +6,7 @@ import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Col
 import { BALANCE } from '@/constants/balance';
 import { PATIENCE_MAX } from '@/types/game';
 import Panneau from '@/components/charte/Panneau';
+import { formatMontant } from '@/utils/formatters';
 
 interface Article {
   titre: string;
@@ -18,9 +19,9 @@ const pct = (x: number) => `${Math.round(x * 100)} %`;
  * Règlement intérieur : l'aide du jeu, rédigée comme un document de service.
  * Un article n'apparaît qu'une fois la mécanique débloquée (rien n'est dévoilé à l'avance).
  */
-export default function ReglementInterieur() {
+export default function ReglementInterieur({ ouvertParDefaut = false }: { ouvertParDefaut?: boolean }) {
   const { mods, notes, prixRamette } = useGameState();
-  const [ouvert, setOuvert] = useState(false);
+  const [ouvert, setOuvert] = useState(ouvertParDefaut);
 
   const articles: Article[] = [
     {
@@ -30,7 +31,7 @@ export default function ReglementInterieur() {
     {
       titre: 'Budget et formulaires',
       texte: `Chaque dossier traité rapporte une dotation et consomme des formulaires. Sans formulaires, plus rien ne se traite.${
-        mods.recrutementVisible ? ` Les ramettes s’achètent dans Recrutement (${prixRamette.toLocaleString('fr-FR')} € l’une).` : ''
+        mods.recrutementVisible ? ` Les ramettes s’achètent dans Recrutement (${formatMontant(prixRamette)} l’une).` : ''
       }`,
     },
     {
@@ -38,10 +39,16 @@ export default function ReglementInterieur() {
       texte: 'Les usagers du périmètre déposent leurs dossiers au guichet et attendent leur tour.',
     },
   ];
+  articles.push({
+    titre: 'Fin de l’acte',
+    texte: mods.conformiteVisible
+      ? 'Quand la Conformité du guichet atteint 100 %, la note de service n° 22 (Demande de réaffectation) devient disponible : la viser clôt l’acte.'
+      : 'L’acte s’achève quand la hiérarchie juge votre guichet conforme. Les notes de service vous en rapprochent.',
+  });
   if (mods.recrutementVisible) {
     articles.push({
       titre: 'Collègues et ancienneté',
-      texte: `Les collègues tamponnent à votre place, sans interruption. Le prix monte à chaque embauche. La vitesse d’un poste double à ${BALANCE.paliersAnciennete.join(', ')} recrues (ancienneté).`,
+      texte: `Les collègues tamponnent à votre place, sans interruption. Le prix monte à chaque embauche. La vitesse d’un poste double à ${BALANCE.paliersAnciennete.join(', ')} recrues (ancienneté). Un achat s’annule dans les secondes qui suivent.`,
     });
   }
   if (notes.length > 0) {
@@ -53,13 +60,13 @@ export default function ReglementInterieur() {
   if (mods.rejetVisible) {
     articles.push({
       titre: 'Taux de rejet',
-      texte: `Un dossier rejeté rapporte une prime et son usager revient plus tard. Rejeté ${PATIENCE_MAX} fois, l’usager abandonne et quitte le périmètre : la demande baisse.`,
+      texte: `Un dossier rejeté rapporte une prime et son usager revient plus tard. Rejeté ${PATIENCE_MAX} fois, l’usager abandonne et quitte le périmètre : la demande baisse. Sous le curseur, la prime et les usagers perdus par minute ; le total est dans le dossier administratif.`,
     });
   }
   if (mods.conformiteVisible) {
     articles.push({
       titre: 'Conformité',
-      texte: 'Elle monte avec la rigueur du guichet : dossiers rejetés, pièces exigées en plus. L’acte s’achève quand elle atteint 100 %.',
+      texte: 'Elle monte avec la rigueur du guichet : dossiers rejetés, pièces exigées en plus. À 100 %, la note n° 22 clôt l’acte.',
     });
   }
 
@@ -84,7 +91,7 @@ export default function ReglementInterieur() {
             <Text style={styles.texte}>{a.texte}</Text>
           </View>
         ))}
-      {ouvert && <Text style={styles.astuce}>Astuce : un appui long sur un compteur donne sa définition.</Text>}
+      {ouvert && <Text style={styles.astuce}>Astuce : touchez un compteur (budget, formulaires…) pour sa définition.</Text>}
     </Panneau>
   );
 }

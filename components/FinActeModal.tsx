@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
-import { useGameState } from '@/context/GameStateContext';
+import { Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { useFenetreBloquante, useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import { formatEntier } from '@/utils/formatters';
 import Panneau from '@/components/charte/Panneau';
@@ -10,30 +10,40 @@ import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 export default function FinActeModal() {
   const { etat, marquerFinActeVue } = useGameState();
   const visible = etat.acteTermine && !etat.finActeVue;
+  useFenetreBloquante('fin-acte', visible, marquerFinActeVue);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={marquerFinActeVue}>
-      <View style={styles.voile}>
-        <Panneau contenuStyle={styles.carte} rayon={Charte.rayon}>
-          <Text style={styles.sur}>Guichet 3 — archivé</Text>
-          <Text style={styles.citation}>
-            « Votre niveau de conformité a été jugé satisfaisant. Une réaffectation de niveau supérieur pourrait être
-            envisagée… »
-          </Text>
-          <Text style={styles.bilan}>
-            {formatEntier(etat.tampons)} tampons apposés ·{' '}
-            {formatEntier(etat.stats.rejetes)} rejets
-          </Text>
-          <Text style={styles.fin}>FIN DE L’ACTE I</Text>
-          <Text style={styles.suite}>L’acte II — Le Service — est en cours d’instruction.</Text>
-          <BoutonPoussoir libelle="RETOURNER AU GUICHET" taille={Typo.titre} hauteur={56} onPress={marquerFinActeVue} />
-        </Panneau>
-      </View>
+      <Pressable style={styles.voile} onPress={marquerFinActeVue} accessible={false}>
+        <Pressable onPress={() => undefined} accessible={false} style={styles.colonne}>
+          <Panneau contenuStyle={styles.carte} rayon={Charte.rayon}>
+            <Text style={styles.sur}>Guichet 3 — archivé</Text>
+            <Text style={styles.citation}>
+              « Votre niveau de conformité a été jugé satisfaisant. Une réaffectation de niveau supérieur pourrait être
+              envisagée… »
+            </Text>
+            <Text style={styles.bilan}>
+              {formatEntier(etat.tampons)} tampons apposés ·{' '}
+              {formatEntier(etat.stats.rejetes)} rejets
+            </Text>
+            <Text style={styles.fin}>FIN DE L’ACTE I</Text>
+            <Text style={styles.suite}>L’acte II — Le Service — est en cours d’instruction.</Text>
+            <Text style={styles.suite}>En attendant, le guichet 3 reste ouvert : vos tampons continuent de compter.</Text>
+            <BoutonPoussoir libelle="RETOURNER AU GUICHET" taille={Typo.titre} hauteur={56} onPress={marquerFinActeVue} />
+          </Panneau>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  /** Sur grand écran, la fenêtre garde la largeur de la colonne de l'app. */
+  colonne: {
+    width: '100%',
+    maxWidth: Charte.largeurColonne,
+    alignSelf: 'center',
+  },
   voile: {
     flex: 1,
     backgroundColor: Colors.voile,

@@ -65,6 +65,8 @@ export const Fonts = {
 
 /** Constructions de la charte : contours, arrondis, ombres dures. */
 export const Charte = {
+  /** Largeur maximale de l'app et de ses fenêtres sur grand écran (colonne de téléphone, web). */
+  largeurColonne: 480,
   trait: 3,
   traitFin: 2,
   /** Cartes, scène, gros boutons. */

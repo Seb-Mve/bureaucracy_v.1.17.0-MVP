@@ -1,11 +1,15 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useGameState, type NoteAffichee } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
-import { formatEuros } from '@/utils/formatters';
+import { formatMontant } from '@/utils/formatters';
 import Hud from '@/components/Hud';
+import BandeauAnnulation from '@/components/BandeauAnnulation';
 import Panneau from '@/components/charte/Panneau';
+
+/** Temps pendant lequel une note visée reste à sa place avant de changer de section (ms). */
+const RETENUE_MS = 1200;
 
 function duree(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -13,9 +17,18 @@ function duree(sec: number): string {
   return m > 0 ? `${m} min ${s.toString().padStart(2, '0')} s` : `${s} s`;
 }
 
-const CarteNote = memo(function CarteNote({ note, onSigner }: { note: NoteAffichee; onSigner: () => void }) {
+const CarteNote = memo(function CarteNote({
+  note,
+  manque,
+  onSigner,
+}: {
+  note: NoteAffichee;
+  /** Budget manquant pour viser la note (0 si elle est à portée). */
+  manque: number;
+  onSigner: () => void;
+}) {
   const signee = note.statut === 'instruction' || note.statut === 'effective';
-  const cout = note.cout > 0 ? `${formatEuros(note.cout)} €` : 'Gratuit';
+  const cout = note.cout > 0 ? `${formatMontant(note.cout)}` : 'Gratuit';
 
   let action: React.ReactNode;
   if (note.statut === 'effective') {
@@ -45,6 +58,14 @@ const CarteNote = memo(function CarteNote({ note, onSigner }: { note: NoteAffich
         <Text style={[styles.viserTexte, !actif && styles.viserTexteInactif]}>Viser · {cout}</Text>
       </Pressable>
     );
+    if (!actif && manque > 0) {
+      action = (
+        <View style={styles.colonneAction}>
+          {action}
+          <Text style={styles.manque}>Il manque {formatMontant(Math.ceil(manque))}</Text>
+        </View>
+      );
+    }
   }
 
   return (
@@ -70,7 +91,22 @@ const CarteNote = memo(function CarteNote({ note, onSigner }: { note: NoteAffich
 
 /** Notes de service : le fil de projets du jeu. */
 export default function NotesScreen() {
-  const { notes, acheterNote, marquerNotesVues } = useGameState();
+  const { notes, acheterNote, marquerNotesVues, etat } = useGameState();
+  // Une note qui vient d'être visée reste à sa place un instant (au tampon « EN VIGUEUR ») avant de rejoindre
+  // sa section : la carte suivante ne glisse pas sous le doigt.
+  const [retenue, setRetenue] = useState<string | null>(null);
+  useEffect(() => {
+    if (!retenue) return;
+    const t = setTimeout(() => setRetenue(null), RETENUE_MS);
+    return () => clearTimeout(t);
+  }, [retenue]);
+  const viser = useCallback(
+    (id: NoteAffichee['id']) => {
+      acheterNote(id);
+      setRetenue(id);
+    },
+    [acheterNote],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -80,8 +116,8 @@ export default function NotesScreen() {
   );
 
   // Les notes à traiter d'abord, puis les notes en vigueur (plus récentes en haut).
-  const aTraiter = notes.filter((n) => n.statut !== 'effective');
-  const enVigueur = notes.filter((n) => n.statut === 'effective').reverse();
+  const aTraiter = notes.filter((n) => n.statut !== 'effective' || n.id === retenue);
+  const enVigueur = notes.filter((n) => n.statut === 'effective' && n.id !== retenue).reverse();
 
   return (
     <View style={styles.ecran}>
@@ -91,18 +127,34 @@ export default function NotesScreen() {
           <Text style={styles.vide}>Aucune note de service. Continuez à tamponner : la hiérarchie vous observe.</Text>
         )}
         {aTraiter.map((n) => (
-          <CarteNote key={n.id} note={n} onSigner={() => acheterNote(n.id)} />
+          <CarteNote key={n.id} note={n} manque={Math.max(0, n.cout - etat.budget)} onSigner={() => viser(n.id)} />
         ))}
         {enVigueur.length > 0 && <Text style={styles.section}>En vigueur</Text>}
         {enVigueur.map((n) => (
-          <CarteNote key={n.id} note={n} onSigner={() => undefined} />
+          <CarteNote key={n.id} note={n} manque={0} onSigner={() => undefined} />
         ))}
       </ScrollView>
+      {/* Sous la liste, au-dessus des onglets : son apparition raccourcit la liste par le bas, rien ne saute sous le doigt. */}
+      <BandeauAnnulation style={styles.annulation} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  annulation: {
+    marginHorizontal: Espace.m,
+    marginTop: Espace.s,
+  },
+  colonneAction: {
+    alignItems: 'flex-end',
+    gap: Espace.xs,
+  },
+  manque: {
+    fontFamily: Fonts.texteGras,
+    fontSize: Typo.petit,
+    lineHeight: Interligne.petit,
+    color: Colors.encreTexte,
+  },
   ecran: {
     flex: 1,
     backgroundColor: Colors.creme,
@@ -227,7 +279,7 @@ const styles = StyleSheet.create({
   },
   relance: {
     fontFamily: Fonts.texte,
-    fontSize: Typo.micro,
+    fontSize: Typo.petit,
     color: Colors.crayon,
   },
   texteEffectif: {

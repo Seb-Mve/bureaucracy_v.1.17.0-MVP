@@ -37,8 +37,8 @@ const minutes = (m: number) => m * 60 * 1000;
 const AVANCEMENTS: Record<number, string> = {
   1: 'Vous êtes nommé·e vacataire.\n\nVotre vacation est reconduite jusqu’à nouvel ordre. Aucun ordre n’est prévu.',
   2: 'Un contrat vous est proposé.\n\nVous l’avez déjà signé.',
-  3: 'Vous êtes admis·e au stage de titularisation.\n\nVous redevenez stagiaire, à un niveau supérieur.',
-  4: 'Vous êtes titularisé·e.\n\nVotre poste vous appartient désormais. L’inverse est également vrai.',
+  3: 'Vous êtes promu·e en catégorie B.\n\nLa catégorie A reste à votre portée. Elle le restera.',
+  4: 'Vous accédez à la catégorie A.\n\nVotre poste vous appartient désormais. L’inverse est également vrai.',
 };
 
 const LETTRES_AVANCEMENT: LettreDef[] = GRADES.slice(1).map((g, i) => ({

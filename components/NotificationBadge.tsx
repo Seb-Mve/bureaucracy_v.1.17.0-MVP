@@ -6,7 +6,13 @@ import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 export default function NotificationBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <View style={styles.badge} accessibilityLabel={`${count} nouveau${count > 1 ? 'x' : ''}`}>
+    // Décoratif : le nombre est déjà dans le nom accessible de l'onglet ou du bouton qui porte la pastille.
+    <View
+      style={styles.badge}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      aria-hidden
+    >
       <Text style={styles.texte}>{count > 9 ? '9+' : count}</Text>
     </View>
   );

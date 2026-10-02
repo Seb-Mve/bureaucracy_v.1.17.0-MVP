@@ -1,7 +1,7 @@
 import React from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Coins, FileText, Inbox, Stamp } from 'lucide-react-native';
-import { useGameState } from '@/context/GameStateContext';
+import { useFenetreBloquante, useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
@@ -22,7 +22,7 @@ const MISSIONS = [
   {
     Icone: Coins,
     fond: Colors.pastelJaune,
-    titre: 'Chaque dossier rapporte 1 €',
+    titre: 'Chaque dossier rapporte 1\u00a0€',
     texte: 'C’est la dotation versée à votre service pour chaque dossier traité.',
   },
   {
@@ -37,45 +37,54 @@ const MISSIONS = [
 export default function FichePoste() {
   const { etat, marquerFichePoste } = useGameState();
   const visible = etat.cerfa.signe && !etat.fichePosteVue;
+  useFenetreBloquante('fiche-poste', visible, () => marquerFichePoste(true));
   const agent = etat.cerfa.prenom || 'Agent sans prénom';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={() => marquerFichePoste(true)}>
-      <View style={styles.voile}>
+      <Pressable style={styles.voile} onPress={() => marquerFichePoste(true)} accessible={false}>
         <ScrollView contentContainerStyle={styles.defilement}>
-          <Panneau contenuStyle={styles.fiche} rayon={Charte.rayonPetit}>
-            <Text style={styles.reference}>Fiche de poste n° 3-A</Text>
-            <Text style={styles.titre}>Agent du guichet 3</Text>
-            <Text style={styles.titulaire}>Titulaire : {agent}</Text>
+          <Pressable onPress={() => undefined} accessible={false} style={styles.colonne}>
+            <Panneau contenuStyle={styles.fiche} rayon={Charte.rayonPetit}>
+              <Text style={styles.reference}>Fiche de poste n° 3-A</Text>
+              <Text style={styles.titre}>Agent du guichet 3</Text>
+              <Text style={styles.titulaire}>Agent : {agent}</Text>
 
-            <View style={styles.missions}>
-              {MISSIONS.map(({ Icone, fond, titre, texte }, i) => (
-                <View key={titre} style={styles.mission}>
-                  <View style={[styles.pastille, { backgroundColor: fond }]}>
-                    <Icone size={18} color={Colors.anthracite} />
+              <View style={styles.missions}>
+                {MISSIONS.map(({ Icone, fond, titre, texte }, i) => (
+                  <View key={titre} style={styles.mission}>
+                    <View style={[styles.pastille, { backgroundColor: fond }]}>
+                      <Icone size={18} color={Colors.anthracite} />
+                    </View>
+                    <View style={styles.missionTexte}>
+                      <Text style={styles.missionTitre}>
+                        {i + 1}. {titre}
+                      </Text>
+                      <Text style={styles.missionDetail}>{texte}</Text>
+                    </View>
                   </View>
-                  <View style={styles.missionTexte}>
-                    <Text style={styles.missionTitre}>
-                      {i + 1}. {titre}
-                    </Text>
-                    <Text style={styles.missionDetail}>{texte}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
 
-            <Text style={styles.chute}>
-              Objectif : tamponner. Le reste relève de votre appréciation, et de la hiérarchie.
-            </Text>
-            <BoutonPoussoir libelle="PRENDRE MON POSTE" taille={Typo.titre} hauteur={56} onPress={() => marquerFichePoste(true)} />
-          </Panneau>
+              <Text style={styles.chute}>
+                Objectif : tamponner. Le reste relève de votre appréciation, et de la hiérarchie.
+              </Text>
+              <BoutonPoussoir libelle="PRENDRE MON POSTE" taille={Typo.titre} hauteur={56} onPress={() => marquerFichePoste(true)} />
+            </Panneau>
+          </Pressable>
         </ScrollView>
-      </View>
+      </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  /** Sur grand écran, la fenêtre garde la largeur de la colonne de l'app. */
+  colonne: {
+    width: '100%',
+    maxWidth: Charte.largeurColonne,
+    alignSelf: 'center',
+  },
   voile: {
     flex: 1,
     backgroundColor: Colors.voile,
