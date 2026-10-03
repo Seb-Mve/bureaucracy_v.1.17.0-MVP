@@ -21,12 +21,12 @@ function espaceLibre(e: KeyboardEvent): boolean {
 }
 
 /**
- * Le bouton TAMPONNER. En rupture, rien ne s'affiche d'avance : c'est en tamponnant dans le vide
- * que le bouton dit « PLUS DE FORMULAIRES » (la pastille de l'onglet où s'en procurer fait le reste).
- * Le gain d'un coup se lit dans les compteurs.
+ * Le bouton TAMPONNER : un dossier à l'acte I, un visa à l'acte II. En rupture, rien ne s'affiche d'avance :
+ * c'est en tamponnant dans le vide que le bouton le dit (« PLUS DE FORMULAIRES », « RUPTURE D’IMPRIMÉS » à
+ * l'acte II ; la pastille de l'onglet où s'en procurer fait le reste). Le gain d'un coup se lit dans les compteurs.
  */
 export default function BoutonTamponner() {
-  const { tamponner, enAttente, etat, mods } = useGameState();
+  const { tamponner, enAttente, rupture, direction, encre } = useGameState();
   const focalise = useIsFocused();
   // Petit écran : bouton un peu moins haut, pour laisser la place à la scène.
   const compact = useWindowDimensions().height < 720;
@@ -44,9 +44,10 @@ export default function BoutonTamponner() {
     return () => clearTimeout(t);
   }, [signal]);
 
-  const rupture = etat.formulaires < mods.pieces;
-  const vide = enAttente < 1;
-  const libelle = signal > 0 ? 'PLUS DE FORMULAIRES' : vide && !rupture ? 'AUCUN DOSSIER' : 'TAMPONNER';
+  const vide = direction ? direction.visas < 1 : enAttente < 1;
+  const libelleSignal = direction ? 'RUPTURE D’IMPRIMÉS' : 'PLUS DE FORMULAIRES';
+  const libelleVide = direction ? 'AUCUN VISA' : 'AUCUN DOSSIER';
+  const libelle = signal > 0 ? libelleSignal : vide && !rupture ? libelleVide : 'TAMPONNER';
   const eteint = rupture || vide;
 
   // Web : la barre d'espace tamponne (un appui = un coup).
@@ -81,11 +82,21 @@ export default function BoutonTamponner() {
         immediat
         hauteur={compact ? 54 : 66}
         taille={libelle === 'TAMPONNER' ? Typo.grand : Typo.titre}
-        couleur={eteint ? Colors.carton : Colors.encre}
-        couleurOmbre={eteint ? Colors.crayonClair : Colors.encreFlanc}
+        couleur={eteint ? Colors.carton : encre.face}
+        couleurOmbre={eteint ? Colors.crayonClair : encre.flanc}
         couleurTexte={signal > 0 ? Colors.rougeTexte : eteint ? Colors.crayon : Colors.anthracite}
-        accessibilityLabel="Tamponner un dossier"
-        accessibilityHint={rupture ? 'Plus de formulaires' : vide ? 'Aucun dossier en attente' : undefined}
+        accessibilityLabel={direction ? 'Tamponner un visa' : 'Tamponner un dossier'}
+        accessibilityHint={
+          rupture
+            ? direction
+              ? 'Rupture d’imprimés'
+              : 'Plus de formulaires'
+            : vide
+              ? direction
+                ? 'Aucun visa en attente'
+                : 'Aucun dossier en attente'
+              : undefined
+        }
       />
     </View>
   );

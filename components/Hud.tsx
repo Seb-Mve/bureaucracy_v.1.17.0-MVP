@@ -78,21 +78,21 @@ const Colonne = memo(function Colonne({
 });
 
 /**
- * Tableau des ressources, à plat sous l'en-tête : budget, formulaires, dossiers en attente
- * et, une fois révélée, Conformité.
+ * Tableau des ressources, à plat sous l'en-tête. Acte I : budget, formulaires, dossiers en attente et, une fois
+ * révélée, Conformité. Acte II : budget, formulaires, visas et, après sa note, Taux de dématérialisation.
  */
 export default function Hud() {
-  const { etat, mods, conformite, verdict, enAttente, prixRamette } = useGameState();
+  const { etat, mods, conformite, verdict, enAttente, prixRamette, rupture, direction, encre } = useGameState();
   const { height, width } = useWindowDimensions();
   const compact = height < 720;
   // Écran étroit : colonnes resserrées.
   const etroit = width < 400;
   // Écran étroit à quatre colonnes : la largeur va aux libellés longs (« Formulaires », « Conformité » en 13 px)
   // plutôt qu'au budget, dont la valeur rétrécit d'elle-même pour tenir.
-  const serre = etroit && mods.conformiteVisible;
-  const rupture = etat.formulaires < mods.pieces;
+  const serre = etroit && (direction ? direction.demat !== null : mods.conformiteVisible);
+  const recrutementVisible = direction ? direction.recrutementVisible : mods.recrutementVisible;
   // En rupture, le budget est en cause aussi s'il ne paie plus une ramette (une fois les ramettes en vente).
-  const sansBudget = rupture && mods.recrutementVisible && etat.budget < prixRamette;
+  const sansBudget = rupture && recrutementVisible && etat.budget < prixRamette;
 
   return (
     <View style={styles.conteneur}>
@@ -117,13 +117,36 @@ export default function Hud() {
           declencheur={verdict?.id}
           effet="baisse"
         />
-        <Colonne
-          label="En attente"
-          valeur={formatEntier(Math.floor(enAttente))}
-          compact={compact}
-          etroit={etroit}
-        />
-        {mods.conformiteVisible && (
+        {direction ? (
+          <Colonne
+            label="Visas"
+            valeur={formatEntier(direction.visas)}
+            compact={compact}
+            etroit={etroit}
+            declencheur={verdict?.id}
+            effet="baisse"
+          />
+        ) : (
+          <Colonne
+            label="En attente"
+            valeur={formatEntier(Math.floor(enAttente))}
+            compact={compact}
+            etroit={etroit}
+          />
+        )}
+        {direction && direction.demat !== null && (
+          <Colonne label="Démat." valeur={`${formatPourcent(direction.demat)} %`} compact={compact} etroit={etroit}>
+            <JaugeHachuree
+              valeur={direction.demat / 100}
+              couleur={encre.face}
+              couleurClaire={encre.claire}
+              hauteur={8}
+              motif="jauge-demat"
+              accessibilityLabel="Taux de dématérialisation"
+            />
+          </Colonne>
+        )}
+        {!direction && mods.conformiteVisible && (
           <Colonne
             label="Conformité"
             place={serre ? 'libelleMoyen' : undefined}

@@ -7,12 +7,12 @@ import JaugeHachuree from '@/components/charte/JaugeHachuree';
 
 const PAS = 0.05;
 
-/** Curseur du Taux de rejet (débloqué par la note de service n° 2). */
+/** Curseur du Taux de rejet (acte I : débloqué par la note de service n° 2 ; acte II : dès l'entrée). */
 export default function CurseurRejet() {
-  const { etat, mods, reglerTauxRejet } = useGameState();
+  const { rejet, reglerTauxRejet, encre } = useGameState();
   const largeur = useRef(1);
-  const max = mods.rejetMax;
-  const taux = Math.min(etat.tauxRejet, max);
+  const max = rejet.max;
+  const taux = rejet.taux;
 
   const regler = useCallback((t: number) => reglerTauxRejet(Math.max(0, Math.min(max, t))), [reglerTauxRejet, max]);
   const reglerRef = useRef(regler);
@@ -71,8 +71,8 @@ export default function CurseurRejet() {
           <View pointerEvents="none">
             <JaugeHachuree
               valeur={max > 0 ? taux / max : 0}
-              couleur={Colors.encre}
-              couleurClaire={Colors.encreClaire}
+              couleur={encre.face}
+              couleurClaire={encre.claire}
               hauteur={22}
               motif="jauge-rejet"
             />

@@ -7,6 +7,7 @@ import BulleGuichet from '@/components/guichet/BulleGuichet';
 import SceneGuichet from '@/components/SceneGuichet';
 import CurseurRejet from '@/components/CurseurRejet';
 import BoutonTamponner from '@/components/BoutonTamponner';
+import EcranDirection from '@/components/direction/EcranDirection';
 
 /**
  * Écran principal : le guichet 3, sans défilement.
@@ -14,9 +15,12 @@ import BoutonTamponner from '@/components/BoutonTamponner';
  * (elle prend toute la place restante), le taux de rejet et TAMPONNER.
  */
 export default function GuichetScreen() {
-  const { mods } = useGameState();
+  const { mods, direction } = useGameState();
   // Petit écran : bulle sur une ligne, la hauteur va à la scène.
   const compact = useWindowDimensions().height < 720;
+
+  // Acte II : l'onglet principal devient l'écran Direction.
+  if (direction) return <EcranDirection />;
 
   return (
     <View style={styles.ecran}>
