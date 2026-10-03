@@ -21,9 +21,15 @@ const Colors = {
   /** Orange lisible pour du texte (contraste AA sur fond clair). */
   encreTexte: '#A0531C',
 
-  // Secondaire
+  // Secondaire, et encre de l'acte II (bouton poussoir bleu)
   bleu: '#5D9CEC',
   bleuOmbre: '#4A89DC',
+  /** Flanc du bouton poussoir bleu, plus sombre que l'ombre (même relief qu'à l'acte I). */
+  bleuFlanc: '#3A6FB5',
+  /** Fond bleu très clair (fiches de l'Atelier, choix retenu). */
+  bleuFond: '#EAF2FE',
+  /** Bleu lisible pour du texte (contraste AA sur fond clair). */
+  bleuTexte: '#2F6DB8',
 
   // Sémantique et texte
   anthracite: '#2D3436',
@@ -53,6 +59,33 @@ const Colors = {
 } as const;
 
 export default Colors;
+
+/** Encre de l'acte en cours : bouton TAMPONNER, jauges, onglet actif, cartes de l'Atelier. */
+export interface Encre {
+  face: string;
+  flanc: string;
+  claire: string;
+  fond: string;
+  texte: string;
+}
+
+/** Orange à l'acte I (le guichet), bleu à l'acte II (la Direction). */
+export const Encres: Record<1 | 2, Encre> = {
+  1: {
+    face: Colors.encre,
+    flanc: Colors.encreFlanc,
+    claire: Colors.encreClaire,
+    fond: Colors.encreFond,
+    texte: Colors.encreTexte,
+  },
+  2: {
+    face: Colors.bleu,
+    flanc: Colors.bleuFlanc,
+    claire: Colors.pastelBleu,
+    fond: Colors.bleuFond,
+    texte: Colors.bleuTexte,
+  },
+};
 
 export const Fonts = {
   titre: 'Fredoka-SemiBold',

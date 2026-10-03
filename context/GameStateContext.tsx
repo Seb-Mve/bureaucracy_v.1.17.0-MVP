@@ -2,16 +2,26 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import type { AgentId, GameEvents, GameState, Lettre, Modifiers, NoteId } from '@/types/game';
+import type { AgentId, GameState, Lettre, Modifiers, NoteId } from '@/types/game';
+import type { ActionAtelier, Agent2Id, Exemplaires, Note2Id } from '@/types/acte2';
 import { AGENTS, BALANCE, GRADES, type AgentDef, type GradeDef } from '@/constants/balance';
 import * as E from '@/data/engine';
-import { NOTES_PAR_ID, type NoteDef } from '@/data/notes';
+import { NOTES_PAR_ID } from '@/data/notes';
 import { nouvellesLettres, lettreAbsence } from '@/data/courrier';
 import { teteDeFile, type UsagerAffiche } from '@/data/usagers';
 import { CLE_SAUVEGARDE, estSauvegardeValide, normaliserSauvegarde } from '@/data/save';
 import { usePreferences } from '@/context/PreferencesContext';
+import * as D from '@/data/acte2/moteur';
+import * as V from '@/data/acte2/vues';
+import * as A from '@/data/acte2/vueAtelier';
+import { lettreAbsence2 } from '@/data/acte2/courrier2';
+import { Encres, type Encre } from '@/constants/Colors';
 
 export type { UsagerAffiche };
+export type { ActionAtelier, Agent2Id, EtapeType, Exemplaires, ProcId } from '@/types/acte2';
+export type { EtapeChaine, ParapheurAffiche, UniteAffichee, VueDirection, VueService2 } from '@/data/acte2/vues';
+export type { ChoixEtape, EffetAffiche, EtapeAtelier, ProcAtelier, VueAtelier } from '@/data/acte2/vueAtelier';
+export type { Encre };
 
 const INTERVALLE = 100;
 /** Au-delà de cet écart entre deux ticks, on considère une absence (onglet en veille). */
@@ -19,13 +29,22 @@ const SEUIL_ABSENCE = 30_000;
 /** Délai maximal entre une modification de l'état et son écriture sur le disque (ms). */
 const DELAI_SAUVEGARDE = 1000;
 /** Plafond d'un achat « Max » de collègues, par sécurité. */
-const ACHAT_MAX = 500;
+const ACHAT_MAX = V.ACHAT_MAX;
 /** Une absence plus courte (simple rechargement) est rattrapée sans lettre du S.I.C. (s). */
 const ABSENCE_LETTRE_S = 300;
 
 export type StatutNote = 'disponible' | 'tropCher' | 'instruction' | 'effective';
 
-export interface NoteAffichee extends Omit<NoteDef, 'visible' | 'appliquer'> {
+/** Note de service affichée : même carte à l'acte I et à l'acte II. */
+export interface NoteAffichee {
+  id: NoteId | Note2Id;
+  numero: number;
+  titre: string;
+  texte: string;
+  effet: string;
+  cout: number;
+  /** Délai d'instruction (s). */
+  instruction: number;
   statut: StatutNote;
   /** Secondes restantes d'instruction. */
   resteSec: number;
@@ -84,14 +103,36 @@ interface GameContextType {
   /** Abandons cumulés hors de l'usager au guichet (collègues, reste d'un coup à plusieurs dossiers) : la scène en fait partir autant. */
   abandonsFile: number;
   demandeLimitante: boolean;
+  /** Formulaires insuffisants pour le prochain coup (pièces exigées à l'acte I, exemplaires à l'acte II). */
+  rupture: boolean;
+  /** Taux de rejet de l'acte en cours, son plafond, et s'il est réglable. */
+  rejet: { taux: number; max: number; visible: boolean };
+  /** Encre de l'acte en cours (orange à l'acte I, bleu à l'acte II). */
+  encre: Encre;
+  /** Écran Direction (acte II) ; null à l'acte I. */
+  direction: V.VueDirection | null;
+  /** Onglet Service de l'acte II ; null à l'acte I. */
+  service2: V.VueService2 | null;
+  /** Atelier des procédures ; null tant qu'il est fermé (et à l'acte I). */
+  atelier: A.VueAtelier | null;
   /** Une ramette gratuite quand la rupture bloquerait le guichet faute de budget. */
   demanderRequisition: () => void;
-  tamponner: () => GameEvents;
+  /** Un coup de tampon : un dossier à l'acte I, un visa à l'acte II. */
+  tamponner: () => { rupture: boolean };
   /** Recrute `nb` collègues d'affilée (autant que le budget le permet). */
   acheterAgent: (id: AgentId, nb?: number) => void;
   acheterRamettes: (nb: number) => void;
   reglerTauxRejet: (taux: number) => void;
-  acheterNote: (id: NoteId) => void;
+  acheterNote: (id: NoteId | Note2Id) => void;
+  /** Acte II : achète `nb` guichets d'affilée (autant que le budget le permet). */
+  acheterGuichet: (nb?: number) => void;
+  /** Acte II : recrute `nb` agents d'affilée (autant que le budget le permet). */
+  acheterAgent2: (id: Agent2Id, nb?: number) => void;
+  reglerExemplaires: (n: Exemplaires) => void;
+  /** Acte II : modification d'une procédure dans l'Atelier (sans effet si elle est refusée). */
+  modifierProcedure: (action: ActionAtelier) => void;
+  /** Fin de l'acte I : prise de fonctions à la Direction. */
+  entrerDirection: () => void;
   marquerNotesVues: () => void;
   signerCerfa: (prenom: string) => void;
   deposerDemission: () => void;
@@ -121,6 +162,12 @@ function distribuerCourrier(s: GameState, maintenant: number): GameState {
 }
 
 function rattraperAbsence(s: GameState, maintenant: number): GameState {
+  if (s.acte === 2) {
+    // Acte II : Guichets et agents seuls ; jamais le moteur de l'acte I.
+    const r2 = D.simulerAbsence2(s, maintenant);
+    if (r2.secondes < ABSENCE_LETTRE_S || r2.franchies < 1) return r2.s;
+    return { ...r2.s, courrier: [lettreAbsence2(r2.secondes, r2.franchies, r2.budget, maintenant), ...r2.s.courrier] };
+  }
   const r = E.simulerAbsence(s, maintenant);
   if (r.secondes < ABSENCE_LETTRE_S || r.traites < 1) return r.s;
   const lettre: Lettre = lettreAbsence(r.secondes, r.traites, r.budget, maintenant);
@@ -212,6 +259,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       let s1: GameState;
       if (ecart > SEUIL_ABSENCE) {
         s1 = rattraperAbsence(s0, maintenant);
+      } else if (s0.acte === 2) {
+        // Acte II : le moteur de la Direction, jamais celui du guichet.
+        s1 = D.tick2(s0, Math.max(0, ecart) / 1000, maintenant).s;
       } else {
         const r = E.tick(s0, Math.max(0, ecart) / 1000, maintenant);
         compterAbandons(r.ev.abandons);
@@ -232,7 +282,18 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return () => sub.remove();
   }, []);
 
-  const tamponner = useCallback((): GameEvents => {
+  const tamponner = useCallback((): { rupture: boolean } => {
+    if (etatRef.current.acte === 2) {
+      // Acte II : le coup vise un parapheur ; la scène et les compteurs réagissent au même verdict qu'à l'acte I.
+      const r2 = D.tamponner2(etatRef.current, Date.now());
+      if (r2.ev.visas > 0) {
+        verdictId.current += 1;
+        setVerdict({ id: verdictId.current, rejete: false, abandon: false, usager: null });
+        vibrerSi('leger');
+      }
+      appliquer(r2.s);
+      return { rupture: r2.ev.rupture };
+    }
     // L'usager de la bulle est celui dont le dossier passe en premier : ce que dit la bulle (« Troisième fois… »)
     // est ce que le coup produit.
     const avant = teteDeFile(etatRef.current)[0] ?? null;
@@ -265,9 +326,33 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     [appliquer, vibrerSi],
   );
 
+  /** Répète un achat `nb` fois tant qu'il aboutit (plafonné à ACHAT_MAX). */
+  const acheterEnLot = useCallback(
+    (acheter: (s: GameState, maintenant: number) => GameState, nb: number) => {
+      const maintenant = Date.now();
+      let s = etatRef.current;
+      for (let i = 0; i < Math.min(nb, ACHAT_MAX); i++) {
+        const suivant = acheter(s, maintenant);
+        if (suivant === s) break;
+        s = suivant;
+      }
+      if (s !== etatRef.current) vibrerSi('moyen');
+      appliquer(s);
+    },
+    [appliquer, vibrerSi],
+  );
+
+  const acheterGuichet = useCallback((nb = 1) => acheterEnLot(D.acheterGuichet, nb), [acheterEnLot]);
+
+  const acheterAgent2 = useCallback(
+    (id: Agent2Id, nb = 1) => acheterEnLot((s, t) => D.acheterAgent2(s, id, t), nb),
+    [acheterEnLot],
+  );
+
   const acheterRamettes = useCallback(
     (nb: number) => {
-      const s = E.acheterRamettes(etatRef.current, nb, Date.now());
+      const s0 = etatRef.current;
+      const s = s0.acte === 2 ? D.acheterRamettes2(s0, nb) : E.acheterRamettes(s0, nb, Date.now());
       if (s !== etatRef.current) vibrerSi('moyen');
       appliquer(s);
     },
@@ -275,19 +360,43 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   );
 
   const demanderRequisition = useCallback(() => {
-    const s = E.requisitionUrgence(etatRef.current, Date.now());
+    const s0 = etatRef.current;
+    const s = s0.acte === 2 ? D.requisitionUrgence2(s0) : E.requisitionUrgence(s0, Date.now());
     if (s !== etatRef.current) vibrerSi('moyen');
     appliquer(s);
   }, [appliquer, vibrerSi]);
 
   const reglerTauxRejet = useCallback(
-    (taux: number) => appliquer(E.reglerTauxRejet(etatRef.current, taux, Date.now())),
+    (taux: number) => {
+      const s0 = etatRef.current;
+      const t = Date.now();
+      appliquer(s0.acte === 2 ? D.reglerTauxRejet2(s0, taux, t) : E.reglerTauxRejet(s0, taux, t));
+    },
     [appliquer],
   );
 
+  const reglerExemplaires = useCallback(
+    (n: Exemplaires) => appliquer(D.reglerExemplaires(etatRef.current, n, Date.now())),
+    [appliquer],
+  );
+
+  const modifierProcedure = useCallback(
+    (action: ActionAtelier) => {
+      const s = D.modifierProcedure(etatRef.current, action, Date.now());
+      if (s === etatRef.current) return;
+      vibrerSi('leger');
+      appliquer(s);
+    },
+    [appliquer, vibrerSi],
+  );
+
   const acheterNote = useCallback(
-    (id: NoteId) => {
-      const s = E.acheterNote(etatRef.current, id, Date.now());
+    (id: NoteId | Note2Id) => {
+      const s0 = etatRef.current;
+      const t = Date.now();
+      let s = s0;
+      if (s0.acte === 2 && V.estNote2(id)) s = D.acheterNote2(s0, id, t);
+      else if (s0.acte === 1 && !V.estNote2(id)) s = E.acheterNote(s0, id, t);
       if (s !== etatRef.current) vibrerSi('succes');
       appliquer(s);
     },
@@ -296,6 +405,11 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
   const marquerNotesVues = useCallback(() => {
     const s = etatRef.current;
+    if (s.acte === 2) {
+      const s2 = D.marquerNotesVues2(s);
+      if (s2 !== s) appliquer(s2);
+      return;
+    }
     const visibles = E.notesVisibles(s);
     if (visibles.every((id) => s.notesVues.includes(id))) return;
     appliquer({ ...s, notesVues: visibles });
@@ -321,10 +435,21 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     appliquer({ ...s, courrier: s.courrier.map((l) => (l.lue ? l : { ...l, lue: true })) });
   }, [appliquer]);
 
-  const marquerFinActeVue = useCallback(
-    () => appliquer({ ...etatRef.current, finActeVue: true }),
-    [appliquer],
-  );
+  const marquerFinActeVue = useCallback(() => {
+    const s = etatRef.current;
+    appliquer(s.acte === 2 ? D.marquerFinActeVue2(s) : { ...s, finActeVue: true });
+  }, [appliquer]);
+
+  const entrerDirection = useCallback(() => {
+    const s = etatRef.current;
+    if (s.acte === 2 || !s.acteTermine) return;
+    satureRef.current = false;
+    setVerdict(null);
+    setAbandonsFile(0);
+    abandonsEnCours.current = 0;
+    vibrerSi('succes');
+    appliquer(D.entrerActe2({ ...s, finActeVue: true }, Date.now()));
+  }, [appliquer, vibrerSi]);
 
   const marquerFichePoste = useCallback(
     (vue: boolean) => appliquer({ ...etatRef.current, fichePosteVue: vue }),
@@ -344,7 +469,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
   const notes = useMemo<NoteAffichee[]>(
     () =>
-      E.notesVisibles(etat).map((id) => {
+      etat.acte === 2 ? V.notesAffichees2(etat, maintenant) : E.notesVisibles(etat).map((id) => {
         const def = NOTES_PAR_ID[id];
         const st = etat.notes[id];
         let statut: StatutNote = etat.budget >= def.cout ? 'disponible' : 'tropCher';
@@ -396,6 +521,19 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     return s;
   }, [etat, mods, vitesse]);
 
+  const direction = useMemo(() => V.vueDirection(etat, maintenant), [etat, maintenant]);
+  const service2 = useMemo(() => V.vueService2(etat, maintenant), [etat, maintenant]);
+  const atelier = useMemo(() => A.vueAtelier(etat, maintenant), [etat, maintenant]);
+  const rejet = useMemo(
+    () =>
+      direction
+        ? { taux: direction.tauxRejet, max: direction.rejetMax, visible: true }
+        : { taux: Math.min(etat.tauxRejet, mods.rejetMax), max: mods.rejetMax, visible: mods.rejetVisible },
+    [direction, etat.tauxRejet, mods],
+  );
+  const prixRamette = etat.acte === 2 ? BALANCE.prixRamette : E.prixRamette(mods);
+  const rupture = direction ? direction.rupture : etat.formulaires < mods.pieces;
+
   const rang = E.rangGrade(etat.tampons);
   const grade = useMemo<GradeAffiche>(
     () => ({ nom: GRADES[rang].nom, rang, bonus: rang * BALANCE.bonusGrade, suivant: GRADES[rang + 1] ?? null }),
@@ -413,23 +551,34 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       perimetre: E.perimetre(etat, maintenant),
       conformite: E.conformite(etat),
       grade,
-      tete: teteDeFile(etat),
+      tete: etat.acte === 1 ? teteDeFile(etat) : [],
       notes,
       notesNonVues: notes.filter((n) => n.nouvelle).length,
       agents,
-      prixRamette: E.prixRamette(mods),
-      maxRamettes: Math.floor(etat.budget / E.prixRamette(mods)),
+      prixRamette,
+      maxRamettes: Math.floor(etat.budget / prixRamette),
       lettresNonLues: etat.courrier.filter((l) => !l.lue).length,
       verdict,
       abandonsFile,
       // Seulement quand les collègues butent sur la demande : une file vidée par les taps du joueur ne compte pas.
       demandeLimitante: sature,
+      rupture,
+      rejet,
+      encre: Encres[etat.acte],
+      direction,
+      service2,
+      atelier,
       demanderRequisition,
       tamponner,
       acheterAgent,
       acheterRamettes,
       reglerTauxRejet,
       acheterNote,
+      acheterGuichet,
+      acheterAgent2,
+      reglerExemplaires,
+      modifierProcedure,
+      entrerDirection,
       marquerNotesVues,
       signerCerfa,
       deposerDemission,
@@ -442,7 +591,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       pret, etat, mods, maintenant, vitesse, notes, agents, verdict, abandonsFile, sature, demanderRequisition, grade, tamponner,
       acheterAgent, acheterRamettes, reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa,
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste,
-      nouvellePartie,
+      nouvellePartie, rupture, rejet, prixRamette, direction, service2, atelier, acheterGuichet, acheterAgent2,
+      reglerExemplaires, modifierProcedure, entrerDirection,
     ],
   );
 
