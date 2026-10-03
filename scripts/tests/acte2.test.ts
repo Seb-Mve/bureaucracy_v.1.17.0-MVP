@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
 import * as D from '../../data/acte2/moteur';
 import { nouvellesLettres } from '../../data/courrier';
+import { lettreAbsence2 } from '../../data/acte2/courrier2';
 import { estSauvegardeValide, normaliserSauvegarde } from '../../data/save';
 import type { GameState } from '../../types/game';
 import {
@@ -48,7 +49,10 @@ test('entrée dans l’acte II : seul le compteur de tampons est conservé', () 
     x(s).procedures.identite.map((e) => e.type),
     ['piece', 'visa'],
   );
-  assert.deepEqual(x(s).usagers.identite, [BALANCE2.fileInitiale, 0]);
+  assert.deepEqual(x(s).usagers.identite, [
+    BALANCE2.fileInitiale,
+    BALANCE2.visasInitiaux,
+  ]);
   assert.deepEqual(x(s).boucles.domicile, [0]);
   assert.equal(x(s).debut, 1000);
 });
@@ -306,13 +310,19 @@ test('début d’acte : seule la Carte d’identité est ouverte, l’Atelier es
 });
 
 test('le catalogue compte 17 notes numérotées de 1 à 17', () => {
-  assert.deepEqual(NOTES2.map((n) => n.numero), Array.from({ length: 17 }, (_, i) => i + 1));
+  assert.deepEqual(
+    NOTES2.map((n) => n.numero),
+    Array.from({ length: 17 }, (_, i) => i + 1),
+  );
 });
 
 test('la note n° 1 est visible d’emblée et ouvre le recrutement', () => {
   const s = base2();
   assert.ok(D.notesVisibles2(s).includes('prise'));
-  assert.equal(D.getModifiers2(D.acheterNote2(s, 'prise', 0), 0).recrutementVisible, true);
+  assert.equal(
+    D.getModifiers2(D.acheterNote2(s, 'prise', 0), 0).recrutementVisible,
+    true,
+  );
 });
 
 test('l’Atelier ouvre le Justificatif de domicile et la Pièce justificative', () => {
@@ -342,7 +352,8 @@ test('grades : la dotation de l’acte II suit le compteur de tampons', () => {
 /** Avance de `secondes` par pas de 100 ms. */
 function avancer2(s: GameState, secondes: number, depart = 0): GameState {
   let r = s;
-  for (let i = 1; i <= secondes * 10; i++) r = D.tick2(r, 0.1, depart + i * 100).s;
+  for (let i = 1; i <= secondes * 10; i++)
+    r = D.tick2(r, 0.1, depart + i * 100).s;
   return r;
 }
 
@@ -357,9 +368,16 @@ function auVisa(s: GameState, usagers: number, boucles: number): GameState {
 
 test('les guichets franchissent les pièces, jamais les visas', () => {
   // Population = dossiers en cours : aucune nouvelle demande pendant ce tick.
-  const s = D.tick2(avec2(base2(), { population: BALANCE2.fileInitiale }), 1, 1000).s;
+  const s = D.tick2(
+    avec2(base2(), { population: BALANCE2.fileInitiale }),
+    1,
+    1000,
+  ).s;
   proche(x(s).usagers.identite[0], BALANCE2.fileInitiale - 0.5);
-  proche(x(s).usagers.identite[1], 0.5 * (1 - BALANCE2.abandonParPoint));
+  proche(
+    x(s).usagers.identite[1],
+    BALANCE2.visasInitiaux + 0.5 * (1 - BALANCE2.abandonParPoint),
+  );
   proche(s.tampons, 0.5);
 });
 
@@ -403,9 +421,14 @@ test('rejet d’un dossier en boucle : aucun coût, il est redéposé', () => {
 });
 
 test('automates : le rejet est au taux moyen, sans tirage', () => {
-  let s = avec2(base2(), { tauxRejet: 0.5, agents: { instructeur: 50, chefBureau: 0, sousDirecteur: 0 }, population: 0 });
+  let s = avec2(base2(), {
+    tauxRejet: 0.5,
+    agents: { instructeur: 50, chefBureau: 0, sousDirecteur: 0 },
+    population: 0,
+  });
   s = avec2(s, { usagers: { ...x(s).usagers, identite: [0, 10] } });
-  const a = D.tick2(s, 1, 1000).s, b = D.tick2(s, 1, 1000).s;
+  const a = D.tick2(s, 1, 1000).s,
+    b = D.tick2(s, 1, 1000).s;
   assert.deepEqual(x(a).usagers, x(b).usagers);
 });
 
@@ -451,10 +474,21 @@ test('sans nouvel usager, les dossiers en boucle circulent sans se multiplier', 
     population: BALANCE2.populationMax,
     procedures: {
       ...x(s).procedures,
-      identite: [{ type: 'piece' }, { type: 'pieceService', exige: 'domicile' }],
-      domicile: [{ type: 'pieceService', exige: 'identite' }, { type: 'piece' }],
+      identite: [
+        { type: 'piece' },
+        { type: 'pieceService', exige: 'domicile' },
+      ],
+      domicile: [
+        { type: 'pieceService', exige: 'identite' },
+        { type: 'piece' },
+      ],
     },
-    usagers: { ...x(s).usagers, identite: [0, 0], domicile: [0, 0], vie: [BALANCE2.populationMax] },
+    usagers: {
+      ...x(s).usagers,
+      identite: [0, 0],
+      domicile: [0, 0],
+      vie: [BALANCE2.populationMax],
+    },
     boucles: { ...x(s).boucles, identite: [50, 0], domicile: [0, 0] },
   });
   s = avancer2(s, 600);
@@ -467,7 +501,10 @@ test('simple dépendance : un second dossier d’usager, pas de dématérialisat
   let s = avecNotes2(base2(), ['atelier', 'pieceService']);
   s = avec2(s, {
     guichets: 100,
-    procedures: { ...x(s).procedures, identite: [{ type: 'pieceService', exige: 'domicile' }] },
+    procedures: {
+      ...x(s).procedures,
+      identite: [{ type: 'pieceService', exige: 'domicile' }],
+    },
     usagers: { ...x(s).usagers, identite: [10] },
     boucles: { ...x(s).boucles, identite: [0] },
   });
@@ -478,12 +515,17 @@ test('simple dépendance : un second dossier d’usager, pas de dématérialisat
 });
 
 test('sans boucle, le Taux de dématérialisation reste à 0 exactement', () => {
-  const s = avancer2(avec2(avecNotes2(base2(), ['prise', 'agents']), { guichets: 10, agents: { instructeur: 10, chefBureau: 0, sousDirecteur: 0 } }), 120);
+  const s = avancer2(
+    avec2(avecNotes2(base2(), ['prise', 'agents']), {
+      guichets: 10,
+      agents: { instructeur: 10, chefBureau: 0, sousDirecteur: 0 },
+    }),
+    120,
+  );
   assert.ok(x(s).stats.franchies > 100);
   assert.equal(x(s).demaPoints, 0);
   assert.equal(D.dematerialisation(x(s)), 0);
 });
-
 
 test('guichets : il faut la note n° 1, puis le prix monte de 15 %', () => {
   const s = base2();
@@ -514,9 +556,19 @@ test('Taux de rejet plafonné, Exemplaires exigés après leur note', () => {
 
 test('Atelier fermé : aucune modification de procédure', () => {
   const s = base2();
-  assert.equal(D.modifierProcedure(s, { type: 'retirer', p: 'identite', k: 0 }, 0), s);
-  const s2 = D.modifierProcedure(avecNotes2(s, ['atelier']), { type: 'retirer', p: 'identite', k: 0 }, 0);
-  assert.deepEqual(x(s2).procedures.identite.map((e) => e.type), ['visa']);
+  assert.equal(
+    D.modifierProcedure(s, { type: 'retirer', p: 'identite', k: 0 }, 0),
+    s,
+  );
+  const s2 = D.modifierProcedure(
+    avecNotes2(s, ['atelier']),
+    { type: 'retirer', p: 'identite', k: 0 },
+    0,
+  );
+  assert.deepEqual(
+    x(s2).procedures.identite.map((e) => e.type),
+    ['visa'],
+  );
 });
 
 test('ramettes au prix de l’acte I, réquisition d’urgence sans budget', () => {
@@ -539,11 +591,16 @@ test('hors-ligne : la simulation s’arrête au plafond', () => {
   assert.equal(r.s.derniereMaj, 10 * 3600 * 1000);
 });
 
-const lettres = (s: GameState, t: number): string[] => nouvellesLettres(s, t).map((l) => l.id);
+const lettres = (s: GameState, t: number): string[] =>
+  nouvellesLettres(s, t).map((l) => l.id);
 
 test('courrier : prise de fonctions à l’entrée dans l’acte II', () => {
   assert.ok(lettres(base2(), 0).includes('a2-prise'));
-  assert.ok(!lettres(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0).includes('a2-prise'));
+  assert.ok(
+    !lettres(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0).includes(
+      'a2-prise',
+    ),
+  );
 });
 
 test('filet de sécurité : 15 puis 30 min après la note, tant qu’aucune boucle n’existe', () => {
@@ -553,15 +610,22 @@ test('filet de sécurité : 15 puis 30 min après la note, tant qu’aucune bouc
   assert.ok(lettres(s, 15 * min).includes('a2-filet1'));
   assert.ok(!lettres(s, 29 * min).includes('a2-filet2'));
   assert.ok(lettres(s, 30 * min).includes('a2-filet2'));
-  assert.ok(!lettres(avec2(s, { premiereBoucle: 1 }), 30 * min).includes('a2-filet1'));
+  assert.ok(
+    !lettres(avec2(s, { premiereBoucle: 1 }), 30 * min).includes('a2-filet1'),
+  );
 });
 
 test('félicitations du S.I.C. au premier dossier en boucle', () => {
-  assert.ok(lettres(avec2(base2(), { premiereBoucle: 1 }), 0).includes('a2-boucle'));
+  assert.ok(
+    lettres(avec2(base2(), { premiereBoucle: 1 }), 0).includes('a2-boucle'),
+  );
 });
 
 test('démission : la pièce manquante est la première procédure modifiée', () => {
-  const s = avec2({ ...base2(), demission: { deposeeLe: 0, relances: 0 } }, { premiereModif: 'domicile' });
+  const s = avec2(
+    { ...base2(), demission: { deposeeLe: 0, relances: 0 } },
+    { premiereModif: 'domicile' },
+  );
   const l = nouvellesLettres(s, 0).find((v) => v.id === 'a2-demission');
   assert.ok(l?.corps.includes('Justificatif de domicile'));
 });
@@ -569,11 +633,18 @@ test('démission : la pièce manquante est la première procédure modifiée', (
 test('rapport annuel à 100 % de dématérialisation', () => {
   const s = avec2(base2(), { demaPoints: BALANCE2.demaCible });
   const l = nouvellesLettres(s, 0).find((v) => v.id === 'a2-rapport');
-  assert.ok(l?.corps.includes('Taux de satisfaction : 100 % (sur les usagers restants)'));
+  assert.ok(
+    l?.corps.includes(
+      'Taux de satisfaction : 100 % (sur les usagers restants)',
+    ),
+  );
 });
 
 test('démission déposée à l’acte II : ni demission1 ni demission2 (a2-demission seule)', () => {
-  const s = avec2({ ...base2(), demission: { deposeeLe: 0, relances: 0 } }, { premiereModif: 'domicile' });
+  const s = avec2(
+    { ...base2(), demission: { deposeeLe: 0, relances: 0 } },
+    { premiereModif: 'domicile' },
+  );
   const ids = lettres(s, 60 * 60_000);
   assert.ok(!ids.includes('demission1'));
   assert.ok(!ids.includes('demission2'));
@@ -585,16 +656,55 @@ test('sauvegarde d’acte II : structure validée', () => {
   assert.equal(estSauvegardeValide(bonne), true);
   assert.equal(estSauvegardeValide({ ...bonne, acte: 3 }), false);
   const a2 = bonne.acte2 as EtatActe2;
-  assert.equal(estSauvegardeValide({ ...bonne, acte2: { ...a2, procedures: undefined } }), false);
   assert.equal(
-    estSauvegardeValide({ ...bonne, acte2: { ...a2, usagers: { identite: [] } } }),
+    estSauvegardeValide({ ...bonne, acte2: { ...a2, procedures: undefined } }),
     false,
   );
   assert.equal(
     estSauvegardeValide({
       ...bonne,
-      acte2: { ...a2, boucles: { ...a2.boucles, domicile: [...a2.boucles.domicile, 0] } },
+      acte2: { ...a2, usagers: { identite: [] } },
     }),
     false,
   );
+  assert.equal(
+    estSauvegardeValide({
+      ...bonne,
+      acte2: {
+        ...a2,
+        boucles: { ...a2.boucles, domicile: [...a2.boucles.domicile, 0] },
+      },
+    }),
+    false,
+  );
+});
+
+test('entrée dans l’acte II : des visas attendent dès la première seconde', () => {
+  const s = base2();
+  assert.equal(D.visasEnAttente(x(s)), BALANCE2.visasInitiaux);
+  assert.equal(D.tamponner2(s, 0).ev.visas, 1);
+});
+
+test('notes vues de l’acte II : la pastille « NOUVEAU » s’éteint, une seule fois', () => {
+  const vue = D.marquerNotesVues2(base2());
+  assert.deepEqual(x(vue).notesVues, ['prise']);
+  assert.equal(D.marquerNotesVues2(vue), vue);
+});
+
+test('fin de l’acte II vue : marquée dans l’état de l’acte II, pas dans celui de l’acte I', () => {
+  const s = { ...base2(), finActeVue: false };
+  const v = D.marquerFinActeVue2(s);
+  assert.equal(x(v).finActeVue, true);
+  assert.equal(v.finActeVue, false);
+  assert.equal(D.marquerFinActeVue2(v), v);
+});
+
+test('lettre d’absence de l’acte II : étapes franchies et dotation de la Direction', () => {
+  const l = lettreAbsence2(3720, 1500, 2400, 99);
+  assert.equal(l.id, 'absence-99');
+  assert.equal(l.objet, 'Pendant votre absence');
+  assert.match(l.corps, /\(1 h 2 min\)/);
+  assert.match(l.corps, /la Direction a franchi 1\s500 étapes/);
+  assert.match(l.corps, /2\s400\s€/);
+  assert.equal(l.lue, false);
 });

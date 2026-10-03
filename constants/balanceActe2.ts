@@ -2,7 +2,13 @@
  * Constantes d'équilibrage de l'acte II — La Direction.
  * Toute valeur ici est vérifiée par scripts/simulate-acte2.ts.
  */
-import type { Agent2Id, Etape, EtapeType, Exemplaires, ProcId } from '../types/acte2';
+import type {
+  Agent2Id,
+  Etape,
+  EtapeType,
+  Exemplaires,
+  ProcId,
+} from '../types/acte2';
 
 export const BALANCE2 = {
   /** Habitants de la ville à l'entrée dans l'acte, et capacité maximale. */
@@ -14,6 +20,8 @@ export const BALANCE2 = {
   demandeRate: 1 / 500,
   /** Dossiers d'usagers qui attendent déjà à la Carte d'identité. */
   fileInitiale: 20,
+  /** Parapheurs qui attendent déjà le visa du chef de service : il tamponne dès la première seconde. */
+  visasInitiaux: 12,
   budgetInitial: 0,
   formulairesInitiaux: 300,
   /** Dotation de base par étape franchie (€), multipliée par celle de l'étape. */
@@ -107,7 +115,10 @@ export const ETAPES: Record<EtapeType, EtapeDef> = {
 };
 
 /** Effet du curseur Exemplaires exigés, par étape franchie. Les formulaires suivent le nombre d'exemplaires. */
-export const EXEMPLAIRES: Record<Exemplaires, { dotation: number; conf: number; patience: number }> = {
+export const EXEMPLAIRES: Record<
+  Exemplaires,
+  { dotation: number; conf: number; patience: number }
+> = {
   1: { dotation: 1, conf: 1, patience: 1 },
   2: { dotation: 1.6, conf: 1.8, patience: 1.5 },
   3: { dotation: 2.1, conf: 2.5, patience: 2 },

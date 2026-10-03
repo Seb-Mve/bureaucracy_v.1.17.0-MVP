@@ -17,16 +17,23 @@ import {
   type Stocks,
 } from '../../types/acte2';
 import { BALANCE } from '../../constants/balance';
-import { AGENTS2, BALANCE2, ETAPES, EXEMPLAIRES, PROCEDURES_INITIALES } from '../../constants/balanceActe2';
+import {
+  AGENTS2,
+  BALANCE2,
+  ETAPES,
+  EXEMPLAIRES,
+  PROCEDURES_INITIALES,
+} from '../../constants/balanceActe2';
 import { multiplicateurAnciennete, partRejetee, rangGrade } from '../engine';
 import { NOTES2, NOTES2_PAR_ID, dematPct } from './notes2';
 import { appliquerAction, estBoucle } from './procedures';
 
-export function copieProcedures(p: Record<ProcId, Etape[]>): Record<ProcId, Etape[]> {
-  return Object.fromEntries(PROCS.map((id) => [id, p[id].map((e) => ({ ...e }))])) as Record<
-    ProcId,
-    Etape[]
-  >;
+export function copieProcedures(
+  p: Record<ProcId, Etape[]>,
+): Record<ProcId, Etape[]> {
+  return Object.fromEntries(
+    PROCS.map((id) => [id, p[id].map((e) => ({ ...e }))]),
+  ) as Record<ProcId, Etape[]>;
 }
 
 export function copieStocks(st: Stocks): Stocks {
@@ -35,7 +42,9 @@ export function copieStocks(st: Stocks): Stocks {
 
 /** Stocks à zéro : un compteur par étape de chaque procédure. */
 export function stocksPour(procedures: Record<ProcId, Etape[]>): Stocks {
-  return Object.fromEntries(PROCS.map((p) => [p, procedures[p].map(() => 0)])) as Stocks;
+  return Object.fromEntries(
+    PROCS.map((p) => [p, procedures[p].map(() => 0)]),
+  ) as Stocks;
 }
 
 export function sommeStocks(st: Stocks): number {
@@ -49,6 +58,7 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
   const procedures = copieProcedures(PROCEDURES_INITIALES);
   const usagers = stocksPour(procedures);
   usagers.identite[0] = BALANCE2.fileInitiale;
+  usagers.identite[1] = BALANCE2.visasInitiaux;
   return {
     debut: maintenant,
     guichets: BALANCE2.guichetsInitiaux,
@@ -68,7 +78,13 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
     premiereModif: null,
     acteTermine: false,
     finActeVue: false,
-    stats: { franchies: 0, franchiesBoucle: 0, visasTampons: 0, abandonsDemarche: 0, taps: 0 },
+    stats: {
+      franchies: 0,
+      franchiesBoucle: 0,
+      visasTampons: 0,
+      abandonsDemarche: 0,
+      taps: 0,
+    },
   };
 }
 
@@ -89,7 +105,11 @@ export function entrerActe2(s: GameState, maintenant: number): GameState {
 }
 
 /** Vrai si la note est achetée et son délai d'instruction écoulé. */
-export function noteEffective2(x: EtatActe2, id: Note2Id, maintenant: number): boolean {
+export function noteEffective2(
+  x: EtatActe2,
+  id: Note2Id,
+  maintenant: number,
+): boolean {
   const n = x.notes[id];
   return n !== undefined && n.effective <= maintenant;
 }
@@ -113,7 +133,8 @@ export function getModifiers2(s: GameState, maintenant: number): Modifiers2 {
   };
   const x = s.acte2;
   if (!x) return m;
-  for (const n of NOTES2) if (noteEffective2(x, n.id, maintenant)) n.appliquer(m);
+  for (const n of NOTES2)
+    if (noteEffective2(x, n.id, maintenant)) n.appliquer(m);
   return m;
 }
 
@@ -121,16 +142,27 @@ export function getModifiers2(s: GameState, maintenant: number): Modifiers2 {
 export function notesVisibles2(s: GameState): Note2Id[] {
   const x = s.acte2;
   if (!x) return [];
-  return NOTES2.filter((n) => x.notes[n.id] !== undefined || n.visible(s)).map((n) => n.id);
+  return NOTES2.filter((n) => x.notes[n.id] !== undefined || n.visible(s)).map(
+    (n) => n.id,
+  );
 }
 
 export function peutAcheterNote2(s: GameState, id: Note2Id): boolean {
   const x = s.acte2;
   const n = NOTES2_PAR_ID[id];
-  return x !== null && x.notes[id] === undefined && n.visible(s) && s.budget >= n.cout;
+  return (
+    x !== null &&
+    x.notes[id] === undefined &&
+    n.visible(s) &&
+    s.budget >= n.cout
+  );
 }
 
-export function acheterNote2(s: GameState, id: Note2Id, maintenant: number): GameState {
+export function acheterNote2(
+  s: GameState,
+  id: Note2Id,
+  maintenant: number,
+): GameState {
   if (!peutAcheterNote2(s, id)) return s;
   const x = s.acte2 as EtatActe2;
   const n = NOTES2_PAR_ID[id];
@@ -139,14 +171,37 @@ export function acheterNote2(s: GameState, id: Note2Id, maintenant: number): Gam
     budget: s.budget - n.cout,
     acte2: {
       ...x,
-      notes: { ...x.notes, [id]: { achetee: maintenant, effective: maintenant + n.instruction * 1000 } },
+      notes: {
+        ...x.notes,
+        [id]: {
+          achetee: maintenant,
+          effective: maintenant + n.instruction * 1000,
+        },
+      },
       acteTermine: x.acteTermine || id === 'promotion',
     },
   };
 }
 
+/** Les notes visibles de l'acte II sont marquées vues (pastille « NOUVEAU »). Même objet si rien ne change. */
+export function marquerNotesVues2(s: GameState): GameState {
+  const x = s.acte2;
+  if (!x) return s;
+  const visibles = notesVisibles2(s);
+  if (visibles.every((id) => x.notesVues.includes(id))) return s;
+  return { ...s, acte2: { ...x, notesVues: visibles } };
+}
+
+/** L'écran de fin de l'acte II a été affiché (champ de l'acte II, distinct de celui de l'acte I). */
+export function marquerFinActeVue2(s: GameState): GameState {
+  const x = s.acte2;
+  if (!x || x.finActeVue) return s;
+  return { ...s, acte2: { ...x, finActeVue: true } };
+}
+
 export const usagersEnCours = (x: EtatActe2): number => sommeStocks(x.usagers);
-export const dossiersEnBoucle = (x: EtatActe2): number => sommeStocks(x.boucles);
+export const dossiersEnBoucle = (x: EtatActe2): number =>
+  sommeStocks(x.boucles);
 
 /** Taux de dématérialisation affichable, plafonné à 100 %. */
 export function dematerialisation(x: EtatActe2): number {
@@ -187,10 +242,18 @@ interface Lot {
   b: number;
 }
 
-const evVide = (): Events2 => ({ franchies: 0, visas: 0, budget: 0, rupture: false, aucunVisa: false });
+const evVide = (): Events2 => ({
+  franchies: 0,
+  visas: 0,
+  budget: 0,
+  rupture: false,
+  aucunVisa: false,
+});
 
 function nettoyer(st: Stocks): Stocks {
-  return Object.fromEntries(PROCS.map((p) => [p, st[p].map((v) => Math.max(0, v))])) as Stocks;
+  return Object.fromEntries(
+    PROCS.map((p) => [p, st[p].map((v) => Math.max(0, v))]),
+  ) as Stocks;
 }
 
 /**
@@ -211,7 +274,10 @@ function franchir(
   for (const l of lots) total += l.u + l.b;
   if (total <= 0) return { s, ev };
   // Formulaires : on franchit au prorata de ce que le stock permet.
-  const ratio = Math.min(1, Math.max(0, s.formulaires) / (total * x0.exemplaires));
+  const ratio = Math.min(
+    1,
+    Math.max(0, s.formulaires) / (total * x0.exemplaires),
+  );
   if (ratio < 1) ev.rupture = true;
   if (ratio <= 0) return { s, ev };
 
@@ -245,7 +311,8 @@ function franchir(
     if (e.type === 'visa') ev.visas += u0 + b0;
 
     // Patience : une part des usagers abandonne à chaque étape.
-    const ab = u0 * Math.min(1, def.patience * BALANCE2.abandonParPoint * ex.patience);
+    const ab =
+      u0 * Math.min(1, def.patience * BALANCE2.abandonParPoint * ex.patience);
     population -= ab;
     abandons += ab;
     let u = u0 - ab;
@@ -253,7 +320,11 @@ function franchir(
 
     // Pièce délivrée par nos services : un dossier lié est déposé dans la procédure exigée.
     // Un dossier en boucle n'est pas dupliqué : il passe dans la procédure exigée.
-    if (e.type === 'pieceService' && e.exige !== undefined && m.procsOuvertes.includes(e.exige)) {
+    if (
+      e.type === 'pieceService' &&
+      e.exige !== undefined &&
+      m.procsOuvertes.includes(e.exige)
+    ) {
       if (estBoucle(x0.procedures, m.procsOuvertes, l.p, e.exige)) {
         // La chaîne ne peut plus aboutir : l'usager est renvoyé chez lui, le dossier continue sans lui.
         abandonsDemarche += u;
@@ -336,16 +407,22 @@ export function tick2(
   const usagers = copieStocks(x0.usagers);
   const inactifs = Math.max(0, x0.population - sommeStocks(usagers));
   const nouvelles = inactifs * (1 - Math.exp(-BALANCE2.demandeRate * dt));
-  for (const p of m.procsOuvertes) usagers[p][0] += nouvelles / m.procsOuvertes.length;
+  for (const p of m.procsOuvertes)
+    usagers[p][0] += nouvelles / m.procsOuvertes.length;
   const population =
-    x0.population + Math.max(0, BALANCE2.populationMax - x0.population) * BALANCE2.installationRate * dt;
+    x0.population +
+    Math.max(0, BALANCE2.populationMax - x0.population) *
+      BALANCE2.installationRate *
+      dt;
 
   const x: EtatActe2 = { ...x0, usagers, population };
   const s: GameState = {
     ...s0,
     acte2: x,
     derniereMaj: maintenant,
-    stats: enJeu ? { ...s0.stats, tempsDeJeu: s0.stats.tempsDeJeu + dt } : s0.stats,
+    stats: enJeu
+      ? { ...s0.stats, tempsDeJeu: s0.stats.tempsDeJeu + dt }
+      : s0.stats,
   };
 
   // Dossiers prêts à franchir leur étape (délai moyen de l'étape écoulé).
@@ -400,15 +477,32 @@ export function tamponner2(
   }
   if (total < 1e-9) return { s, ev: { ...evVide(), aucunVisa: true } };
   const part = Math.min(1, m.tapPower / total);
-  const r = franchir(s, lots.map((l) => ({ ...l, u: l.u * part, b: l.b * part })), m, maintenant, alea);
+  const r = franchir(
+    s,
+    lots.map((l) => ({ ...l, u: l.u * part, b: l.b * part })),
+    m,
+    maintenant,
+    alea,
+  );
   const x = r.s.acte2 as EtatActe2;
-  return { ev: r.ev, s: { ...r.s, acte2: { ...x, stats: { ...x.stats, visasTampons: x.stats.visasTampons + r.ev.visas } } } };
+  return {
+    ev: r.ev,
+    s: {
+      ...r.s,
+      acte2: {
+        ...x,
+        stats: { ...x.stats, visasTampons: x.stats.visasTampons + r.ev.visas },
+      },
+    },
+  };
 }
 
 /** Prix du prochain Guichet : le guichet 3, offert, ne compte pas. */
 export function coutGuichet(possedes: number): number {
   const g = BALANCE2.guichet;
-  return Math.ceil(g.coutBase * Math.pow(g.croissance, possedes - BALANCE2.guichetsInitiaux));
+  return Math.ceil(
+    g.coutBase * Math.pow(g.croissance, possedes - BALANCE2.guichetsInitiaux),
+  );
 }
 
 export function acheterGuichet(s: GameState, maintenant: number): GameState {
@@ -416,7 +510,11 @@ export function acheterGuichet(s: GameState, maintenant: number): GameState {
   if (!x || !getModifiers2(s, maintenant).recrutementVisible) return s;
   const cout = coutGuichet(x.guichets);
   if (s.budget < cout) return s;
-  return { ...s, budget: s.budget - cout, acte2: { ...x, guichets: x.guichets + 1 } };
+  return {
+    ...s,
+    budget: s.budget - cout,
+    acte2: { ...x, guichets: x.guichets + 1 },
+  };
 }
 
 export function coutAgent2(id: Agent2Id, possedes: number): number {
@@ -436,7 +534,11 @@ export function gainAgent2(x: EtatActe2, id: Agent2Id): number {
   );
 }
 
-export function peutAcheterAgent2(s: GameState, id: Agent2Id, maintenant: number): boolean {
+export function peutAcheterAgent2(
+  s: GameState,
+  id: Agent2Id,
+  maintenant: number,
+): boolean {
   const x = s.acte2;
   return (
     x !== null &&
@@ -445,7 +547,11 @@ export function peutAcheterAgent2(s: GameState, id: Agent2Id, maintenant: number
   );
 }
 
-export function acheterAgent2(s: GameState, id: Agent2Id, maintenant: number): GameState {
+export function acheterAgent2(
+  s: GameState,
+  id: Agent2Id,
+  maintenant: number,
+): GameState {
   if (!peutAcheterAgent2(s, id, maintenant)) return s;
   const x = s.acte2 as EtatActe2;
   return {
@@ -465,7 +571,8 @@ export function acheterRamettes2(s: GameState, nb: number): GameState {
     formulaires: s.formulaires + possibles * BALANCE.ramette,
     stats: {
       ...s.stats,
-      formulairesAchetes: s.stats.formulairesAchetes + possibles * BALANCE.ramette,
+      formulairesAchetes:
+        s.stats.formulairesAchetes + possibles * BALANCE.ramette,
     },
   };
 }
@@ -473,11 +580,16 @@ export function acheterRamettes2(s: GameState, nb: number): GameState {
 /** En rupture et sans de quoi payer une ramette, le service en fournit une, gratuitement. */
 export function requisitionUrgence2(s: GameState): GameState {
   const x = s.acte2;
-  if (!x || s.formulaires >= x.exemplaires || s.budget >= BALANCE.prixRamette) return s;
+  if (!x || s.formulaires >= x.exemplaires || s.budget >= BALANCE.prixRamette)
+    return s;
   return { ...s, formulaires: s.formulaires + BALANCE.ramette };
 }
 
-export function reglerTauxRejet2(s: GameState, taux: number, maintenant: number): GameState {
+export function reglerTauxRejet2(
+  s: GameState,
+  taux: number,
+  maintenant: number,
+): GameState {
   const x = s.acte2;
   if (!x) return s;
   const m = getModifiers2(s, maintenant);
@@ -485,7 +597,11 @@ export function reglerTauxRejet2(s: GameState, taux: number, maintenant: number)
   return { ...s, acte2: { ...x, tauxRejet: t } };
 }
 
-export function reglerExemplaires(s: GameState, n: Exemplaires, maintenant: number): GameState {
+export function reglerExemplaires(
+  s: GameState,
+  n: Exemplaires,
+  maintenant: number,
+): GameState {
   const x = s.acte2;
   if (!x || !getModifiers2(s, maintenant).exemplairesVisible) return s;
   return { ...s, acte2: { ...x, exemplaires: n } };

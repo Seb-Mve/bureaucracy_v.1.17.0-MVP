@@ -2,11 +2,11 @@
  * Courrier du S.I.C. pour l'acte II — La Direction.
  * Les lettres passent par `nouvellesLettres` (data/courrier.ts), une seule fois chacune.
  */
-import type { GameState } from '../../types/game';
+import type { GameState, Lettre } from '../../types/game';
 import type { EtatActe2 } from '../../types/acte2';
 import type { LettreDef } from '../courrier';
 import { BALANCE2, PROC_NOMS } from '../../constants/balanceActe2';
-import { formatEntier } from '../../utils/formatters';
+import { formatEntier, formatMontant } from '../../utils/formatters';
 import { dematPct } from './notes2';
 
 const nom = (s: GameState): string => s.cerfa.prenom || 'Agent sans prénom';
@@ -60,7 +60,9 @@ export const LETTRES_ACTE2: LettreDef[] = [
       return `Votre demande de démission demeure incomplète.\n\nPièce manquante : justificatif de conformité à la procédure « ${p ? PROC_NOMS[p] : PROC_NOMS.identite} ».`;
     },
     declencheur: (s) =>
-      s.demission.deposeeLe !== null && s.acte2 !== null && s.acte2.premiereModif !== null,
+      s.demission.deposeeLe !== null &&
+      s.acte2 !== null &&
+      s.acte2.premiereModif !== null,
   },
   {
     id: 'a2-rapport',
@@ -70,3 +72,26 @@ export const LETTRES_ACTE2: LettreDef[] = [
     declencheur: (s) => s.acte2 !== null && dematPct(s.acte2) >= 100,
   },
 ];
+
+/** Durée d'une absence, en heures et minutes. */
+function dureeAbsence(secondes: number): string {
+  return secondes >= 3600
+    ? `${Math.floor(secondes / 3600)} h ${Math.floor((secondes % 3600) / 60)} min`
+    : `${Math.max(1, Math.floor(secondes / 60))} min`;
+}
+
+/** Lettre de résumé après une absence à l'acte II (Guichets et agents seuls, sans rejet). */
+export function lettreAbsence2(
+  secondes: number,
+  franchies: number,
+  budget: number,
+  maintenant: number,
+): Lettre {
+  return {
+    id: `absence-${maintenant}`,
+    objet: 'Pendant votre absence',
+    corps: `Pendant votre absence (${dureeAbsence(secondes)}), la Direction a franchi ${formatEntier(franchies)} étapes et perçu ${formatMontant(budget)} de dotation.\n\nAucun dossier n’a été rejeté : la rigueur ne se délègue pas.\n\nVos procédures ont suivi leur cours.`,
+    recue: maintenant,
+    lue: false,
+  };
+}
