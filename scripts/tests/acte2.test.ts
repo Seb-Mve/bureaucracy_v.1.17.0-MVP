@@ -336,3 +336,129 @@ test('Promotion : visible à 100 % de dématérialisation, termine l’acte', ()
 test('grades : la dotation de l’acte II suit le compteur de tampons', () => {
   proche(D.getModifiers2({ ...base2(), tampons: 10000 }, 0).dotationMult, 1.2);
 });
+
+/** Avance de `secondes` par pas de 100 ms. */
+function avancer2(s: GameState, secondes: number, depart = 0): GameState {
+  let r = s;
+  for (let i = 1; i <= secondes * 10; i++) r = D.tick2(r, 0.1, depart + i * 100).s;
+  return r;
+}
+
+/** Une procédure à un seul Visa, avec des dossiers d'usagers ou en boucle à ce visa. */
+function auVisa(s: GameState, usagers: number, boucles: number): GameState {
+  return avec2(s, {
+    procedures: { ...x(s).procedures, identite: [{ type: 'visa' }] },
+    usagers: { ...x(s).usagers, identite: [usagers] },
+    boucles: { ...x(s).boucles, identite: [boucles] },
+  });
+}
+
+test('les guichets franchissent les pièces, jamais les visas', () => {
+  // Population = dossiers en cours : aucune nouvelle demande pendant ce tick.
+  const s = D.tick2(avec2(base2(), { population: BALANCE2.fileInitiale }), 1, 1000).s;
+  proche(x(s).usagers.identite[0], BALANCE2.fileInitiale - 0.5);
+  proche(x(s).usagers.identite[1], 0.5 * (1 - BALANCE2.abandonParPoint));
+  proche(s.tampons, 0.5);
+});
+
+test('un tap accorde un visa : dotation, tampon, Conformité', () => {
+  const s0 = auVisa(base2(), 5, 0);
+  const r = D.tamponner2(s0, 0);
+  assert.equal(r.ev.visas, 1);
+  proche(x(r.s).usagers.identite[0], 4);
+  proche(r.s.budget - s0.budget, 1);
+  proche(x(r.s).conformitePoints, 2);
+  proche(r.s.tampons, s0.tampons + 1);
+});
+
+test('sans visa en attente, le tap ne fait rien', () => {
+  const s0 = auVisa(base2(), 0, 0);
+  const r = D.tamponner2(s0, 0);
+  assert.equal(r.ev.aucunVisa, true);
+  assert.equal(r.s.budget, s0.budget);
+});
+
+/** Tirage qui rejette toujours (alea < taux), et tirage qui ne rejette jamais. */
+const toujours = () => 0;
+const jamais = () => 0.999;
+
+test('rejet d’un usager : il perd patience et peut abandonner', () => {
+  const s0 = avec2(auVisa(base2(), 5, 0), { tauxRejet: 0.5 });
+  const r = D.tamponner2(s0, 0, toujours);
+  // 4 % abandonnent au visa ; le reste est rejeté (tirage) ; un tiers des rejetés abandonne.
+  proche(x(r.s).abandons, 0.04 + 0.96 / 3);
+  proche(x(r.s).usagers.identite[0], 4 + 0.96 - 0.96 / 3);
+  proche(r.s.budget - s0.budget, 1 + 0.96 * BALANCE2.primeRejet);
+  proche(x(D.tamponner2(s0, 0, jamais).s).abandons, 0.04);
+});
+
+test('rejet d’un dossier en boucle : aucun coût, il est redéposé', () => {
+  const s0 = avec2(auVisa(base2(), 0, 5), { tauxRejet: 0.5 });
+  const r = D.tamponner2(s0, 0, toujours);
+  assert.equal(x(r.s).abandons, 0);
+  proche(x(r.s).boucles.identite[0], 5);
+  proche(x(r.s).demaPoints, 1);
+});
+
+test('automates : le rejet est au taux moyen, sans tirage', () => {
+  let s = avec2(base2(), { tauxRejet: 0.5, agents: { instructeur: 50, chefBureau: 0, sousDirecteur: 0 }, population: 0 });
+  s = avec2(s, { usagers: { ...x(s).usagers, identite: [0, 10] } });
+  const a = D.tick2(s, 1, 1000).s, b = D.tick2(s, 1, 1000).s;
+  assert.deepEqual(x(a).usagers, x(b).usagers);
+});
+
+test('Exemplaires ×3 : trois formulaires par étape, dotation ×2,1', () => {
+  const s0 = avec2(auVisa(base2(), 5, 0), { exemplaires: 3 });
+  const r = D.tamponner2(s0, 0);
+  proche(s0.formulaires - r.s.formulaires, 3);
+  proche(r.s.budget - s0.budget, 2.1);
+});
+
+test('rupture d’imprimés : aucun visa sans formulaires', () => {
+  const s0 = { ...auVisa(base2(), 5, 0), formulaires: 0 };
+  const r = D.tamponner2(s0, 0);
+  assert.equal(r.ev.rupture, true);
+  assert.deepEqual(x(r.s).usagers.identite, [5]);
+});
+
+test('une boucle renvoie les usagers chez eux et produit de la dématérialisation', () => {
+  let s = avecNotes2(base2(), ['atelier', 'pieceService']);
+  s = avec2(s, {
+    guichets: 100,
+    population: 10,
+    procedures: {
+      ...x(s).procedures,
+      identite: [{ type: 'pieceService', exige: 'domicile' }],
+      domicile: [{ type: 'pieceService', exige: 'identite' }],
+    },
+    usagers: { ...x(s).usagers, identite: [10], domicile: [0] },
+    boucles: { ...x(s).boucles, identite: [0], domicile: [0] },
+  });
+  s = avancer2(s, 10);
+  assert.ok(x(s).premiereBoucle !== null);
+  assert.ok(x(s).stats.abandonsDemarche > 0);
+  assert.ok(D.dossiersEnBoucle(x(s)) > 0);
+  assert.ok(x(s).demaPoints > 0);
+});
+
+test('simple dépendance : un second dossier d’usager, pas de dématérialisation', () => {
+  let s = avecNotes2(base2(), ['atelier', 'pieceService']);
+  s = avec2(s, {
+    guichets: 100,
+    procedures: { ...x(s).procedures, identite: [{ type: 'pieceService', exige: 'domicile' }] },
+    usagers: { ...x(s).usagers, identite: [10] },
+    boucles: { ...x(s).boucles, identite: [0] },
+  });
+  s = avancer2(s, 30);
+  assert.equal(x(s).demaPoints, 0);
+  assert.equal(x(s).premiereBoucle, null);
+  assert.ok(x(s).usagers.domicile[0] > 0);
+});
+
+test('sans boucle, le Taux de dématérialisation reste à 0 exactement', () => {
+  const s = avancer2(avec2(avecNotes2(base2(), ['prise', 'agents']), { guichets: 10, agents: { instructeur: 10, chefBureau: 0, sousDirecteur: 0 } }), 120);
+  assert.ok(x(s).stats.franchies > 100);
+  assert.equal(x(s).demaPoints, 0);
+  assert.equal(D.dematerialisation(x(s)), 0);
+});
+

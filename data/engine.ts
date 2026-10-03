@@ -192,7 +192,7 @@ export function prixRamette(m: Modifiers): number {
  * Part rejetée d'un lot de `n` dossiers : chaque dossier est rejeté avec la probabilité `taux`
  * (un vrai taux, avec ses séries), la fraction de dossier restante tirée elle aussi.
  */
-function partRejetee(n: number, taux: number, alea: () => number): number {
+export function partRejetee(n: number, taux: number, alea: () => number): number {
   if (n <= 0 || taux <= 0) return 0;
   const entiers = Math.floor(n);
   let rejetes = 0;
