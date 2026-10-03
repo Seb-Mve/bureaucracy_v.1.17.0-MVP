@@ -7,6 +7,7 @@ import { BALANCE } from '@/constants/balance';
 import { PATIENCE_MAX } from '@/types/game';
 import Panneau from '@/components/charte/Panneau';
 import { formatEntier, formatMontant } from '@/utils/formatters';
+import { articlesDirection } from '@/components/direction/reglementDirection';
 
 interface Article {
   titre: string;
@@ -22,7 +23,7 @@ const parCoup = (n: number) => (n === 1 ? 'le dossier posé' : `${formatEntier(n
  * Un article n'apparaît qu'une fois la mécanique débloquée (rien n'est dévoilé à l'avance).
  */
 export default function ReglementInterieur() {
-  const { mods, notes, prixRamette } = useGameState();
+  const { mods, notes, prixRamette, direction } = useGameState();
   const [ouvert, setOuvert] = useState(false);
 
   const articles: Article[] = [
@@ -68,6 +69,9 @@ export default function ReglementInterieur() {
     });
   }
 
+  // Acte II : le règlement de la Direction remplace celui du guichet 3.
+  const affiches = direction ? articlesDirection(direction, notes.length > 0, prixRamette) : articles;
+
   return (
     <Panneau contenuStyle={styles.fiche} rayon={Charte.rayon}>
       <Pressable
@@ -77,11 +81,13 @@ export default function ReglementInterieur() {
         accessibilityState={{ expanded: ouvert }}
         accessibilityLabel="Règlement intérieur"
       >
-        <Text style={styles.reference}>Guichet 3 · {articles.length} articles en vigueur</Text>
+        <Text style={styles.reference}>
+          {direction ? 'La Direction' : 'Guichet 3'} · {affiches.length} articles en vigueur
+        </Text>
         {ouvert ? <ChevronDown size={18} color={Colors.anthracite} /> : <ChevronRight size={18} color={Colors.anthracite} />}
       </Pressable>
       {ouvert &&
-        articles.map((a, i) => (
+        affiches.map((a, i) => (
           <View key={a.titre} style={styles.article}>
             <Text style={styles.titre}>
               Article {i + 1} · {a.titre}

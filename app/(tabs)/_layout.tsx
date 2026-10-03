@@ -9,6 +9,7 @@ import NotificationBadge from '@/components/NotificationBadge';
 import EnTete from '@/components/EnTete';
 import CerfaEcran from '@/components/CerfaEcran';
 import FinActeModal from '@/components/FinActeModal';
+import FinActe2Modal from '@/components/direction/FinActe2Modal';
 import FichePoste from '@/components/FichePoste';
 
 /** Hauteur de la barre d'onglets hors marge du bas (icône + libellé). */
@@ -38,6 +39,7 @@ export default function TabLayout() {
   return (
     <>
       <FinActeModal />
+      <FinActe2Modal />
       <FichePoste />
       <Tabs
         screenOptions={{

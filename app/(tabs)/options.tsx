@@ -17,22 +17,42 @@ function dureeJeu(sec: number): string {
 
 /** Options : dossier administratif, règlement intérieur, confort, démission, remise à zéro. */
 export default function OptionsScreen() {
-  const { etat, grade, deposerDemission, nouvellePartie, marquerFichePoste } = useGameState();
+  const { etat, grade, direction, deposerDemission, nouvellePartie, marquerFichePoste } = useGameState();
   const [demande, setDemande] = useState<'demission' | 'effacer' | null>(null);
   const deposee = etat.demission.deposeeLe !== null;
   const agent = etat.cerfa.prenom || 'Agent sans prénom';
 
-  const lignes: [string, string][] = [
-    ['Agent', agent],
-    ['Grade', grade.nom],
-    ['Prime d’avancement', grade.rang > 0 ? `+${Math.round(grade.bonus * 100)} % de dotation` : 'Néant'],
-    ['Affectation', 'Guichet 3'],
-    // Même mot, même grandeur que l'en-tête : un tampon apposé = un dossier traité.
-    ['Tampons apposés', formatEntier(etat.tampons)],
-    ['Dossiers rejetés', formatEntier(Math.floor(etat.stats.rejetes))],
-    ['Usagers perdus (abandons)', formatEntier(Math.floor(etat.abandons))],
-    ['Temps de service', dureeJeu(etat.stats.tempsDeJeu)],
-  ];
+  const prime = grade.rang > 0 ? `+${Math.round(grade.bonus * 100)} % de dotation` : 'Néant';
+  // Acte II : les compteurs de la Direction ; ceux du guichet 3 restent dans la sauvegarde, sans être montrés.
+  const lignes: [string, string][] = direction
+    ? [
+        ['Agent', agent],
+        ['Grade', grade.nom],
+        ['Prime d’avancement', prime],
+        ['Affectation', 'La Direction'],
+        ['Tampons apposés', formatEntier(etat.tampons)],
+        ['Visas accordés', formatEntier(direction.visasAccordes)],
+        ['Usagers perdus (abandons)', formatEntier(direction.abandons)],
+        // Tableau de bord (note n° 16) : il mesure ce qui a été jugé mesurable.
+        ...(direction.tableau
+          ? ([
+              ['Abandons de démarche', formatEntier(direction.tableau.abandonsDemarche)],
+              ['Taux de satisfaction', '100 % (sur les usagers restants)'],
+            ] as [string, string][])
+          : []),
+        ['Temps de service', dureeJeu(etat.stats.tempsDeJeu)],
+      ]
+    : [
+        ['Agent', agent],
+        ['Grade', grade.nom],
+        ['Prime d’avancement', prime],
+        ['Affectation', 'Guichet 3'],
+        // Même mot, même grandeur que l'en-tête : un tampon apposé = un dossier traité.
+        ['Tampons apposés', formatEntier(etat.tampons)],
+        ['Dossiers rejetés', formatEntier(Math.floor(etat.stats.rejetes))],
+        ['Usagers perdus (abandons)', formatEntier(Math.floor(etat.abandons))],
+        ['Temps de service', dureeJeu(etat.stats.tempsDeJeu)],
+      ];
 
   return (
     <View style={styles.ecran}>
@@ -45,14 +65,17 @@ export default function OptionsScreen() {
               <Text style={styles.valeur}>{v}</Text>
             </View>
           ))}
-          <Pressable
-            style={({ pressed }) => [styles.relire, pressed && styles.presse]}
-            accessibilityRole="button"
-            accessibilityLabel="Relire ma fiche de poste"
-            onPress={() => marquerFichePoste(false)}
-          >
-            <Text style={styles.relireTexte}>Relire ma fiche de poste</Text>
-          </Pressable>
+          {/* La fiche de poste est celle du guichet 3 : elle ne se relit plus à la Direction. */}
+          {!direction && (
+            <Pressable
+              style={({ pressed }) => [styles.relire, pressed && styles.presse]}
+              accessibilityRole="button"
+              accessibilityLabel="Relire ma fiche de poste"
+              onPress={() => marquerFichePoste(false)}
+            >
+              <Text style={styles.relireTexte}>Relire ma fiche de poste</Text>
+            </Pressable>
+          )}
         </Panneau>
 
         <Text style={styles.titre}>Règlement intérieur</Text>
@@ -73,7 +96,8 @@ export default function OptionsScreen() {
           ) : (
             <>
               <Text style={styles.texte}>
-                Je soussigné·e, {agent}, sollicite la cessation de mes fonctions au guichet 3.
+                Je soussigné·e, {agent}, sollicite la cessation de mes fonctions{' '}
+                {direction ? 'à la Direction' : 'au guichet 3'}.
               </Text>
               <BoutonPoussoir
                 libelle="DÉPOSER MA DÉMISSION"
