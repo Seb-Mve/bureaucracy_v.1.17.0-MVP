@@ -32,7 +32,7 @@ export const BALANCE2 = {
   guichetsInitiaux: 1,
   etapesMax: 8,
   /** Points de dématérialisation correspondant à 100 %. */
-  demaCible: 150_000,
+  demaCible: 140_000,
   /** Délai du filet de sécurité après la note « Pièce délivrée par nos services » (min). */
   filetMinutes: 15,
 } as const;

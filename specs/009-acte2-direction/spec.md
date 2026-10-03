@@ -275,8 +275,10 @@ Fourchettes humaines, depuis le début de l'acte II, premier passage, une Réfor
 | Premier agent | 3.2 | 3.3 | 3.5 |
 | Atelier | 9.7 | 9.0 | 8.8 |
 | Première boucle | 28.6 | 27.4 | 26.4 |
-| Dématérialisation 50 % | 84.0 | 82.8 | 81.5 |
-| Dématérialisation 100 % | 124.8 | 123.5 | 122.3 |
+| Dématérialisation 50 % | 84.7 | 83.5 | 82.3 |
+| Dématérialisation 100 % | 126.9 | 125.7 | 124.5 |
+
+La dématérialisation à 100 % arrive avant sa cible de 150 à 200 min : le mur est reporté au plan 3 (Réforme, calage du mur).
 
 Le robot construit la boucle dès que l'étape est disponible : le temps de découverte humain n'est pas mesuré ici.
 
