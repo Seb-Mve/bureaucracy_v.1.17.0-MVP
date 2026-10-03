@@ -137,9 +137,11 @@ const LETTRES: LettreDef[] = [
 
 /** Lettres dont le déclencheur vient de devenir vrai. */
 export function nouvellesLettres(s: GameState, maintenant: number): Lettre[] {
-  return LETTRES.filter((l) => !s.lettresEnvoyees.includes(l.id) && l.declencheur(s, maintenant)).map(
-    (l) => ({ id: l.id, objet: l.objet, corps: l.corps(s), recue: maintenant, lue: false }),
-  );
+  // À l'acte II, les lettres de l'acte I se taisent (champs figés) ; le grade, lui, est conservé.
+  const candidates = s.acte === 2 ? [...LETTRES_AVANCEMENT, ...LETTRES_ACTE2] : LETTRES;
+  return candidates
+    .filter((l) => !s.lettresEnvoyees.includes(l.id) && l.declencheur(s, maintenant))
+    .map((l) => ({ id: l.id, objet: l.objet, corps: l.corps(s), recue: maintenant, lue: false }));
 }
 
 /** Lettre de résumé après une absence. */

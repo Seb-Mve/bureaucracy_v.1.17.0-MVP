@@ -603,6 +603,21 @@ test('courrier : prise de fonctions à l’entrée dans l’acte II', () => {
   );
 });
 
+test('courrier : les lettres de l’acte I restent muettes à l’acte II, le grade non', () => {
+  const b = base2();
+  const s = {
+    ...b,
+    tampons: 1e6,
+    abandons: 1000,
+    stats: { ...b.stats, traites: 50, rejetes: 400 },
+  };
+  const ids = lettres(s, 0);
+  for (const id of ['bienvenue', 'premierRejet', 'fidelite', 'abandons']) {
+    assert.ok(!ids.includes(id), id);
+  }
+  assert.ok(ids.includes('grade1'));
+});
+
 test('filet de sécurité : 15 puis 30 min après la note, tant qu’aucune boucle n’existe', () => {
   const s = avecNotes2(base2(), ['pieceService']);
   const min = 60_000;
