@@ -5,9 +5,12 @@
 import type { GameState } from '../../types/game';
 import {
   PROCS,
+  type ActionAtelier,
+  type Agent2Id,
   type Etape,
   type EtatActe2,
   type Events2,
+  type Exemplaires,
   type Modifiers2,
   type Note2Id,
   type ProcId,
@@ -17,7 +20,7 @@ import { BALANCE } from '../../constants/balance';
 import { AGENTS2, BALANCE2, ETAPES, EXEMPLAIRES, PROCEDURES_INITIALES } from '../../constants/balanceActe2';
 import { multiplicateurAnciennete, partRejetee, rangGrade } from '../engine';
 import { NOTES2, NOTES2_PAR_ID, dematPct } from './notes2';
-import { estBoucle } from './procedures';
+import { appliquerAction, estBoucle } from './procedures';
 
 export function copieProcedures(p: Record<ProcId, Etape[]>): Record<ProcId, Etape[]> {
   return Object.fromEntries(PROCS.map((id) => [id, p[id].map((e) => ({ ...e }))])) as Record<
@@ -398,4 +401,126 @@ export function tamponner2(
   const r = franchir(s, lots.map((l) => ({ ...l, u: l.u * part, b: l.b * part })), m, maintenant, alea);
   const x = r.s.acte2 as EtatActe2;
   return { ev: r.ev, s: { ...r.s, acte2: { ...x, stats: { ...x.stats, visasTampons: x.stats.visasTampons + r.ev.visas } } } };
+}
+
+/** Prix du prochain Guichet : le guichet 3, offert, ne compte pas. */
+export function coutGuichet(possedes: number): number {
+  const g = BALANCE2.guichet;
+  return Math.ceil(g.coutBase * Math.pow(g.croissance, possedes - BALANCE2.guichetsInitiaux));
+}
+
+export function acheterGuichet(s: GameState, maintenant: number): GameState {
+  const x = s.acte2;
+  if (!x || !getModifiers2(s, maintenant).recrutementVisible) return s;
+  const cout = coutGuichet(x.guichets);
+  if (s.budget < cout) return s;
+  return { ...s, budget: s.budget - cout, acte2: { ...x, guichets: x.guichets + 1 } };
+}
+
+export function coutAgent2(id: Agent2Id, possedes: number): number {
+  const def = AGENTS2.find((a) => a.id === id);
+  if (!def) return Infinity;
+  return Math.ceil(def.coutBase * Math.pow(def.croissance, possedes));
+}
+
+/** Visas/s gagnés en recrutant un agent de plus (palier d'ancienneté compris). */
+export function gainAgent2(x: EtatActe2, id: Agent2Id): number {
+  const def = AGENTS2.find((a) => a.id === id);
+  if (!def) return 0;
+  const n = x.agents[id];
+  return (
+    (n + 1) * def.vitesse * multiplicateurAnciennete(n + 1) -
+    n * def.vitesse * multiplicateurAnciennete(n)
+  );
+}
+
+export function peutAcheterAgent2(s: GameState, id: Agent2Id, maintenant: number): boolean {
+  const x = s.acte2;
+  return (
+    x !== null &&
+    getModifiers2(s, maintenant).agentsDisponibles.includes(id) &&
+    s.budget >= coutAgent2(id, x.agents[id])
+  );
+}
+
+export function acheterAgent2(s: GameState, id: Agent2Id, maintenant: number): GameState {
+  if (!peutAcheterAgent2(s, id, maintenant)) return s;
+  const x = s.acte2 as EtatActe2;
+  return {
+    ...s,
+    budget: s.budget - coutAgent2(id, x.agents[id]),
+    acte2: { ...x, agents: { ...x.agents, [id]: x.agents[id] + 1 } },
+  };
+}
+
+/** Achète `nb` ramettes au prix de l'acte I (sinon le maximum possible). */
+export function acheterRamettes2(s: GameState, nb: number): GameState {
+  const possibles = Math.min(nb, Math.floor(s.budget / BALANCE.prixRamette));
+  if (possibles <= 0) return s;
+  return {
+    ...s,
+    budget: s.budget - possibles * BALANCE.prixRamette,
+    formulaires: s.formulaires + possibles * BALANCE.ramette,
+    stats: {
+      ...s.stats,
+      formulairesAchetes: s.stats.formulairesAchetes + possibles * BALANCE.ramette,
+    },
+  };
+}
+
+/** En rupture et sans de quoi payer une ramette, le service en fournit une, gratuitement. */
+export function requisitionUrgence2(s: GameState): GameState {
+  const x = s.acte2;
+  if (!x || s.formulaires >= x.exemplaires || s.budget >= BALANCE.prixRamette) return s;
+  return { ...s, formulaires: s.formulaires + BALANCE.ramette };
+}
+
+export function reglerTauxRejet2(s: GameState, taux: number, maintenant: number): GameState {
+  const x = s.acte2;
+  if (!x) return s;
+  const m = getModifiers2(s, maintenant);
+  const t = Math.max(0, Math.min(m.rejetMax, Math.round(taux * 100) / 100));
+  return { ...s, acte2: { ...x, tauxRejet: t } };
+}
+
+export function reglerExemplaires(s: GameState, n: Exemplaires, maintenant: number): GameState {
+  const x = s.acte2;
+  if (!x || !getModifiers2(s, maintenant).exemplairesVisible) return s;
+  return { ...s, acte2: { ...x, exemplaires: n } };
+}
+
+/** Modification d'une procédure dans l'Atelier (refusée tant que l'Atelier est fermé). */
+export function modifierProcedure(
+  s: GameState,
+  action: ActionAtelier,
+  maintenant: number,
+): GameState {
+  const x = s.acte2;
+  if (!x) return s;
+  const m = getModifiers2(s, maintenant);
+  if (!m.atelierVisible) return s;
+  const x2 = appliquerAction(x, action, m.etapesDisponibles, m.procsOuvertes);
+  return x2 === x ? s : { ...s, acte2: x2 };
+}
+
+/** Simule une absence (Guichets et agents seuls, sans rejet), par pas d'une seconde, plafonnée. */
+export function simulerAbsence2(
+  s0: GameState,
+  maintenant: number,
+): { s: GameState; secondes: number; franchies: number; budget: number } {
+  const secondes = Math.min(
+    BALANCE.horsLigneMax,
+    Math.max(0, Math.floor((maintenant - s0.derniereMaj) / 1000)),
+  );
+  let s = s0;
+  let franchies = 0;
+  let budget = 0;
+  const debut = maintenant - secondes * 1000;
+  for (let i = 1; i <= secondes; i++) {
+    const r = tick2(s, 1, debut + i * 1000, false);
+    s = r.s;
+    franchies += r.ev.franchies;
+    budget += r.ev.budget;
+  }
+  return { s: { ...s, derniereMaj: maintenant }, secondes, franchies, budget };
 }

@@ -9,6 +9,7 @@ import {
   estBoucle,
   procsEnBoucle,
 } from '../../data/acte2/procedures';
+import { BALANCE } from '../../constants/balance';
 import { BALANCE2, PROCEDURES_INITIALES } from '../../constants/balanceActe2';
 import { NOTES2 } from '../../data/acte2/notes2';
 import type { Note2Id } from '../../types/acte2';
@@ -462,3 +463,57 @@ test('sans boucle, le Taux de dématérialisation reste à 0 exactement', () => 
   assert.equal(D.dematerialisation(x(s)), 0);
 });
 
+
+test('guichets : il faut la note n° 1, puis le prix monte de 15 %', () => {
+  const s = base2();
+  assert.equal(D.acheterGuichet(s, 0), s);
+  assert.equal(x(D.acheterGuichet(avecNotes2(s, ['prise']), 0)).guichets, 2);
+  assert.equal(D.coutGuichet(1), 60);
+  assert.equal(D.coutGuichet(2), Math.ceil(60 * 1.15));
+});
+
+test('agents : débloqués par note, ancienneté comprise', () => {
+  let s = base2();
+  assert.equal(D.peutAcheterAgent2(s, 'instructeur', 0), false);
+  s = D.acheterAgent2(avecNotes2(s, ['agents']), 'instructeur', 0);
+  assert.equal(x(s).agents.instructeur, 1);
+  proche(D.vitesseVisas(x(s)), 0.3);
+  // Le 10ᵉ instructeur double la vitesse de tous les instructeurs.
+  const neuf = { ...x(s), agents: { ...x(s).agents, instructeur: 9 } };
+  proche(D.gainAgent2(neuf, 'instructeur'), 10 * 0.3 * 2 - 9 * 0.3);
+});
+
+test('Taux de rejet plafonné, Exemplaires exigés après leur note', () => {
+  let s = D.reglerTauxRejet2(base2(), 0.9, 0);
+  proche(x(s).tauxRejet, 0.5);
+  assert.equal(x(D.reglerExemplaires(s, 3, 0)).exemplaires, 1);
+  s = avecNotes2(s, ['exemplaires']);
+  assert.equal(x(D.reglerExemplaires(s, 3, 0)).exemplaires, 3);
+});
+
+test('Atelier fermé : aucune modification de procédure', () => {
+  const s = base2();
+  assert.equal(D.modifierProcedure(s, { type: 'retirer', p: 'identite', k: 0 }, 0), s);
+  const s2 = D.modifierProcedure(avecNotes2(s, ['atelier']), { type: 'retirer', p: 'identite', k: 0 }, 0);
+  assert.deepEqual(x(s2).procedures.identite.map((e) => e.type), ['visa']);
+});
+
+test('ramettes au prix de l’acte I, réquisition d’urgence sans budget', () => {
+  const s = D.acheterRamettes2({ ...base2(), budget: 20, formulaires: 0 }, 5);
+  assert.equal(s.formulaires, 2 * BALANCE.ramette);
+  proche(s.budget, 20 - 2 * BALANCE.prixRamette);
+  const vide = { ...base2(), budget: 0, formulaires: 0 };
+  assert.equal(D.requisitionUrgence2(vide).formulaires, BALANCE.ramette);
+  assert.equal(D.requisitionUrgence2({ ...vide, budget: 100 }).formulaires, 0);
+});
+
+test('hors-ligne : la simulation s’arrête au plafond', () => {
+  const s = avec2(avecNotes2(base2(), ['prise', 'agents']), {
+    guichets: 20,
+    agents: { instructeur: 20, chefBureau: 0, sousDirecteur: 0 },
+  });
+  const r = D.simulerAbsence2(s, 10 * 3600 * 1000);
+  assert.equal(r.secondes, BALANCE.horsLigneMax);
+  assert.ok(r.franchies > 0);
+  assert.equal(r.s.derniereMaj, 10 * 3600 * 1000);
+});
