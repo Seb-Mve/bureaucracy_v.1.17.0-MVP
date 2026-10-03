@@ -23,6 +23,7 @@ npm run lint                             # Run ESLint via expo lint
 ./node_modules/.bin/tsc --noEmit -p .    # Type-check (scripts/ and specs/ are excluded)
 npm test                                 # Unit tests of data/ and of the pixel-art scene engine (node:test, scripts/tests/*.test.ts)
 node scripts/simulate-acte1.ts [taps/s] [minutes]   # Balance simulator: bot player, prints milestones
+node scripts/bundle-scene-pixel.ts <out.js> [--acte 2]   # Browser bundle of the pixel scenes for DESIGN/ mockups (no dependency)
 ```
 
 Pure data-layer logic is covered by `npm test` (Node's built-in test runner, no dependency). Balance changes must be checked with the simulator (target: bot finishes Act I in ~60–75 min, i.e. ~85–100 min for a human).
@@ -86,7 +87,7 @@ The header (`EnTete`) holds the **Tampons apposés** counter (always at the top,
 
 ### Pixel-art scene (`components/scene/`)
 
-`pixel/` is a platform-free engine (no React): `moteur.ts` keeps its own visual queue (driven by `enAttente` and each `verdict`), animates the stamp and draws each frame into a small RGBA `Toile` (≈176 × 112 px); `sprites.ts` generates usagers, the agent and the stamp; `decor.ts` paints the static layers once per size. `ScenePixel.tsx` shows the frames with `@shopify/react-native-skia` (nearest-neighbour sampling), `ScenePixel.web.tsx` with a plain `<canvas>` (no Skia on the web). Pixel colours live in `constants/PalettePixel.ts`. The loop runs only while the Guichet tab is focused and draws 30 frames/s. Usager moods are deliberately not shown in the queue; only a rejected usager leaves angry.
+`pixel/` is a platform-free engine (no React): `moteur.ts` keeps its own visual queue (driven by `enAttente` and each `verdict`), animates the stamp and draws each frame into a small RGBA `Toile` (≈176 × 112 px); `sprites.ts` generates usagers, the agent and the stamp; `decor.ts` paints the static layers once per size. `ScenePixel.tsx` shows the frames with `@shopify/react-native-skia` (nearest-neighbour sampling), `ScenePixel.web.tsx` with a plain `<canvas>` (no Skia on the web). Pixel colours live in `constants/PalettePixel.ts`. The loop runs only while the Guichet tab is focused and draws 30 frames/s. Usager moods are deliberately not shown in the queue; only a rejected usager leaves angry. Act II has its own scene, `direction.ts` (`MoteurDirection`): the chef de service's glass office above the service hall (numbered guichets, call board, seated ticket holders), the chef stamping the parapheurs that pile up in a two-level tray. DESIGN/ mockups must use these engines through `scripts/bundle-scene-pixel.ts`, never old illustrations.
 
 ## Key Conventions
 

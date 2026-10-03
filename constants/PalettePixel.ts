@@ -78,6 +78,25 @@ export const PX = {
   bulleNote: Colors.vertEncre,
 } as const;
 
+/**
+ * Scène de l'acte II (La Direction) : le bureau du chef, boiseries et moquette, et la salle du
+ * service derrière la vitre, plus froide et plus pâle (la distance).
+ */
+export const PX_DIRECTION = {
+  murBureau: ['#F3E7CC', '#E7D6B2', '#D3BE93'],
+  moquette: ['#7E8FA6', '#6F8098', '#5F7088'],
+  salleMur: ['#EDF2F5', '#E0E8EE', '#C9D5DF'],
+  salleSol: ['#E3E7E0', '#D3D8CF'],
+  bande: ['#A0C4FF', Colors.bleu],
+  rideau: ['#D3D8DC', '#AEB6BC'],
+  vitreSalle: '#D4E6EE',
+  sousMain: ['#5E8F6E', '#4C7A5C'],
+  parapheur: ['#D9776B', '#7FB685', '#8E9AAF', '#E2B654'],
+  metal: ['#EEF1F3', '#C9D0D5', '#9AA5AC'],
+  lampe: ['#3E6A5A', '#2E5244'],
+  lumiere: '#FFF4C8',
+} as const;
+
 export const PEAUX = [
   ['#FFE6CC', '#F6D0A8', '#E2B086', '#C8926A'],
   ['#F8D6B2', '#E9B98E', '#CF9A6E', '#B07C55'],
