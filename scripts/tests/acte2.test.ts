@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
 import * as D from '../../data/acte2/moteur';
+import { nouvellesLettres } from '../../data/courrier';
 import { estSauvegardeValide, normaliserSauvegarde } from '../../data/save';
 import type { GameState } from '../../types/game';
 import {
@@ -516,4 +517,37 @@ test('hors-ligne : la simulation s’arrête au plafond', () => {
   assert.equal(r.secondes, BALANCE.horsLigneMax);
   assert.ok(r.franchies > 0);
   assert.equal(r.s.derniereMaj, 10 * 3600 * 1000);
+});
+
+const lettres = (s: GameState, t: number): string[] => nouvellesLettres(s, t).map((l) => l.id);
+
+test('courrier : prise de fonctions à l’entrée dans l’acte II', () => {
+  assert.ok(lettres(base2(), 0).includes('a2-prise'));
+  assert.ok(!lettres(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0).includes('a2-prise'));
+});
+
+test('filet de sécurité : 15 puis 30 min après la note, tant qu’aucune boucle n’existe', () => {
+  const s = avecNotes2(base2(), ['pieceService']);
+  const min = 60_000;
+  assert.ok(!lettres(s, 14 * min).includes('a2-filet1'));
+  assert.ok(lettres(s, 15 * min).includes('a2-filet1'));
+  assert.ok(!lettres(s, 29 * min).includes('a2-filet2'));
+  assert.ok(lettres(s, 30 * min).includes('a2-filet2'));
+  assert.ok(!lettres(avec2(s, { premiereBoucle: 1 }), 30 * min).includes('a2-filet1'));
+});
+
+test('félicitations du S.I.C. au premier dossier en boucle', () => {
+  assert.ok(lettres(avec2(base2(), { premiereBoucle: 1 }), 0).includes('a2-boucle'));
+});
+
+test('démission : la pièce manquante est la première procédure modifiée', () => {
+  const s = avec2({ ...base2(), demission: { deposeeLe: 0, relances: 0 } }, { premiereModif: 'domicile' });
+  const l = nouvellesLettres(s, 0).find((v) => v.id === 'a2-demission');
+  assert.ok(l?.corps.includes('Justificatif de domicile'));
+});
+
+test('rapport annuel à 100 % de dématérialisation', () => {
+  const s = avec2(base2(), { demaPoints: BALANCE2.demaCible });
+  const l = nouvellesLettres(s, 0).find((v) => v.id === 'a2-rapport');
+  assert.ok(l?.corps.includes('Taux de satisfaction : 100 % (sur les usagers restants)'));
 });

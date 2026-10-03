@@ -7,8 +7,9 @@ import { BALANCE, GRADES } from '../constants/balance';
 import { conformite, dossiersEnAttente, getModifiers, noteEffective, rangGrade } from './engine';
 import { NOTES_PAR_ID } from './notes';
 import { formatEntier, formatMontant, formatPourcent } from '../utils/formatters';
+import { LETTRES_ACTE2 } from './acte2/courrier2';
 
-interface LettreDef {
+export interface LettreDef {
   id: LettreId;
   objet: string;
   corps: (s: GameState) => string;
@@ -129,6 +130,7 @@ const LETTRES: LettreDef[] = [
       `${nom(s)},\n\nVotre niveau de conformité a été jugé satisfaisant.\n\nUne réaffectation de niveau supérieur pourrait être envisagée. Le guichet 3 sera archivé.`,
     declencheur: (s) => s.acteTermine,
   },
+  ...LETTRES_ACTE2,
 ];
 
 /** Lettres dont le déclencheur vient de devenir vrai. */
