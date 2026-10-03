@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Building2, ScrollText, Settings, UserPlus } from 'lucide-react-native';
+import { Building2, ScrollText, Settings, UserPlus, Wrench } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import NotificationBadge from '@/components/NotificationBadge';
@@ -103,6 +103,15 @@ export default function TabLayout() {
                 <NotificationBadge count={notesNonVues} alerte={ruptureNotes} />
               </View>
             ),
+          }}
+        />
+        <Tabs.Screen
+          name="atelier"
+          options={{
+            title: 'Atelier',
+            tabBarAccessibilityLabel: 'Atelier des procédures',
+            href: direction?.atelierVisible ? undefined : null,
+            tabBarIcon: ({ color, size }) => <Wrench size={size} color={color} />,
           }}
         />
         <Tabs.Screen
