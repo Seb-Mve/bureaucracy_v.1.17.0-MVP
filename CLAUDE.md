@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**BUREAUCRACY++** is a satirical French incremental/idle mobile game built with React Native + Expo. The game is being rebuilt as a 6-act arc (see the design document); the code currently implements **Act I — Le Guichet** (spec: `specs/007-acte1-guichet/spec.md`).
+**BUREAUCRACY++** is a satirical French incremental/idle mobile game built with React Native + Expo. The game is being rebuilt as a 6-act arc (see the design document); the code currently implements **Act I — Le Guichet** (spec: `specs/007-acte1-guichet/spec.md`) and **Act II — La Direction** without the Réforme yet (spec: `specs/009-acte2-direction/spec.md`; closing the end-of-Act-I window starts it).
 
 Act I loop: usagers file dossiers at the guichet; the player taps TAMPONNER (and hires collègues) to process them; each processed dossier consumes formulaires and pays a dotation. Demand is abundant (the queue rarely empties): the bottleneck is processing capacity and formulaires. A player-set **Taux de rejet** sends usagers back; a rejected dossier pays a bonus (prime de rejet) and raises hidden Conformité, but usagers who run out of patience abandon, shrinking future demand. Collègues double their speed at 10/25/50 copies (ancienneté). Each collègue type has its own cost growth (`croissance`, lower for the stagiaire). The **Tampons apposés** counter sets the player’s grade (`GRADES` in `constants/balance.ts`): +10 % dotation per grade, announced only by a S.I.C. letter and shown in Options (dossier administratif), never in the HUD. A note in instruction takes its full official delay: tapping does not shorten it. Note n° 1 (« Renfort estival », opens the Service tab) appears at a tampons count drawn per game between 20 and 30 (`GameState.seuilRenfort`, `BALANCE.seuilRenfort`), so the player senses hidden rules. Near the end of the act the collègues outrun the population and the queue empties for ~15–20 s: this is intended, explained by the bubble and a S.I.C. letter (« Excédent de productivité ») that teases Act II. There is no ordre du jour and no circulaires: the player discovers the game (fiche de poste at the start, règlement intérieur in Options, notes de service, S.I.C. letters). The game explains itself once: no counter definitions, no help button, no explanatory lines under controls, no note notification on the Guichet (a new note shows only as the Notes tab badge). Notes de service (projects) drip-feed mechanics. The act ends when Conformité reaches 100 %.
 
@@ -24,6 +24,7 @@ npm run lint                             # Run ESLint via expo lint
 npm test                                 # Unit tests of data/ and of the pixel-art scene engine (node:test, scripts/tests/*.test.ts)
 node scripts/simulate-acte1.ts [taps/s] [minutes]   # Balance simulator: bot player, prints milestones
 node scripts/simulate-acte2.ts [taps/s] [minutes]   # Act II balance simulator (no Réforme yet)
+node --import ./scripts/resoudre-ts.ts scripts/save-acte2.ts <preset>   # Prints the localStorage line that loads an Act II test save (finActeI, debut, atelier, boucle, demat, fin)
 node scripts/bundle-scene-pixel.ts <out.js> [--acte 2]   # Browser bundle of the pixel scenes for DESIGN/ mockups (no dependency)
 ```
 
@@ -55,6 +56,7 @@ Components must never import from `data/`. Everything goes through `useGameState
 - **Purchases are final:** there is no undo.
 - **Head of the queue:** the usager in the bubble (`teteDeFile(s)[0]`, patience drawn per usager number from the real queue mix) is the one whose dossier the next tap processes first (`E.tamponner(…, premier)`), so « Troisième fois… » then a rejection is an abandon. Abandons show in the scene: the usager drops their dossier (it lies on the floor 2.5 s), leaves fast with a red exit arrow (`MoteurScene.abandon`, `Verdict.abandon`, `abandonsFile` for collègue abandons, at most 2/s).
 - **Tap feedback:** a tap shows no floating numbers. It reads in the scene (arm, impact star, ink, shake) and in the counters, which react to `verdict.id` through `components/charte/ValeurAnimee`. TAMPONNER fires on press-in, one stamp per press (`BoutonPoussoir` `immediat`, no auto-repeat), and the space bar stamps on the web (the only keyboard shortcut).
+- **Acts:** the game loop, the offline catch-up and every action dispatch on `s.acte`: Act I runs `data/engine.ts`, Act II runs `data/acte2/moteur.ts` (`tick2`, `tamponner2`, `simulerAbsence2` + `lettreAbsence2`); Act I code never runs on an Act II state, and Act I fields kept in the save are never shown at Act II. Screens read Act II through `direction`, `service2` and `atelier` (pure views: `data/acte2/vues.ts`, `data/acte2/vueAtelier.ts`; null at Act I) and the act's ink `encre` (`Encres` in `constants/Colors.ts`: orange, then blue). `FinActeModal` calls `entrerDirection`.
 
 ### PreferencesContext (`context/PreferencesContext.tsx`)
 
@@ -75,6 +77,8 @@ Vibrations and reduced animations, stored under their own AsyncStorage key (`bur
 | `data/acte2/notes2.ts` | The 17 Act II Notes de service |
 | `data/acte2/courrier2.ts` | Act II S.I.C. letters (incl. the safety-net letters) |
 | `constants/balanceActe2.ts` | Act II tuning (`BALANCE2`), steps, Exemplaires, agents |
+| `data/acte2/vues.ts` | Act II views: Direction screen (parapheur, step chain, Démat.), Service, notes |
+| `data/acte2/vueAtelier.ts` | Atelier view: step effects (symbol + word), loops, catalogue |
 | `utils/formatters.ts` | `formatEntier` (counts) and `formatEuros` (money): full digits up to 99 999, then « 124 k », « 4,47 M »; `formatPourcent`; `formatNumberFrench` (rates) |
 
 ### Economy model (aggregate, no per-usager objects)
@@ -88,6 +92,7 @@ File-based routing via `expo-router`. First launch shows `CerfaEcran` (hiring fo
 - `recruitment.tsx` — tab « Service »: ramettes and collègues (hidden until note n° 1)
 - `notes.tsx` — Notes de service (hidden until the first note)
 - `options.tsx` — no resources table; dossier administratif, règlement intérieur (help, one article per unlocked mechanic), confort settings, démission, reset
+- At Act II, `index.tsx` shows `components/direction/EcranDirection` (tab « Direction »: resources Budget, Formulaires, Visas, then Démat.; bubble with the parapheur and its procedure as linked mini-cards; `MoteurDirection` scene; Rejet and Exemplaires sliders; blue TAMPONNER), `recruitment.tsx` shows `ServiceDirection` (guichets and agents), and `atelier.tsx` (`components/atelier/`, one procedure per screen, add / remove / move steps, never names the loop) appears after the note « Atelier des procédures ». `FinActe2Modal` closes Act II; the game goes on.
 
 The header (`EnTete`) holds the **Tampons apposés** counter (always at the top, on every tab), and the S.I.C. courrier envelope. Below 720 pt of height the Guichet goes compact (single-line bubble, tighter HUD and button). On the web the app is a centred column of at most 480 pt, and `public/index.html` sets `viewport-fit=cover` so iPhone home-screen installs get real safe-area insets (the tab bar adds the bottom inset).
 

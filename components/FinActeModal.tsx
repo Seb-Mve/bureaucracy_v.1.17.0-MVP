@@ -1,20 +1,29 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { router } from 'expo-router';
 import { useFermetureEchap, useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import { formatEntier } from '@/utils/formatters';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 
-/** Écran de fin de l'acte I, affiché une fois après la « Demande de réaffectation ». */
+/**
+ * Écran de fin de l'acte I, après la « Demande de réaffectation ». Le fermer, de quelque façon que ce soit,
+ * c'est prendre ses fonctions à la Direction (acte II) : l'écran revient donc aussi aux anciennes sauvegardes
+ * dont l'acte I était terminé.
+ */
 export default function FinActeModal() {
-  const { etat, marquerFinActeVue } = useGameState();
-  const visible = etat.acteTermine && !etat.finActeVue;
-  useFermetureEchap(visible, marquerFinActeVue);
+  const { etat, entrerDirection } = useGameState();
+  const visible = etat.acte === 1 && etat.acteTermine;
+  const prendreFonctions = useCallback(() => {
+    entrerDirection();
+    router.navigate('/');
+  }, [entrerDirection]);
+  useFermetureEchap(visible, prendreFonctions);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={marquerFinActeVue}>
-      <Pressable style={styles.voile} onPress={marquerFinActeVue} accessible={false}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={prendreFonctions}>
+      <Pressable style={styles.voile} onPress={prendreFonctions} accessible={false}>
         <Pressable onPress={() => undefined} accessible={false} style={styles.colonne}>
           <Panneau contenuStyle={styles.carte} rayon={Charte.rayon}>
             <Text style={styles.sur}>Guichet 3 — archivé</Text>
@@ -27,9 +36,15 @@ export default function FinActeModal() {
               {formatEntier(etat.stats.rejetes)} rejets
             </Text>
             <Text style={styles.fin}>FIN DE L’ACTE I</Text>
-            <Text style={styles.suite}>L’acte II — Le Service — est en cours d’instruction.</Text>
-            <Text style={styles.suite}>En attendant, le guichet 3 reste ouvert : vos tampons continuent de compter.</Text>
-            <BoutonPoussoir libelle="RETOURNER AU GUICHET" taille={Typo.titre} hauteur={56} onPress={marquerFinActeVue} />
+            <Text style={styles.suite}>Acte II — La Direction.</Text>
+            <BoutonPoussoir
+              libelle="PRENDRE MES FONCTIONS"
+              taille={Typo.titre}
+              hauteur={56}
+              couleur={Colors.bleu}
+              couleurOmbre={Colors.bleuFlanc}
+              onPress={prendreFonctions}
+            />
           </Panneau>
         </Pressable>
       </Pressable>
