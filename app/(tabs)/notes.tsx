@@ -2,7 +2,7 @@ import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useGameState, type NoteAffichee } from '@/context/GameStateContext';
-import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Interligne, Typo, type Encre } from '@/constants/Colors';
 import { formatMontant } from '@/utils/formatters';
 import Hud from '@/components/Hud';
 import Panneau from '@/components/charte/Panneau';
@@ -18,9 +18,11 @@ function duree(sec: number): string {
 
 const CarteNote = memo(function CarteNote({
   note,
+  encre,
   onSigner,
 }: {
   note: NoteAffichee;
+  encre: Encre;
   onSigner: () => void;
 }) {
   const signee = note.statut === 'instruction' || note.statut === 'effective';
@@ -48,7 +50,7 @@ const CarteNote = memo(function CarteNote({
         accessibilityRole="button"
         accessibilityLabel={`Approuver la note de service numéro ${note.numero}, ${cout}`}
         accessibilityState={{ disabled: !actif }}
-        style={({ pressed }) => [styles.viser, actif ? styles.viserActif : styles.viserInactif, pressed && styles.presse]}
+        style={({ pressed }) => [styles.viser, actif ? { backgroundColor: encre.face } : styles.viserInactif, pressed && styles.presse]}
       >
         <Text style={[styles.viserTexte, !actif && styles.viserTexteInactif]}>Approuver · {cout}</Text>
       </Pressable>
@@ -60,7 +62,7 @@ const CarteNote = memo(function CarteNote({
       <View style={styles.entete}>
         <Text style={styles.numero}>NOTE DE SERVICE N° {note.numero.toString().padStart(3, '0')}</Text>
         {note.nouvelle && (
-          <View style={styles.nouveau}>
+          <View style={[styles.nouveau, { backgroundColor: encre.face }]}>
             <Text style={styles.nouveauTexte}>NOUVEAU</Text>
           </View>
         )}
@@ -78,7 +80,7 @@ const CarteNote = memo(function CarteNote({
 
 /** Notes de service : le fil de projets du jeu. */
 export default function NotesScreen() {
-  const { notes, acheterNote, marquerNotesVues } = useGameState();
+  const { notes, acheterNote, marquerNotesVues, encre } = useGameState();
   // Une note qui vient d'être approuvée reste à sa place un instant (au tampon « EN VIGUEUR ») avant de rejoindre
   // sa section : la carte suivante ne glisse pas sous le doigt.
   const [retenue, setRetenue] = useState<string | null>(null);
@@ -110,11 +112,11 @@ export default function NotesScreen() {
           <Text style={styles.vide}>Aucune note de service. Continuez à tamponner : la hiérarchie vous observe.</Text>
         )}
         {aTraiter.map((n) => (
-          <CarteNote key={n.id} note={n} onSigner={() => viser(n.id)} />
+          <CarteNote key={n.id} note={n} encre={encre} onSigner={() => viser(n.id)} />
         ))}
         {enVigueur.length > 0 && <Text style={styles.section}>En vigueur</Text>}
         {enVigueur.map((n) => (
-          <CarteNote key={n.id} note={n} onSigner={() => undefined} />
+          <CarteNote key={n.id} note={n} encre={encre} onSigner={() => undefined} />
         ))}
       </ScrollView>
     </View>
@@ -167,7 +169,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   nouveau: {
-    backgroundColor: Colors.encre,
     borderRadius: Charte.rayonMini,
     borderWidth: 1.5,
     borderColor: Colors.anthracite,
@@ -207,9 +208,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Espace.l,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  viserActif: {
-    backgroundColor: Colors.encre,
   },
   viserInactif: {
     backgroundColor: Colors.carton,

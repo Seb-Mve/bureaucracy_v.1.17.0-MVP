@@ -15,19 +15,25 @@ import FichePoste from '@/components/FichePoste';
 const HAUTEUR_ONGLETS = 58;
 
 export default function TabLayout() {
-  const { pret, etat, mods, notes, notesNonVues, agents, demandeLimitante } = useGameState();
+  const { pret, etat, mods, notes, notesNonVues, agents, demandeLimitante, direction, service2, rupture, encre } =
+    useGameState();
   // La barre d'onglets s'arrête au-dessus de la barre d'accueil de l'iPhone (marge du bas réelle, web compris).
   const { bottom } = useSafeAreaInsets();
 
   if (!pret) return null;
   if (!etat.cerfa.signe) return <CerfaEcran />;
 
-  // Quand la demande limite, la pastille n'invite plus à recruter : ce serait de l'argent perdu.
-  const recrutablesDispo = demandeLimitante ? 0 : agents.filter((a) => a.achetable).length;
+  const recrutementVisible = direction ? direction.recrutementVisible : mods.recrutementVisible;
+  // Acte I : quand la demande limite, la pastille n'invite plus à recruter (ce serait de l'argent perdu).
+  // Acte II : guichets et agents achetables.
+  const recrutablesDispo = service2
+    ? [service2.guichet, ...service2.agents].filter((u) => u.achetable).length
+    : demandeLimitante
+      ? 0
+      : agents.filter((a) => a.achetable).length;
   // Rupture de formulaires : un « ! » sur l'onglet où s'en procurer (Service, ou Notes avant la note n° 1).
-  const rupture = etat.formulaires < mods.pieces;
-  const ruptureService = rupture && mods.recrutementVisible;
-  const ruptureNotes = rupture && !mods.recrutementVisible;
+  const ruptureService = rupture && recrutementVisible;
+  const ruptureNotes = rupture && !recrutementVisible;
 
   return (
     <>
@@ -38,7 +44,7 @@ export default function TabLayout() {
           header: () => <EnTete />,
           // Libellé toujours sous l'icône : sur grand écran, la barre le mettrait à côté et le couperait (colonne de 480).
           tabBarLabelPosition: 'below-icon',
-          tabBarActiveTintColor: Colors.encreTexte,
+          tabBarActiveTintColor: encre.texte,
           tabBarInactiveTintColor: Colors.crayon,
           tabBarStyle: {
             backgroundColor: Colors.papierChaud,
@@ -57,8 +63,9 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Guichet',
-            tabBarAccessibilityLabel: 'Guichet',
+            // Acte II : l'onglet principal devient « Direction ».
+            title: direction ? 'Direction' : 'Guichet',
+            tabBarAccessibilityLabel: direction ? 'Direction' : 'Guichet',
             tabBarIcon: ({ color, size }) => <Building2 size={size} color={color} />,
           }}
         />
@@ -71,7 +78,7 @@ export default function TabLayout() {
               : recrutablesDispo > 0
                 ? `Service, ${recrutablesDispo} recrutement possible`
                 : 'Service',
-            href: mods.recrutementVisible ? undefined : null,
+            href: recrutementVisible ? undefined : null,
             tabBarIcon: ({ color, size }) => (
               <View>
                 <UserPlus size={size} color={color} />
