@@ -252,17 +252,19 @@ function franchir(
     let b = b0;
 
     // Pièce délivrée par nos services : un dossier lié est déposé dans la procédure exigée.
+    // Un dossier en boucle n'est pas dupliqué : il passe dans la procédure exigée.
     if (e.type === 'pieceService' && e.exige !== undefined && m.procsOuvertes.includes(e.exige)) {
       if (estBoucle(x0.procedures, m.procsOuvertes, l.p, e.exige)) {
         // La chaîne ne peut plus aboutir : l'usager est renvoyé chez lui, le dossier continue sans lui.
         abandonsDemarche += u;
-        b += u;
+        boucles[e.exige][0] += b + u;
+        if (b + u > 0 && premiereBoucle === null) premiereBoucle = maintenant;
+        b = u;
         u = 0;
-        boucles[e.exige][0] += b;
-        if (b > 0 && premiereBoucle === null) premiereBoucle = maintenant;
       } else {
         usagers[e.exige][0] += u;
         boucles[e.exige][0] += b;
+        b = 0;
       }
     }
 

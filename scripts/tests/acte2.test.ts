@@ -443,6 +443,26 @@ test('une boucle renvoie les usagers chez eux et produit de la dématérialisati
   assert.ok(x(s).demaPoints > 0);
 });
 
+test('sans nouvel usager, les dossiers en boucle circulent sans se multiplier', () => {
+  let s = avecNotes2(base2(), ['atelier', 'pieceService']);
+  // Population entière garée dans la procédure fermée : aucune demande, aucune installation.
+  s = avec2(s, {
+    guichets: 100,
+    population: BALANCE2.populationMax,
+    procedures: {
+      ...x(s).procedures,
+      identite: [{ type: 'piece' }, { type: 'pieceService', exige: 'domicile' }],
+      domicile: [{ type: 'pieceService', exige: 'identite' }, { type: 'piece' }],
+    },
+    usagers: { ...x(s).usagers, identite: [0, 0], domicile: [0, 0], vie: [BALANCE2.populationMax] },
+    boucles: { ...x(s).boucles, identite: [50, 0], domicile: [0, 0] },
+  });
+  s = avancer2(s, 600);
+  proche(D.dossiersEnBoucle(x(s)), 50, 1e-6);
+  assert.ok(x(s).stats.franchiesBoucle > 1000);
+  assert.ok(x(s).boucles.domicile[0] > 0);
+});
+
 test('simple dépendance : un second dossier d’usager, pas de dématérialisation', () => {
   let s = avecNotes2(base2(), ['atelier', 'pieceService']);
   s = avec2(s, {
