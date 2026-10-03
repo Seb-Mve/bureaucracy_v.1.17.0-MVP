@@ -11,7 +11,7 @@ export const BALANCE2 = {
   /** Nouveaux habitants par seconde, en fraction de la place libre. */
   installationRate: 1 / 60,
   /** Demandes par seconde et par usager inactif. */
-  demandeRate: 1 / 20,
+  demandeRate: 1 / 500,
   /** Dossiers d'usagers qui attendent déjà à la Carte d'identité. */
   fileInitiale: 20,
   budgetInitial: 0,
@@ -27,12 +27,12 @@ export const BALANCE2 = {
   abandonRejet: 1 / 3,
   rejetMaxInitial: 0.5,
   /** Guichets : étapes franchies par seconde et prix. */
-  guichet: { vitesse: 0.5, coutBase: 60, croissance: 1.15 },
+  guichet: { vitesse: 0.5, coutBase: 30, croissance: 1.15 },
   /** Le guichet 3 de l'acte I, compressé en unité. */
   guichetsInitiaux: 1,
   etapesMax: 8,
   /** Points de dématérialisation correspondant à 100 %. */
-  demaCible: 3_000_000,
+  demaCible: 150_000,
   /** Délai du filet de sécurité après la note « Pièce délivrée par nos services » (min). */
   filetMinutes: 15,
 } as const;

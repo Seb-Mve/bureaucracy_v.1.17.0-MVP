@@ -23,6 +23,7 @@ npm run lint                             # Run ESLint via expo lint
 ./node_modules/.bin/tsc --noEmit -p .    # Type-check (scripts/ and specs/ are excluded)
 npm test                                 # Unit tests of data/ and of the pixel-art scene engine (node:test, scripts/tests/*.test.ts)
 node scripts/simulate-acte1.ts [taps/s] [minutes]   # Balance simulator: bot player, prints milestones
+node scripts/simulate-acte2.ts [taps/s] [minutes]   # Act II balance simulator (no Réforme yet)
 node scripts/bundle-scene-pixel.ts <out.js> [--acte 2]   # Browser bundle of the pixel scenes for DESIGN/ mockups (no dependency)
 ```
 
@@ -69,6 +70,11 @@ Vibrations and reduced animations, stored under their own AsyncStorage key (`bur
 | `data/usagers.ts` | Deterministic usager identities (name, request, mood) for the queue display |
 | `data/save.ts` | Storage key, save validation, removal of obsolete fields from older saves |
 | `constants/balance.ts` | All tuning numbers (`BALANCE`) and collègue definitions (`AGENTS`) |
+| `data/acte2/moteur.ts` | Act II (La Direction): entry, `tick2`, `tamponner2` (visas), purchases, sliders, offline |
+| `data/acte2/procedures.ts` | Procedure graph, loop detection, Atelier actions |
+| `data/acte2/notes2.ts` | The 17 Act II Notes de service |
+| `data/acte2/courrier2.ts` | Act II S.I.C. letters (incl. the safety-net letters) |
+| `constants/balanceActe2.ts` | Act II tuning (`BALANCE2`), steps, Exemplaires, agents |
 | `utils/formatters.ts` | `formatEntier` (counts) and `formatEuros` (money): full digits up to 99 999, then « 124 k », « 4,47 M »; `formatPourcent`; `formatNumberFrench` (rates) |
 
 ### Economy model (aggregate, no per-usager objects)

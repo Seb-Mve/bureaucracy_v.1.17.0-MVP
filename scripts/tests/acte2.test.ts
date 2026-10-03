@@ -469,8 +469,8 @@ test('guichets : il faut la note n° 1, puis le prix monte de 15 %', () => {
   const s = base2();
   assert.equal(D.acheterGuichet(s, 0), s);
   assert.equal(x(D.acheterGuichet(avecNotes2(s, ['prise']), 0)).guichets, 2);
-  assert.equal(D.coutGuichet(1), 60);
-  assert.equal(D.coutGuichet(2), Math.ceil(60 * 1.15));
+  assert.equal(D.coutGuichet(1), 30);
+  assert.equal(D.coutGuichet(2), Math.ceil(30 * 1.15));
 });
 
 test('agents : débloqués par note, ancienneté comprise', () => {

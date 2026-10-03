@@ -268,6 +268,18 @@ Fourchettes humaines, depuis le début de l'acte II, premier passage, une Réfor
 | Première Réforme, replay de l'acte I compris | 60 – 90 min |
 | Fin de l'acte (100 %) | 105 – 135 min |
 
+### Mesures du robot (sans Réforme, `scripts/simulate-acte2.ts`)
+
+| Jalon | Robot 1 tap/s | Robot 2 taps/s | Robot 3 taps/s |
+|---|---|---|---|
+| Premier agent | 3.2 | 3.3 | 3.5 |
+| Atelier | 9.7 | 9.0 | 8.8 |
+| Première boucle | 28.6 | 27.4 | 26.4 |
+| Dématérialisation 50 % | 84.0 | 82.8 | 81.5 |
+| Dématérialisation 100 % | 124.8 | 123.5 | 122.3 |
+
+Le robot construit la boucle dès que l'étape est disponible : le temps de découverte humain n'est pas mesuré ici.
+
 ## Interface
 
 - Encre bleue `#5D9CEC` / bord bas `#4A89DC` pour le bouton TAMPONNER. Fond crème inchangé.

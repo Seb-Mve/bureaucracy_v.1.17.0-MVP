@@ -65,7 +65,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Atelier des procédures',
     texte: 'Le chef de service est autorisé à compléter les procédures. Il n’est pas autorisé à les simplifier.',
     effet: 'Débloque l’Atelier, la procédure Justificatif de domicile et l’étape Pièce justificative.',
-    cout: 1500,
+    cout: 1000,
     instruction: 120,
     visible: si((x) => x.stats.franchies >= 3000),
     appliquer: (m) => {
@@ -80,7 +80,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Signature manuscrite',
     texte: 'Toute pièce doit être signée. Toute signature doit être lisible. Aucune signature n’est lisible.',
     effet: 'Débloque l’étape Signature.',
-    cout: 2500,
+    cout: 1500,
     instruction: 60,
     visible: si((x) => achetee(x, 'atelier')),
     appliquer: (m) => {
@@ -93,7 +93,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Exemplaires exigés',
     texte: 'Par mesure de sécurité, toute pièce est exigée en plusieurs exemplaires. Les exemplaires sont détruits après vérification.',
     effet: 'Débloque le curseur Exemplaires exigés.',
-    cout: 4000,
+    cout: 2500,
     instruction: 120,
     visible: si((x) => achetee(x, 'atelier') && x.stats.franchies >= 8000),
     appliquer: (m) => {
@@ -106,7 +106,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Chef de bureau',
     texte: 'Un chef de bureau vise ce que l’instructeur a visé, pour le cas où.',
     effet: 'Débloque le Chef de bureau.',
-    cout: 8000,
+    cout: 5000,
     instruction: 120,
     visible: si((x) => x.agents.instructeur >= 10),
     appliquer: (m) => {
@@ -119,7 +119,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Pièce délivrée par nos services',
     texte: 'Rappel : un justificatif délivré par nos services fait foi pour toute démarche, y compris celle qui l’a délivré.',
     effet: 'Débloque l’étape Pièce délivrée par nos services.',
-    cout: 15000,
+    cout: 6000,
     instruction: 240,
     visible: si((x) => achetee(x, 'signature') && x.stats.franchies >= 25000),
     appliquer: (m) => {
