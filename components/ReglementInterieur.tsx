@@ -6,7 +6,7 @@ import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Col
 import { BALANCE } from '@/constants/balance';
 import { PATIENCE_MAX } from '@/types/game';
 import Panneau from '@/components/charte/Panneau';
-import { formatMontant } from '@/utils/formatters';
+import { formatEntier, formatMontant } from '@/utils/formatters';
 
 interface Article {
   titre: string;
@@ -14,6 +14,8 @@ interface Article {
 }
 
 const pct = (x: number) => `${Math.round(x * 100)} %`;
+/** Ce que traite un coup de tampon, selon le nombre de dossiers par coup en vigueur. */
+const parCoup = (n: number) => (n === 1 ? 'le dossier posé' : `${formatEntier(n)} dossiers posés`);
 
 /**
  * Règlement intérieur : l'aide du jeu, rédigée comme un document de service.
@@ -26,7 +28,7 @@ export default function ReglementInterieur() {
   const articles: Article[] = [
     {
       titre: 'Le tampon',
-      texte: `Chaque coup de tampon traite le dossier posé sur votre bureau. Le nombre de tampons apposés fixe votre grade : chaque grade ajoute ${pct(BALANCE.bonusGrade)} de dotation.`,
+      texte: `Chaque coup de tampon traite ${parCoup(mods.tapPower)} sur votre bureau. Le nombre de tampons apposés fixe votre grade : chaque grade ajoute ${pct(BALANCE.bonusGrade)} de dotation.`,
     },
     {
       titre: 'Budget et formulaires',
@@ -48,24 +50,21 @@ export default function ReglementInterieur() {
   if (notes.length > 0) {
     articles.push({
       titre: 'Notes de service',
-      texte: 'Une note approuvée part en instruction. Elle prend effet au terme du délai réglementaire.',
+      texte: 'Une note approuvée prend effet aussitôt, ou au terme de son délai d’instruction quand elle en a un.',
     });
   }
   if (mods.rejetVisible) {
     articles.push({
       titre: 'Taux de rejet',
-      texte: `Un dossier rejeté rapporte une prime et son usager revient plus tard. Rejeté ${PATIENCE_MAX} fois, l’usager abandonne et quitte le périmètre : la demande baisse. Le total des usagers perdus est dans le dossier administratif.`,
+      texte: `Un dossier rejeté, par vous ou par vos collègues, rapporte une prime et son usager revient plus tard. Rejeté ${PATIENCE_MAX} fois, l’usager abandonne et quitte le périmètre : la demande baisse. Le total des usagers perdus est dans le dossier administratif.`,
     });
   }
   if (mods.conformiteVisible) {
     // Rien n'annonce la fin avant l'audit : le jeu se découvre.
     articles.push({
-      titre: 'Réaffectation',
-      texte: 'Quand la Conformité du guichet atteint 100 %, la note de service n° 22 (Demande de réaffectation) devient disponible.',
-    });
-    articles.push({
       titre: 'Conformité',
-      texte: 'Elle monte avec la rigueur du guichet : dossiers rejetés, pièces exigées en plus. À 100 %, la note n° 22 devient disponible.',
+      texte:
+        'Elle monte avec la rigueur du guichet : dossiers rejetés, pièces exigées en plus. À 100 %, la note de service n° 22 (Demande de réaffectation) devient disponible.',
     });
   }
 

@@ -137,4 +137,8 @@ export interface GameEvents {
   budget: number;
   rupture: boolean;
   fileVide: boolean;
+  /** Usagers perdus par ce traitement (rejetés à leur dernière patience). */
+  abandons: number;
+  /** Coup du joueur : sort du dossier de l'usager au guichet (celui de la bulle), traité en premier. */
+  tete?: { rejete: boolean; abandon: boolean };
 }

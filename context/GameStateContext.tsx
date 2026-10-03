@@ -9,7 +9,6 @@ import { NOTES_PAR_ID, type NoteDef } from '@/data/notes';
 import { nouvellesLettres, lettreAbsence } from '@/data/courrier';
 import { teteDeFile, type UsagerAffiche } from '@/data/usagers';
 import { CLE_SAUVEGARDE, estSauvegardeValide, normaliserSauvegarde } from '@/data/save';
-import { formatEntier } from '@/utils/formatters';
 import { usePreferences } from '@/context/PreferencesContext';
 
 export type { UsagerAffiche };
@@ -57,6 +56,8 @@ export interface GradeAffiche {
 export interface Verdict {
   id: number;
   rejete: boolean;
+  /** L'usager rejeté l'était pour la dernière fois : il abandonne et quitte le périmètre. */
+  abandon: boolean;
   /** Le dossier qui vient d'être tamponné (celui qui était au guichet). */
   usager: UsagerAffiche | null;
 }
@@ -80,6 +81,8 @@ interface GameContextType {
   maxRamettes: number;
   lettresNonLues: number;
   verdict: Verdict | null;
+  /** Abandons cumulés hors de l'usager au guichet (collègues, reste d'un coup à plusieurs dossiers) : la scène en fait partir autant. */
+  abandonsFile: number;
   demandeLimitante: boolean;
   /** Une ramette gratuite quand la rupture bloquerait le guichet faute de budget. */
   demanderRequisition: () => void;
@@ -120,7 +123,7 @@ function distribuerCourrier(s: GameState, maintenant: number): GameState {
 function rattraperAbsence(s: GameState, maintenant: number): GameState {
   const r = E.simulerAbsence(s, maintenant);
   if (r.secondes < ABSENCE_LETTRE_S || r.traites < 1) return r.s;
-  const lettre: Lettre = lettreAbsence(r.secondes, r.traites, r.budget, maintenant, formatEntier);
+  const lettre: Lettre = lettreAbsence(r.secondes, r.traites, r.budget, maintenant);
   return { ...r.s, courrier: [lettre, ...r.s.courrier] };
 }
 
@@ -128,6 +131,17 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const [etat, setEtat] = useState<GameState>(() => E.etatInitial(Date.now()));
   const [pret, setPret] = useState(false);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [abandonsFile, setAbandonsFile] = useState(0);
+  /** Fractions d'abandon pas encore montrées (le moteur agrège des parts de dossier). */
+  const abandonsEnCours = useRef(0);
+  const compterAbandons = useCallback((n: number) => {
+    if (n <= 0) return;
+    abandonsEnCours.current += n;
+    const entiers = Math.floor(abandonsEnCours.current);
+    if (entiers < 1) return;
+    abandonsEnCours.current -= entiers;
+    setAbandonsFile((a) => a + entiers);
+  }, []);
   const { vibrations } = usePreferences();
   const vibrationsRef = useRef(vibrations);
   vibrationsRef.current = vibrations;
@@ -199,12 +213,14 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       if (ecart > SEUIL_ABSENCE) {
         s1 = rattraperAbsence(s0, maintenant);
       } else {
-        s1 = E.tick(s0, Math.max(0, ecart) / 1000, maintenant).s;
+        const r = E.tick(s0, Math.max(0, ecart) / 1000, maintenant);
+        compterAbandons(r.ev.abandons);
+        s1 = r.s;
       }
       appliquer(distribuerCourrier(s1, maintenant));
     }, INTERVALLE);
     return () => clearInterval(id);
-  }, [pret, appliquer]);
+  }, [pret, appliquer, compterAbandons]);
 
   // Sauvegarde immédiate en arrière-plan.
   useEffect(() => {
@@ -217,19 +233,22 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   }, []);
 
   const tamponner = useCallback((): GameEvents => {
-    const avant = teteDeFile(etatRef.current, 1)[0] ?? null;
+    // L'usager de la bulle est celui dont le dossier passe en premier : ce que dit la bulle (« Troisième fois… »)
+    // est ce que le coup produit.
+    const avant = teteDeFile(etatRef.current)[0] ?? null;
     const t = Date.now();
-    const r = E.tamponner(etatRef.current, t);
+    const r = E.tamponner(etatRef.current, t, Math.random, avant?.patience);
     if (r.ev.traites > 0) {
-      // L'usager en tête de file repart rejeté avec la part réellement rejetée par ce coup (0 ou 1 pour un coup simple).
-      const rejete = r.ev.rejetes > 0 && Math.random() < r.ev.rejetes / r.ev.traites;
+      const rejete = r.ev.tete ? r.ev.tete.rejete : r.ev.rejetes > 0 && Math.random() < r.ev.rejetes / r.ev.traites;
+      const abandon = r.ev.tete?.abandon ?? false;
       verdictId.current += 1;
-      setVerdict({ id: verdictId.current, rejete, usager: avant });
+      setVerdict({ id: verdictId.current, rejete, abandon, usager: avant });
+      compterAbandons(r.ev.abandons - (abandon ? 1 : 0));
       vibrerSi('leger');
     }
     appliquer(r.s);
     return r.ev;
-  }, [appliquer, vibrerSi]);
+  }, [appliquer, vibrerSi, compterAbandons]);
 
   const acheterAgent = useCallback(
     (id: AgentId, nb = 1) => {
@@ -315,6 +334,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const nouvellePartie = useCallback(() => {
     satureRef.current = false;
     setVerdict(null);
+    setAbandonsFile(0);
+    abandonsEnCours.current = 0;
     appliquer(E.etatInitial(Date.now()));
   }, [appliquer]);
 
@@ -400,7 +421,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       maxRamettes: Math.floor(etat.budget / E.prixRamette(mods)),
       lettresNonLues: etat.courrier.filter((l) => !l.lue).length,
       verdict,
-      demandeLimitante: sature || E.dossiersEnAttente(etat) < 1,
+      abandonsFile,
+      // Seulement quand les collègues butent sur la demande : une file vidée par les taps du joueur ne compte pas.
+      demandeLimitante: sature,
       demanderRequisition,
       tamponner,
       acheterAgent,
@@ -416,7 +439,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       nouvellePartie,
     }),
     [
-      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, sature, demanderRequisition, grade, tamponner,
+      pret, etat, mods, maintenant, vitesse, notes, agents, verdict, abandonsFile, sature, demanderRequisition, grade, tamponner,
       acheterAgent, acheterRamettes, reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa,
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste,
       nouvellePartie,

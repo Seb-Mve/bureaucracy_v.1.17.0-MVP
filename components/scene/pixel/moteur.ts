@@ -26,8 +26,8 @@ interface UsagerScene {
   phase: number;
   marche: boolean;
   vitesse: number;
-  /** En train de partir : accepté, rejeté ou simplement sorti de la file. */
-  depart?: 'accepte' | 'rejete' | 'discret';
+  /** En train de partir : accepté, rejeté (il reviendra), abandon (perdu pour de bon) ou simplement sorti de la file. */
+  depart?: 'accepte' | 'rejete' | 'abandon' | 'discret';
   pousse: number;
 }
 interface Dossier { x: number; de: number; vers: number; t0: number; duree: number; etat: 'glisse' | 'pose' | 'retour'; marque?: 'ok' | 'rej'; saut?: number }
@@ -35,6 +35,8 @@ interface Coup { t0: number; rejete: boolean; impact: boolean }
 interface Particule { x: number; y: number; vx: number; vy: number; g: number; t0: number; vie: number; col: string; fondu?: boolean }
 /** Étoile d'impact du tampon (le gain s'affiche dans les compteurs, pas dans la scène). */
 interface Etoile { x: number; y: number; t0: number; vie: number }
+/** Dossier lâché par un usager qui abandonne : il reste un moment au sol. */
+interface DossierAuSol { x: number; t0: number }
 
 /** Dimensions du monde dessiné (px). */
 const MONDE = { largeur: 176, hauteur: 112 };
@@ -49,6 +51,12 @@ const RATTRAPAGE = 8;
 const PRESSE_DEPART = 160;
 const COLERE = ['x.x.x', '.xxx.', 'xx.xx', '.xxx.', 'x.x.x'];
 const NOTE = ['..xx.', '..x.x', '..x..', 'xxx..', 'xxx..'];
+/** Flèche de sortie : l'usager s'en va pour de bon. */
+const SORTIE = ['..x..', '.x...', 'xxxxx', '.x...', '..x..'];
+/** Allure d'un usager qui abandonne (px/s). */
+const VITESSE_ABANDON = 92;
+/** Durée pendant laquelle un dossier lâché reste au sol (ms). */
+const DUREE_AU_SOL = 2500;
 
 export class MoteurScene {
   W = 0;
@@ -66,9 +74,10 @@ export class MoteurScene {
   private parts: UsagerScene[] = [];
   private particules: Particule[] = [];
   private etoiles: Etoile[] = [];
+  private auSol: DossierAuSol[] = [];
   private dossier: Dossier | null = null;
   private coup: Coup | null = null;
-  private depart: { t: number; rejete: boolean } | null = null;
+  private depart: { t: number; rejete: boolean; abandon: boolean } | null = null;
   private cible = 0;
   /** Usagers en attente qui ne tiennent pas dans le champ : affichés « +N » au bout de la file. */
   surplus = 0;
@@ -148,8 +157,8 @@ export class MoteurScene {
     return this.file.filter((u) => Math.abs(u.cible - u.x) < 12).length;
   }
 
-  /** Coup de tampon du joueur : l'agent tamponne, puis l'usager repart. */
-  tamponner(rejete: boolean) {
+  /** Coup de tampon du joueur : l'agent tamponne, puis l'usager repart (abandon : rejeté pour la dernière fois). */
+  tamponner(rejete: boolean, abandon = false) {
     if (this.depart) {
       // Nouveau coup avant que le précédent usager soit parti : c'est une rafale.
       // Ceux qui s'en vont filent pour ne pas traverser la file à pas lents.
@@ -161,17 +170,47 @@ export class MoteurScene {
     if (!d || d.etat !== 'pose' || d.marque) this.dossier = { x: 106, de: 106, vers: 106, t0: this.t, duree: 1, etat: 'pose' };
     this.coup = { t0: this.t, rejete, impact: false };
     this.dernierCoup = this.t;
-    this.depart = { t: this.t + 330, rejete };
+    this.depart = { t: this.t + 330, rejete, abandon };
   }
 
   private faireDepart() {
     const rejete = this.depart?.rejete ?? false;
+    const abandon = this.depart?.abandon ?? false;
     this.depart = null;
     const u = this.file.shift();
     if (u) {
-      Object.assign(u, { depart: rejete ? 'rejete' : 'accepte', cible: this.gauche - 16, vitesse: rejete ? 62 : 46 });
-      this.parts.push(u);
+      if (abandon) this.partirPourDeBon(u);
+      else {
+        Object.assign(u, { depart: rejete ? 'rejete' : 'accepte', cible: this.gauche - 16, vitesse: rejete ? 62 : 46 });
+        this.parts.push(u);
+      }
     }
+    this.ajuster();
+  }
+
+  /** L'usager lâche son dossier (les feuilles s'envolent, le dossier reste au sol) et quitte la file pour de bon. */
+  private partirPourDeBon(u: UsagerScene) {
+    const t = this.t;
+    Object.assign(u, { depart: 'abandon', cible: this.gauche - 16, vitesse: VITESSE_ABANDON });
+    this.parts.push(u);
+    this.auSol.push({ x: Math.round(u.x) - 4, t0: t });
+    for (let i = 0; i < 8; i++) {
+      this.particules.push({
+        x: u.x + (i % 3) - 1, y: PIEDS_DEPART - 18, vx: (hache(t | 0, i + 40) % 50) - 25, vy: -30 - (hache(t | 0, i + 50) % 30),
+        g: 110, t0: t, vie: 900, col: i % 2 ? PX.papier[0] : PX.lignePapier, fondu: true,
+      });
+    }
+  }
+
+  /**
+   * Abandon venu des collègues (ou du reste d'un coup à plusieurs dossiers) : un usager de la file,
+   * jamais celui du guichet, part pour de bon. La file se recomplète par la gauche.
+   */
+  abandon() {
+    if (this.file.length < 2) return;
+    const i = 1 + (hache(this.t | 0, 61) % (this.file.length - 1));
+    const [u] = this.file.splice(i, 1);
+    this.partirPourDeBon(u);
     this.ajuster();
   }
 
@@ -204,7 +243,7 @@ export class MoteurScene {
     this.file.forEach((u) => this.marcher(u, dt));
     this.parts = this.parts.filter((u) => {
       this.marcher(u, dt);
-      if (u.depart === 'rejete' && u.marche && t - u.pousse > 170) {
+      if ((u.depart === 'rejete' || u.depart === 'abandon') && u.marche && t - u.pousse > 170) {
         u.pousse = t;
         for (const s of [-1, 1]) this.particules.push({ x: u.x + (s > 0 ? 3 : -2), y: PIEDS_DEPART, vx: 12 * s, vy: -12, g: 40, t0: t, vie: 320, col: PX.poussiere });
       }
@@ -229,6 +268,7 @@ export class MoteurScene {
       return t - p.t0 < p.vie;
     });
     this.etoiles = this.etoiles.filter((f) => t - f.t0 < f.vie);
+    this.auSol = this.auSol.filter((d) => t - d.t0 < DUREE_AU_SOL);
   }
 
   private positionTampon(): { x: number; y: number; ecrase: boolean; trainee: boolean } {
@@ -261,7 +301,8 @@ export class MoteurScene {
     T.copier(this.facade, this.facade.ox, this.facade.oy);
     this.peindreUsagers(T);
     T.copier(this.potelets, this.potelets.ox, this.potelets.oy);
-    // Bout de file : ceux qui attendent hors champ, plutôt que des usagers entassés les uns sur les autres.
+    this.peindreEffets(T);
+    // Bout de file (après les effets : les bulles de ceux qui partent ne la recouvrent jamais) : ceux qui attendent hors champ, plutôt que des usagers entassés les uns sur les autres.
     if (this.surplus > 0 && this.file.length > 0) {
       const n = this.surplus;
       const etiquette = `+${n < 1000 ? n : `${Math.floor(n / 1000)}K`}`;
@@ -270,7 +311,6 @@ export class MoteurScene {
       T.boite(x - 2, y - 2, w, 9, PX.papier[0]);
       texte(T, etiquette, x, y, c(PX.contour));
     }
-    this.peindreEffets(T);
     return T;
   }
 
@@ -363,7 +403,8 @@ export class MoteurScene {
     }
     for (const u of this.parts) {
       const pas = u.marche ? Math.floor(u.dist / 3) % 4 : -1;
-      const img = spriteUsager(u.spec, { pas, bras: 'tient', fache: u.depart === 'rejete', numerote: this.numerotation });
+      const perdu = u.depart === 'abandon';
+      const img = spriteUsager(u.spec, { pas, bras: perdu ? 'vide' : 'tient', fache: u.depart === 'rejete' || perdu, numerote: this.numerotation });
       const saut = u.depart === 'accepte' && u.marche ? Math.floor(u.dist / 5) % 2 : 0;
       T.copier(img, Math.round(u.x) - 11, PIEDS_DEPART - 37 - saut, true);
     }
@@ -386,10 +427,18 @@ export class MoteurScene {
 
   private peindreEffets(T: Toile) {
     const t = this.t;
+    // Dossiers lâchés au sol, au premier plan (devant les pieds de la file), qui pâlissent avant de disparaître.
+    for (const d of this.auSol) {
+      const a = Math.max(0, 1 - Math.max(0, t - d.t0 - DUREE_AU_SOL * 0.6) / (DUREE_AU_SOL * 0.4));
+      const k = Math.round(a * 10) / 10, y = PIEDS_FILE - 1;
+      T.rect(d.x - 1, y - 1, 12, 4, c(PX.contour, k));
+      T.rect(d.x, y, 10, 2, c(PX.papier[0], k)); T.rect(d.x + 1, y, 3, 1, c(PX.lignePapier, k)); T.rect(d.x + 6, y + 1, 3, 1, c(PX.rouge, k));
+    }
     for (const u of this.parts) {
       if (u.depart === 'discret') continue;
       const y = hautTete(u.spec, PIEDS_DEPART) - 11, x = Math.round(u.x) - 3;
-      if (u.depart === 'rejete') this.bulle(T, COLERE, x, y, PX.bulleColere);
+      if (u.depart === 'abandon') this.bulle(T, SORTIE, x, y, PX.rouge);
+      else if (u.depart === 'rejete') this.bulle(T, COLERE, x, y, PX.bulleColere);
       else this.bulle(T, NOTE, x, y - Math.round(Math.abs(Math.sin(t / 150)) * 2), PX.bulleNote);
     }
     for (const p of this.particules) {

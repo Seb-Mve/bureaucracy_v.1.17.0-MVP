@@ -80,17 +80,19 @@ export function usager(numero: number, patience: number): UsagerAffiche {
 }
 
 /**
- * Les `n` premiers usagers de la file. Leur patience suit la répartition
- * réelle de la file (les plus excédés en premier, comme au vrai guichet).
+ * Les `n` premiers usagers de la file. La patience de chacun est tirée (de façon stable, d'après son
+ * numéro) selon la répartition réelle de la file : en moyenne, le guichet voit la file telle qu'elle est.
+ * Le premier est l'usager de la bulle, et c'est son dossier que le prochain coup de tampon traite.
  */
 export function teteDeFile(s: GameState, n = 3): UsagerAffiche[] {
   const total = s.file[1] + s.file[2] + s.file[3];
   const visibles = Math.min(n, Math.floor(total));
   const res: UsagerAffiche[] = [];
   for (let i = 0; i < visibles; i++) {
-    const pos = ((i + 0.5) / visibles) * total;
+    const numero = Math.floor(s.stats.traites) + 1 + i;
+    const pos = (h(numero, 6) / 4294967296) * total;
     const patience = pos < s.file[1] ? 1 : pos < s.file[1] + s.file[2] ? 2 : 3;
-    res.push(usager(Math.floor(s.stats.traites) + 1 + i, patience));
+    res.push(usager(numero, patience));
   }
   return res;
 }

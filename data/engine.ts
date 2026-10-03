@@ -203,9 +203,17 @@ function partRejetee(n: number, taux: number, alea: () => number): number {
 /**
  * `alea` absent : rejet à sa valeur moyenne (collègues, gros volumes agrégés).
  * `alea` fourni : tirage dossier par dossier (le coup de tampon du joueur).
+ * `premier` : patience de l'usager au guichet (celui de la bulle). Son dossier passe en premier,
+ * avec son propre tirage ; le reste du lot se répartit au prorata de la file.
  */
-function traiter(s: GameState, demande: number, m: Modifiers, alea?: () => number): { s: GameState; ev: GameEvents } {
-  const ev: GameEvents = { traites: 0, rejetes: 0, budget: 0, rupture: false, fileVide: false };
+function traiter(
+  s: GameState,
+  demande: number,
+  m: Modifiers,
+  alea?: () => number,
+  premier?: number,
+): { s: GameState; ev: GameEvents } {
+  const ev: GameEvents = { traites: 0, rejetes: 0, budget: 0, rupture: false, fileVide: false, abandons: 0 };
   const enFile = somme(s.file);
   if (enFile <= 0) {
     ev.fileVide = true;
@@ -216,16 +224,14 @@ function traiter(s: GameState, demande: number, m: Modifiers, alea?: () => numbe
   if (possibles <= 0) return { s, ev };
 
   const tauxRegle = Math.min(s.tauxRejet, m.rejetMax);
-  const taux = alea ? partRejetee(possibles, tauxRegle, alea) : tauxRegle;
   const file = [...s.file] as ParPatience;
   const retours = [...s.retours] as ParPatience;
   let population = s.population;
   let abandons = s.abandons;
   let rejetes = 0;
 
-  for (let p = 1; p <= PATIENCE_MAX; p++) {
-    const part = (s.file[p] / enFile) * possibles;
-    if (part <= 0) continue;
+  /** Traite `part` dossiers de patience `p`, dont la fraction `taux` est rejetée. */
+  const traiterPart = (p: number, part: number, taux: number) => {
     file[p] = Math.max(0, file[p] - part);
     const rej = part * taux;
     rejetes += rej;
@@ -234,6 +240,24 @@ function traiter(s: GameState, demande: number, m: Modifiers, alea?: () => numbe
     } else {
       population -= rej;
       abandons += rej;
+      ev.abandons += rej;
+    }
+  };
+
+  let reste = possibles;
+  if (alea && premier !== undefined && possibles >= 1 && s.file[premier] >= 1) {
+    const rejete = alea() < tauxRegle;
+    traiterPart(premier, 1, rejete ? 1 : 0);
+    ev.tete = { rejete, abandon: rejete && premier === 1 };
+    reste -= 1;
+  }
+  if (reste > 0) {
+    const taux = alea ? partRejetee(reste, tauxRegle, alea) : tauxRegle;
+    const avant = [...file] as ParPatience;
+    const total = somme(avant);
+    for (let p = 1; p <= PATIENCE_MAX; p++) {
+      const part = total > 0 ? (avant[p] / total) * reste : 0;
+      if (part > 0) traiterPart(p, part, taux);
     }
   }
 
@@ -334,14 +358,16 @@ export function tick(
 /**
  * Un tap sur TAMPONNER : traite `tapPower` dossiers. Le délai d'instruction des notes n'en dépend pas.
  * Chaque dossier tamponné est rejeté avec la probabilité du taux de rejet (`alea`, Math.random par défaut).
+ * `premier` : patience de l'usager au guichet (`teteDeFile(s)[0]`), dont le dossier est traité en premier.
  */
 export function tamponner(
   s: GameState,
   maintenant: number,
   alea: () => number = Math.random,
+  premier?: number,
 ): { s: GameState; ev: GameEvents } {
   const m = getModifiers(s, maintenant);
-  const r = traiter(s, m.tapPower, m, alea);
+  const r = traiter(s, m.tapPower, m, alea, premier);
   return {
     ev: r.ev,
     s: { ...r.s, stats: { ...r.s.stats, taps: r.s.stats.taps + 1 } },

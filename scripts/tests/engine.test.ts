@@ -205,3 +205,29 @@ test('rejet au tampon : en moyenne, la part rejetée suit le taux (avec des sér
   assert.ok(Math.abs(rejetes / 2000 - 0.5) < 0.05, `part rejetée ${rejetes / 2000}`);
   assert.ok(serieMax >= 3, 'un vrai tirage produit des séries de rejets');
 });
+
+test('le dossier de l’usager au guichet passe en premier, avec son propre tirage', () => {
+  // File de patience mêlée, rejet réglé à 50 % ; tirage forcé (0 = rejeté, 0,99 = accepté).
+  const s = { ...avecNotes(base(), ['renfort', 'rejet']), tauxRejet: 0.5, file: [0, 5, 5, 5] as GameState['file'] };
+  const perdu = E.tamponner(s, 0, () => 0, 1);
+  assert.deepEqual(perdu.ev.tete, { rejete: true, abandon: true });
+  assert.equal(perdu.ev.abandons, 1);
+  assert.equal(perdu.s.abandons, s.abandons + 1);
+  assert.equal(perdu.s.file[1], 4);
+
+  const revient = E.tamponner(s, 0, () => 0, 3);
+  assert.deepEqual(revient.ev.tete, { rejete: true, abandon: false });
+  assert.equal(revient.ev.abandons, 0);
+  assert.equal(revient.s.retours[2], s.retours[2] + 1);
+
+  const accepte = E.tamponner(s, 0, () => 0.99, 1);
+  assert.deepEqual(accepte.ev.tete, { rejete: false, abandon: false });
+  assert.equal(accepte.s.abandons, s.abandons);
+});
+
+test('les abandons des collègues sont rapportés par le tick', () => {
+  const s = { ...avecNotes(base(), ['renfort', 'rejet']), tauxRejet: 0.5, file: [0, 50, 0, 0] as GameState['file'], agents: { stagiaire: 50, accueil: 0, instructeur: 0, titulaire: 0 } };
+  const r = E.tick(s, 1, 1000);
+  assert.ok(r.ev.abandons > 0);
+  assert.ok(Math.abs(r.s.abandons - s.abandons - r.ev.abandons) < 1e-9);
+});

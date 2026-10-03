@@ -27,8 +27,8 @@ interface ColonneProps {
   premiere?: boolean;
   compact?: boolean;
   etroit?: boolean;
-  /** Colonne qui reçoit un peu plus de place (le budget, la valeur la plus longue). */
-  large?: boolean;
+  /** Part de largeur : « large » pour la valeur la plus longue (le budget), sinon pour un libellé long sur écran serré. */
+  place?: 'large' | 'libelleLong' | 'libelleMoyen';
   children?: React.ReactNode;
 }
 
@@ -41,7 +41,7 @@ const Colonne = memo(function Colonne({
   premiere,
   compact,
   etroit,
-  large,
+  place,
   children,
 }: ColonneProps) {
   const { ref, largeur, surLayout } = useLargeur();
@@ -53,7 +53,7 @@ const Colonne = memo(function Colonne({
         styles.colonne,
         compact && styles.colonneCompacte,
         etroit && styles.colonneEtroite,
-        large && styles.colonneLarge,
+        place && PLACE_STYLE[place],
         !premiere && styles.separee,
         rupture && styles.fondRupture,
       ]}
@@ -85,8 +85,11 @@ export default function Hud() {
   const { etat, mods, conformite, verdict, enAttente, prixRamette } = useGameState();
   const { height, width } = useWindowDimensions();
   const compact = height < 720;
-  // Écran étroit : colonnes resserrées, pour que « Formulaires » tienne entier à côté de la Conformité.
+  // Écran étroit : colonnes resserrées.
   const etroit = width < 400;
+  // Écran étroit à quatre colonnes : la largeur va aux libellés longs (« Formulaires », « Conformité » en 13 px)
+  // plutôt qu'au budget, dont la valeur rétrécit d'elle-même pour tenir.
+  const serre = etroit && mods.conformiteVisible;
   const rupture = etat.formulaires < mods.pieces;
   // En rupture, le budget est en cause aussi s'il ne paie plus une ramette (une fois les ramettes en vente).
   const sansBudget = rupture && mods.recrutementVisible && etat.budget < prixRamette;
@@ -96,7 +99,7 @@ export default function Hud() {
       <View style={styles.ligne}>
         <Colonne
           premiere
-          large
+          place={serre ? undefined : 'large'}
           label="Budget"
           valeur={`${formatMontant(etat.budget)}`}
           compact={compact}
@@ -106,6 +109,7 @@ export default function Hud() {
         />
         <Colonne
           label="Formulaires"
+          place={serre ? 'libelleLong' : undefined}
           valeur={formatEntier(etat.formulaires)}
           compact={compact}
           etroit={etroit}
@@ -122,6 +126,7 @@ export default function Hud() {
         {mods.conformiteVisible && (
           <Colonne
             label="Conformité"
+            place={serre ? 'libelleMoyen' : undefined}
             valeur={`${formatPourcent(conformite)} %`}
             compact={compact}
             etroit={etroit}
@@ -150,6 +155,12 @@ const styles = StyleSheet.create({
   },
   colonneLarge: {
     flex: 1.2,
+  },
+  colonneLibelleLong: {
+    flex: 1.15,
+  },
+  colonneLibelleMoyen: {
+    flex: 1.05,
   },
   colonneEtroite: {
     paddingHorizontal: Espace.xs,
@@ -183,8 +194,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: Fonts.texteGras,
-    fontSize: Typo.micro,
-    lineHeight: Interligne.micro,
+    fontSize: Typo.petit,
+    lineHeight: Interligne.petit,
     color: Colors.crayon,
   },
   valeur: {
@@ -202,6 +213,12 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
 });
+
+const PLACE_STYLE = {
+  large: styles.colonneLarge,
+  libelleLong: styles.colonneLibelleLong,
+  libelleMoyen: styles.colonneLibelleMoyen,
+} as const;
 
 const TAILLE_STYLE: Record<number, TextStyle | undefined> = {
   [Typo.corps]: styles.valeurCorps,

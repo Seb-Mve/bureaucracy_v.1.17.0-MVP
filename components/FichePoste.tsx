@@ -9,7 +9,7 @@ import { BALANCE } from '@/constants/balance';
 import { formatEntier, formatMontant } from '@/utils/formatters';
 
 /** Les missions du poste, avec la dotation et la consommation en vigueur (la fiche se relit depuis Options). */
-const missions = (dotation: number, pieces: number) => [
+const missions = (dotation: number, pieces: number, parCoup: number) => [
   {
     Icone: Inbox,
     fond: Colors.pastelBleu,
@@ -20,7 +20,10 @@ const missions = (dotation: number, pieces: number) => [
     Icone: Stamp,
     fond: Colors.encreClaire,
     titre: 'Vous tamponnez',
-    texte: 'Chaque tap tamponne le dossier posé sur votre bureau.',
+    texte:
+      parCoup === 1
+        ? 'Chaque tap tamponne le dossier posé sur votre bureau.'
+        : `Chaque tap tamponne ${formatEntier(parCoup)} dossiers posés sur votre bureau.`,
   },
   {
     Icone: Coins,
@@ -56,7 +59,7 @@ export default function FichePoste() {
               <Text style={styles.titulaire}>Agent : {agent}</Text>
 
               <View style={styles.missions}>
-                {missions(BALANCE.dotation * mods.dotationMult, mods.pieces).map(({ Icone, fond, titre, texte }, i) => (
+                {missions(BALANCE.dotation * mods.dotationMult, mods.pieces, mods.tapPower).map(({ Icone, fond, titre, texte }, i) => (
                   <View key={titre} style={styles.mission}>
                     <View style={[styles.pastille, { backgroundColor: fond }]}>
                       <Icone size={18} color={Colors.anthracite} />

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
 import { normaliserSauvegarde } from '../../data/save';
 import { nouvellesLettres } from '../../data/courrier';
+import { teteDeFile } from '../../data/usagers';
 import type { GameState, NoteId } from '../../types/game';
 
 const base = (): GameState => E.signerCerfa(E.etatInitial(0), 'Test', 0);
@@ -36,4 +37,11 @@ test('note n° 1 : seuil tiré au sort entre 20 et 30 tampons, fixe pour la part
 test('sauvegarde sans seuil de la note n° 1 : ancien seuil de 8 tampons', () => {
   const { seuilRenfort: _, ...ancienne } = base();
   assert.equal(normaliserSauvegarde(ancienne as GameState).seuilRenfort, 8);
+});
+
+test('l’usager de la bulle est le même quel que soit le nombre d’usagers demandés', () => {
+  for (let traites = 0; traites < 40; traites++) {
+    const s = { ...base(), file: [0, 7, 11, 23] as GameState['file'], stats: { ...base().stats, traites } };
+    assert.equal(teteDeFile(s, 1)[0].patience, teteDeFile(s, 3)[0].patience);
+  }
 });

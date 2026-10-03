@@ -95,12 +95,8 @@ export default function NotesScreen() {
     [acheterNote],
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      marquerNotesVues();
-      return () => marquerNotesVues();
-    }, [marquerNotesVues]),
-  );
+  // Les nouvelles notes gardent leur pastille « NOUVEAU » tant qu'on est sur l'onglet : elles ne sont vues qu'en le quittant.
+  useFocusEffect(useCallback(() => () => marquerNotesVues(), [marquerNotesVues]));
 
   // Les notes à traiter d'abord, puis les notes en vigueur (plus récentes en haut).
   const aTraiter = notes.filter((n) => n.statut !== 'effective' || n.id === retenue);

@@ -90,3 +90,16 @@ test('file plus longue que le champ : « +N » au bout, pas d’usagers entassé
   m.etat({ enAttente: 0, numerotation: false, premierNumero: 1 });
   assert.equal(m.surplus, 0);
 });
+
+test('abandon : l’usager part pour de bon et la file se recomplète', () => {
+  const m = scene();
+  const avant = m.peindre()?.px.slice();
+  m.tamponner(true, true);
+  m.abandon();
+  for (let i = 0; i < 20; i++) m.avancer(33);
+  const apres = m.peindre()?.px;
+  assert.ok(avant && apres);
+  assert.notDeepEqual(apres, avant);
+  for (let i = 0; i < 200; i++) m.avancer(33);
+  assert.ok(m.usagersEnPlace() >= 4, 'la file visible est de nouveau garnie');
+});

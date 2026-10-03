@@ -7,6 +7,8 @@ import type { Toile } from './toile';
 
 /** Images dessinées par seconde (le moteur avance, lui, à chaque frame). */
 const IMAGES_PAR_SECONDE = 30;
+/** Abandons montés en scène au plus toutes les… (ms) : au-delà, ils sont absorbés (la file ne se vide pas d'un coup). */
+const ECART_ABANDONS = 500;
 
 export interface TailleScene {
   /** Zone d'affichage (pt). */
@@ -19,7 +21,7 @@ export interface TailleScene {
  * tant que l'écran du guichet est affiché. `dessiner` reçoit chaque image.
  */
 export function useMoteurScene(dessiner: (t: Toile) => void, onImpact?: () => void) {
-  const { enAttente, mods, tete, verdict } = useGameState();
+  const { enAttente, mods, tete, verdict, abandonsFile } = useGameState();
   const impactRef = useRef(onImpact);
   impactRef.current = onImpact;
   const dessinerRef = useRef(dessiner);
@@ -39,8 +41,23 @@ export function useMoteurScene(dessiner: (t: Toile) => void, onImpact?: () => vo
   useEffect(() => {
     if (!verdict || verdict.id === dernierVerdict.current) return;
     dernierVerdict.current = verdict.id;
-    moteur.tamponner(verdict.rejete);
+    moteur.tamponner(verdict.rejete, verdict.abandon);
   }, [moteur, verdict]);
+
+  // Abandons hors du guichet (collègues) : un usager de la file part pour de bon, au plus deux par seconde.
+  const abandonsVus = useRef(abandonsFile);
+  const dernierAbandon = useRef(0);
+  useEffect(() => {
+    if (abandonsFile <= abandonsVus.current) {
+      abandonsVus.current = abandonsFile;
+      return;
+    }
+    abandonsVus.current = abandonsFile;
+    const maintenant = performance.now();
+    if (maintenant - dernierAbandon.current < ECART_ABANDONS) return;
+    dernierAbandon.current = maintenant;
+    moteur.abandon();
+  }, [moteur, abandonsFile]);
 
   useFocusEffect(
     useCallback(() => {

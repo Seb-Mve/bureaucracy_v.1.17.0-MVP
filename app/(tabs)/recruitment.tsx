@@ -4,7 +4,7 @@ import { FileStack, UserRound } from 'lucide-react-native';
 import { useGameState, type AgentAffiche } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import { BALANCE } from '@/constants/balance';
-import { formatEntier, formatEuros, formatNumberFrench, formatMontant } from '@/utils/formatters';
+import { formatDebit, formatEntier, formatEuros, formatMontant } from '@/utils/formatters';
 import Hud from '@/components/Hud';
 import Panneau from '@/components/charte/Panneau';
 
@@ -81,7 +81,7 @@ const CarteAgent = memo(function CarteAgent({
         />
         <BoutonAchat
           libelle="Max"
-          detail={max > 0 ? `×${formatEntier(max)}\n${formatMontant(agent.coutMax)}` : '×0'}
+          detail={max > 0 ? `×${formatEntier(max)}\n${formatMontant(agent.coutMax)}` : `×0\n${formatMontant(agent.cout)}`}
           actif={max > 0}
           onPress={() => onAcheter(agent.id, max)}
           accessibilityLabel={`Recruter : ${agent.nom}, autant que le budget le permet (${max}), ${formatEuros(agent.coutMax)} euros`}
@@ -144,7 +144,7 @@ export default function ServiceScreen() {
             />
             <BoutonAchat
               libelle="Max"
-              detail={maxRamettes > 0 ? `×${formatEntier(maxRamettes)}\n${formatMontant(maxRamettes * prixRamette)}` : '×0'}
+              detail={maxRamettes > 0 ? `×${formatEntier(maxRamettes)}\n${formatMontant(maxRamettes * prixRamette)}` : `×0\n${formatMontant(prixRamette)}`}
               actif={maxRamettes > 0}
               onPress={() => acheterRamettes(maxRamettes)}
               accessibilityLabel={`Acheter ${maxRamettes} ramettes (ce que permet le budget), ${formatEuros(maxRamettes * prixRamette)} euros`}
@@ -154,7 +154,7 @@ export default function ServiceScreen() {
         </Panneau>
 
         <Text style={styles.titre}>
-          Collègues <Text style={styles.sousTitre}>· {formatNumberFrench(vitesse)} dossiers/s au total</Text>
+          Collègues <Text style={styles.sousTitre}>· {formatDebit(vitesse)} dossiers/s au total</Text>
         </Text>
         {demandeLimitante && (
           <Text style={styles.alerte}>

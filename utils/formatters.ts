@@ -1,45 +1,3 @@
-/**
- * Format a number according to French conventions
- * - Uses comma (,) as decimal separator
- * - Uses space as thousands separator
- * - Uses lowercase abbreviations: k (thousands), M (millions)
- * 
- * Examples:
- * - 1234 → "1 234"
- * - 1500 → "1,5 k"
- * - 2500000 → "2,5 M"
- */
-export function formatNumberFrench(value: number): string {
-  if (value >= 1000000) {
-    const millions = value / 1000000;
-    // Format with French decimal separator
-    const formatted = millions.toFixed(2).replace('.', ',');
-    // Remove trailing zeros after comma
-    return formatted.replace(/,?0+$/, '') + ' M';
-  } else if (value >= 1000) {
-    const thousands = value / 1000;
-    // Format with French decimal separator
-    const formatted = thousands.toFixed(2).replace('.', ',');
-    // Remove trailing zeros after comma
-    return formatted.replace(/,?0+$/, '') + ' k';
-  } else if (value >= 100) {
-    // Format with French thousands separator
-    return Math.floor(value).toLocaleString('fr-FR');
-  } else if (value >= 10) {
-    return value.toFixed(1).replace('.', ',');
-  } else {
-    return value.toFixed(2).replace('.', ',');
-  }
-}
-
-/**
- * Format large numbers with French thousands separator (space)
- * Example: 123456 → "123 456"
- */
-export function formatLargeNumber(value: number): string {
-  return Math.floor(value).toLocaleString('fr-FR');
-}
-
 /** Au-delà de ce seuil, les quantités et les montants passent en écriture compacte (« 124 k »). */
 const SEUIL_COMPACT = 100000;
 
@@ -82,6 +40,11 @@ export function formatEuros(value: number): string {
   if (value < 10) return (Math.floor(Math.max(0, value) * 100) / 100).toFixed(2).replace('.', ',');
   if (value < SEUIL_COMPACT) return Math.floor(value).toLocaleString('fr-FR');
   return formatCompact(value);
+}
+
+/** Débit (dossiers par seconde) : même écriture que les montants (« 0,30 », « 115 », « 12,4 k »). */
+export function formatDebit(value: number): string {
+  return formatEuros(value);
 }
 
 /** Montant complet, symbole compris, avec une espace insécable (« 1 240 € », « 0,20 € »). */

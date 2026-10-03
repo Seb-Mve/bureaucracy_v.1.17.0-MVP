@@ -6,6 +6,7 @@ import type { GameState, Lettre, LettreId, NoteId } from '../types/game';
 import { BALANCE, GRADES } from '../constants/balance';
 import { conformite, dossiersEnAttente, getModifiers, noteEffective, rangGrade } from './engine';
 import { NOTES_PAR_ID } from './notes';
+import { formatEntier, formatMontant, formatPourcent } from '../utils/formatters';
 
 interface LettreDef {
   id: LettreId;
@@ -89,7 +90,7 @@ const LETTRES: LettreDef[] = [
     id: 'audit',
     objet: 'Résultat de l’audit',
     corps: (s) =>
-      `Le S.I.C. porte à votre connaissance votre niveau de conformité : ${Math.floor(conformite(s))} %.\n\nIl l’a toujours connu.`,
+      `Le S.I.C. porte à votre connaissance votre niveau de conformité : ${formatPourcent(conformite(s))} %.\n\nIl l’a toujours connu.`,
     declencheur: (s, t) => noteEffective(s, 'audit', t),
   },
   {
@@ -143,7 +144,6 @@ export function lettreAbsence(
   traites: number,
   budget: number,
   maintenant: number,
-  format: (n: number) => string,
 ): Lettre {
   const duree =
     secondes >= 3600
@@ -152,7 +152,7 @@ export function lettreAbsence(
   return {
     id: `absence-${maintenant}`,
     objet: 'Pendant votre absence',
-    corps: `Pendant votre absence (${duree}), le guichet 3 a traité ${format(traites)} dossiers et perçu ${format(budget)} € de dotation.\n\nAucun dossier n’a été rejeté : la rigueur ne se délègue pas.\n\nVotre présence n’a pas été jugée nécessaire.`,
+    corps: `Pendant votre absence (${duree}), le guichet 3 a traité ${formatEntier(traites)} dossiers et perçu ${formatMontant(budget)} de dotation.\n\nAucun dossier n’a été rejeté : la rigueur ne se délègue pas.\n\nVotre présence n’a pas été jugée nécessaire.`,
     recue: maintenant,
     lue: false,
   };
