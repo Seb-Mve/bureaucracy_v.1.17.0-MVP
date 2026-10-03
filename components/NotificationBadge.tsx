@@ -2,9 +2,9 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 
-/** Pastille de nouveauté (onglets, enveloppe du courrier). */
-export default function NotificationBadge({ count }: { count: number }) {
-  if (count <= 0) return null;
+/** Pastille de nouveauté (onglets, enveloppe du courrier). `alerte` affiche « ! » (rupture de formulaires). */
+export default function NotificationBadge({ count, alerte = false }: { count: number; alerte?: boolean }) {
+  if (count <= 0 && !alerte) return null;
   return (
     // Décoratif : le nombre est déjà dans le nom accessible de l'onglet ou du bouton qui porte la pastille.
     <View
@@ -13,7 +13,7 @@ export default function NotificationBadge({ count }: { count: number }) {
       importantForAccessibility="no-hide-descendants"
       aria-hidden
     >
-      <Text style={styles.texte}>{count > 9 ? '9+' : count}</Text>
+      <Text style={styles.texte}>{alerte ? '!' : count > 9 ? '9+' : count}</Text>
     </View>
   );
 }

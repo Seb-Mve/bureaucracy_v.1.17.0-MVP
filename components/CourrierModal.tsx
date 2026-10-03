@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
-import { useFenetreBloquante, useGameState } from '@/context/GameStateContext';
+import { useFermetureEchap, useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 
@@ -20,7 +20,7 @@ function date(ms: number): string {
 /** Le courrier du S.I.C. : lettres reçues, plus récentes en haut. */
 export default function CourrierModal({ visible, onFermer }: CourrierModalProps) {
   const { etat, marquerLettresLues } = useGameState();
-  useFenetreBloquante('courrier', visible, onFermer);
+  useFermetureEchap(visible, onFermer);
 
   useEffect(() => {
     if (!visible) return;

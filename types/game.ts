@@ -102,8 +102,8 @@ export interface GameState {
   finActeVue: boolean;
   /** La fiche de poste (explication du principe) a été lue. */
   fichePosteVue: boolean;
-  /** Circulaires déjà affichées (une seule fois par mécanique). */
-  circulairesVues: string[];
+  /** Tampons à partir desquels la note n° 1 apparaît, tiré au sort en début de partie (20 à 30). */
+  seuilRenfort: number;
   stats: GameStats;
   /** Dernier horodatage de simulation (ms), pour le hors-ligne. */
   derniereMaj: number;
@@ -137,6 +137,4 @@ export interface GameEvents {
   budget: number;
   rupture: boolean;
   fileVide: boolean;
-  /** Relance des notes en instruction : délai raccourci, plancher atteint, ou aucune note en instruction. */
-  relance: 'transmise' | 'classee' | null;
 }

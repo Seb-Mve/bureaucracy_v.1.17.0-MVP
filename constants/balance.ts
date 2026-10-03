@@ -25,6 +25,8 @@ export const BALANCE = {
   dotation: 1,
   budgetInitial: 0,
   formulairesInitiaux: 60,
+  /** La note n° 1 apparaît à un nombre de tampons tiré au sort par partie, dans cet intervalle (inclus). */
+  seuilRenfort: [20, 30] as const,
   /** Une ramette = N formulaires. */
   ramette: 100,
   prixRamette: 8,
@@ -40,10 +42,6 @@ export const BALANCE = {
   paliersAnciennete: [10, 25, 50],
   /** Dotation supplémentaire par grade atteint (+10 % par grade). */
   bonusGrade: 0.1,
-  /** Délai d'instruction retiré par tap (s), quelle que soit la puissance du tap. */
-  relanceParTap: 1,
-  /** Part maximale du délai d'instruction qu'on peut effacer par des relances. */
-  relanceMax: 0.5,
 } as const;
 
 export interface GradeDef {

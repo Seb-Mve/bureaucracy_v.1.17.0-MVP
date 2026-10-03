@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
-import { formatEntier, formatPourcent } from '@/utils/formatters';
+import { formatEntier } from '@/utils/formatters';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 import ReglementInterieur from '@/components/ReglementInterieur';
 import ReglagesConfort from '@/components/ReglagesConfort';
 import Confirmation from '@/components/charte/Confirmation';
-import Hud from '@/components/Hud';
 
 function dureeJeu(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -18,7 +17,7 @@ function dureeJeu(sec: number): string {
 
 /** Options : dossier administratif, règlement intérieur, confort, démission, remise à zéro. */
 export default function OptionsScreen() {
-  const { etat, grade, deposerDemission, nouvellePartie, marquerFichePoste, mods, conformite } = useGameState();
+  const { etat, grade, deposerDemission, nouvellePartie, marquerFichePoste } = useGameState();
   const [demande, setDemande] = useState<'demission' | 'effacer' | null>(null);
   const deposee = etat.demission.deposeeLe !== null;
   const agent = etat.cerfa.prenom || 'Agent sans prénom';
@@ -32,17 +31,11 @@ export default function OptionsScreen() {
     ['Tampons apposés', formatEntier(etat.tampons)],
     ['Dossiers rejetés', formatEntier(Math.floor(etat.stats.rejetes))],
     ['Usagers perdus (abandons)', formatEntier(Math.floor(etat.abandons))],
-    // Même grandeur que le tableau des ressources : la Conformité, inconnue avant l'audit.
-    [
-      'Avancement de l’acte',
-      mods.conformiteVisible ? `Conformité ${formatPourcent(conformite)} % (à 100 %, la note n° 22 clôt l’acte)` : 'Non encore audité',
-    ],
     ['Temps de service', dureeJeu(etat.stats.tempsDeJeu)],
   ];
 
   return (
     <View style={styles.ecran}>
-      <Hud />
       <ScrollView style={styles.defilement} contentContainerStyle={styles.contenu}>
         <Text style={styles.titre}>Dossier administratif</Text>
         <Panneau contenuStyle={styles.fiche} rayon={Charte.rayon}>

@@ -1,9 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
-import { ordreDuJour } from '../../data/ordreDuJour';
-import { circulaireAAfficher } from '../../data/circulaires';
 import { normaliserSauvegarde } from '../../data/save';
+import { nouvellesLettres } from '../../data/courrier';
 import type { GameState, NoteId } from '../../types/game';
 
 const base = (): GameState => E.signerCerfa(E.etatInitial(0), 'Test', 0);
@@ -12,85 +11,29 @@ const avecNotes = (s: GameState, ids: NoteId[]): GameState => {
   for (const id of ids) notes[id] = { achetee: 0, effective: 0 };
   return { ...s, notes };
 };
-const consigne = (s: GameState) => ordreDuJour(s, E.getModifiers(s, 0));
-const agents = (stagiaire: number) => ({ stagiaire, accueil: 0, instructeur: 0, titulaire: 0 });
 
-test('ordre du jour : déroulé complet', () => {
-  let s = base();
-  assert.equal(consigne(s)?.id, 'tamponner');
-  assert.deepEqual(consigne({ ...s, tampons: 3.6 })?.progression, { valeur: 3, cible: 8 });
-
-  s = { ...s, tampons: 8 };
-  assert.equal(consigne(s)?.id, 'note');
-
-  s = avecNotes(s, ['renfort']);
-  assert.equal(consigne(s)?.id, 'recruter');
-  assert.equal(consigne(s)?.onglet, 'recruitment');
-
-  s = { ...s, agents: agents(1) };
-  assert.equal(consigne(s)?.id, 'formulaires');
-
-  s = { ...s, stats: { ...s.stats, formulairesAchetes: 100 } };
-  assert.equal(consigne(s)?.id, 'poursuivre');
-
-  s = { ...s, tampons: 250 };
-  assert.equal(consigne(s)?.id, 'note');
-
-  s = avecNotes(s, ['rejet']);
-  assert.equal(consigne(s)?.id, 'rejet');
-
-  s = { ...s, tauxRejet: 0.2 };
-  assert.equal(consigne(s)?.id, 'attendrePerimetre');
-
-  s = { ...s, tampons: 1_000_000 };
-  assert.equal(consigne(s)?.id, 'perimetre');
-
-  s = avecNotes(s, ['tilleuls']);
-  assert.equal(consigne(s)?.id, 'note', 'des notes visibles attendent');
-
-  // Toutes les notes visibles visées : le prochain palier de tampons sert de jalon.
-  const visibles = (['horaires', 'ramettes', 'dateur', 'prime'] as NoteId[]);
-  const s2 = avecNotes({ ...s, tampons: 1600 }, visibles);
-  const c = consigne(s2);
-  assert.equal(c?.id, 'prochaineNote', JSON.stringify(c));
-  assert.equal(c?.progression?.cible, 2000);
+test('sauvegarde ancienne : le champ des circulaires supprimées est retiré', () => {
+  const ancienne = { ...base(), circulairesVues: ['collegues'] } as GameState;
+  assert.equal('circulairesVues' in normaliserSauvegarde(ancienne), false);
 });
 
-test('ordre du jour : les formulaires passent devant quand le stock est bas', () => {
-  const s = { ...avecNotes({ ...base(), tampons: 8 }, ['renfort']), formulaires: 10 };
-  assert.equal(consigne(s)?.id, 'formulaires');
-});
-
-test('circulaires : une à la fois, puis plus jamais', () => {
-  let s = avecNotes(base(), ['renfort']);
-  const c = circulaireAAfficher(s, E.getModifiers(s, 0));
-  assert.equal(c?.id, 'collegues');
-  s = { ...s, circulairesVues: ['collegues'] };
-  assert.equal(circulaireAAfficher(s, E.getModifiers(s, 0)), null);
-});
-
-test('circulaires en attente : la plus récente passe devant', () => {
-  const s = avecNotes(base(), ['renfort', 'rejet']);
-  assert.equal(circulaireAAfficher(s, E.getModifiers(s, 0))?.id, 'rejet');
-  const s2 = { ...s, circulairesVues: ['rejet'] };
-  assert.equal(circulaireAAfficher(s2, E.getModifiers(s2, 0))?.id, 'collegues');
-});
-
-test('ordre du jour : à 100 % de Conformité, viser la note n° 22 passe avant tout', () => {
+test('lettre « Excédent de productivité » : file vide une fois la Conformité révélée', () => {
   const s = avecNotes(base(), ['renfort', 'rejet', 'piece', 'audit']);
-  const fin = { ...s, formulaires: 0, conformitePoints: 1e12 };
-  const c = consigne(fin);
-  assert.equal(c?.id, 'fin', JSON.stringify(c));
+  const vide = { ...s, file: [0, 0, 0, 0] as GameState['file'], retours: [0, 0, 0, 0] as GameState['file'] };
+  assert.ok(nouvellesLettres(vide, 0).some((l) => l.id === 'penurie'));
+  assert.ok(!nouvellesLettres({ ...vide, file: [0, 0, 0, 5] as GameState['file'] }, 0).some((l) => l.id === 'penurie'));
 });
 
-test('sauvegarde ancienne : les circulaires déjà débloquées sont marquées vues', () => {
-  const s = avecNotes(base(), ['renfort', 'rejet']);
-  const { circulairesVues: _, ...ancienne } = s;
-  const n = normaliserSauvegarde(ancienne as GameState, 0);
-  assert.deepEqual(n.circulairesVues, ['collegues', 'rejet']);
+test('note n° 1 : seuil tiré au sort entre 20 et 30 tampons, fixe pour la partie', () => {
+  assert.equal(E.tirerSeuilRenfort(() => 0), 20);
+  assert.equal(E.tirerSeuilRenfort(() => 0.999), 30);
+  const s = E.etatInitial(0, () => 0.5);
+  assert.equal(s.seuilRenfort, 25);
+  assert.ok(!E.notesVisibles({ ...s, tampons: 24 }).includes('renfort'));
+  assert.ok(E.notesVisibles({ ...s, tampons: 25 }).includes('renfort'));
 });
 
-test('sauvegarde récente : circulairesVues conservé', () => {
-  const s = { ...avecNotes(base(), ['renfort']), circulairesVues: [] };
-  assert.deepEqual(normaliserSauvegarde(s, 0).circulairesVues, []);
+test('sauvegarde sans seuil de la note n° 1 : ancien seuil de 8 tampons', () => {
+  const { seuilRenfort: _, ...ancienne } = base();
+  assert.equal(normaliserSauvegarde(ancienne as GameState).seuilRenfort, 8);
 });

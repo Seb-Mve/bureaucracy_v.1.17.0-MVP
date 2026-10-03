@@ -3,8 +3,6 @@
  * L'ancienne sauvegarde (clé 'bureaucracy_game_state', schéma v4) est ignorée.
  */
 import type { GameState } from '../types/game';
-import { getModifiers } from './engine';
-import { circulairesDejaDeclenchees } from './circulaires';
 
 export const CLE_SAUVEGARDE = 'bureaucracy_acte1_v1';
 
@@ -35,14 +33,10 @@ export function estSauvegardeValide(x: unknown): x is GameState {
 }
 
 /**
- * Complète une sauvegarde antérieure à la spec 008 : sans `circulairesVues`,
- * les circulaires des mécaniques déjà débloquées sont marquées comme lues.
+ * Met à niveau une sauvegarde plus ancienne : retire les champs qui n'existent plus (`circulairesVues`)
+ * et complète `seuilRenfort` (ancien seuil fixe de 8 tampons, pour ne pas cacher une note déjà vue).
  */
-export function normaliserSauvegarde(s: GameState, maintenant: number): GameState {
-  if (Array.isArray((s as Partial<GameState>).circulairesVues)) return s;
-  const provisoire: GameState = { ...s, circulairesVues: [] };
-  return {
-    ...provisoire,
-    circulairesVues: circulairesDejaDeclenchees(provisoire, getModifiers(provisoire, maintenant)),
-  };
+export function normaliserSauvegarde(s: GameState): GameState {
+  const { circulairesVues: _, ...reste } = s as GameState & { circulairesVues?: unknown };
+  return estNombre(reste.seuilRenfort) ? reste : { ...reste, seuilRenfort: 8 };
 }

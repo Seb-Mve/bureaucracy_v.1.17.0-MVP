@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
-import { useFenetreBloquante, useGameState } from '@/context/GameStateContext';
+import { useFermetureEchap, useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import { formatEntier } from '@/utils/formatters';
 import Panneau from '@/components/charte/Panneau';
@@ -10,7 +10,7 @@ import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 export default function FinActeModal() {
   const { etat, marquerFinActeVue } = useGameState();
   const visible = etat.acteTermine && !etat.finActeVue;
-  useFenetreBloquante('fin-acte', visible, marquerFinActeVue);
+  useFermetureEchap(visible, marquerFinActeVue);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={marquerFinActeVue}>

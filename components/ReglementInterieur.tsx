@@ -19,19 +19,19 @@ const pct = (x: number) => `${Math.round(x * 100)} %`;
  * Règlement intérieur : l'aide du jeu, rédigée comme un document de service.
  * Un article n'apparaît qu'une fois la mécanique débloquée (rien n'est dévoilé à l'avance).
  */
-export default function ReglementInterieur({ ouvertParDefaut = false }: { ouvertParDefaut?: boolean }) {
+export default function ReglementInterieur() {
   const { mods, notes, prixRamette } = useGameState();
-  const [ouvert, setOuvert] = useState(ouvertParDefaut);
+  const [ouvert, setOuvert] = useState(false);
 
   const articles: Article[] = [
     {
       titre: 'Le tampon',
-      texte: `Chaque coup de tampon traite le dossier posé sur votre bureau. Maintenez le bouton pour tamponner en continu. Le nombre de tampons apposés fixe votre grade : chaque grade ajoute ${pct(BALANCE.bonusGrade)} de dotation.`,
+      texte: `Chaque coup de tampon traite le dossier posé sur votre bureau. Le nombre de tampons apposés fixe votre grade : chaque grade ajoute ${pct(BALANCE.bonusGrade)} de dotation.`,
     },
     {
       titre: 'Budget et formulaires',
       texte: `Chaque dossier traité rapporte une dotation et consomme des formulaires. Sans formulaires, plus rien ne se traite.${
-        mods.recrutementVisible ? ` Les ramettes s’achètent dans Recrutement (${formatMontant(prixRamette)} l’une).` : ''
+        mods.recrutementVisible ? ` Les ramettes s’achètent dans l’onglet Service (${formatMontant(prixRamette)} l’une).` : ''
       }`,
     },
     {
@@ -39,34 +39,33 @@ export default function ReglementInterieur({ ouvertParDefaut = false }: { ouvert
       texte: 'Les usagers du périmètre déposent leurs dossiers au guichet et attendent leur tour.',
     },
   ];
-  articles.push({
-    titre: 'Fin de l’acte',
-    texte: mods.conformiteVisible
-      ? 'Quand la Conformité du guichet atteint 100 %, la note de service n° 22 (Demande de réaffectation) devient disponible : la viser clôt l’acte.'
-      : 'L’acte s’achève quand la hiérarchie juge votre guichet conforme. Les notes de service vous en rapprochent.',
-  });
   if (mods.recrutementVisible) {
     articles.push({
       titre: 'Collègues et ancienneté',
-      texte: `Les collègues tamponnent à votre place, sans interruption. Le prix monte à chaque embauche. La vitesse d’un poste double à ${BALANCE.paliersAnciennete.join(', ')} recrues (ancienneté). Un achat s’annule dans les secondes qui suivent.`,
+      texte: `Les collègues tamponnent à votre place, sans interruption. Le prix monte à chaque embauche. La vitesse d’un poste double à ${BALANCE.paliersAnciennete.join(', ')} recrues (ancienneté).`,
     });
   }
   if (notes.length > 0) {
     articles.push({
-      titre: 'Notes de service et relances',
-      texte: `Une note visée part en instruction. Pendant ce délai, chaque coup de tampon relance le service : −${BALANCE.relanceParTap} s, dans la limite de ${pct(BALANCE.relanceMax)} du délai réglementaire.`,
+      titre: 'Notes de service',
+      texte: 'Une note approuvée part en instruction. Elle prend effet au terme du délai réglementaire.',
     });
   }
   if (mods.rejetVisible) {
     articles.push({
       titre: 'Taux de rejet',
-      texte: `Un dossier rejeté rapporte une prime et son usager revient plus tard. Rejeté ${PATIENCE_MAX} fois, l’usager abandonne et quitte le périmètre : la demande baisse. Sous le curseur, la prime et les usagers perdus par minute ; le total est dans le dossier administratif.`,
+      texte: `Un dossier rejeté rapporte une prime et son usager revient plus tard. Rejeté ${PATIENCE_MAX} fois, l’usager abandonne et quitte le périmètre : la demande baisse. Le total des usagers perdus est dans le dossier administratif.`,
     });
   }
   if (mods.conformiteVisible) {
+    // Rien n'annonce la fin avant l'audit : le jeu se découvre.
+    articles.push({
+      titre: 'Réaffectation',
+      texte: 'Quand la Conformité du guichet atteint 100 %, la note de service n° 22 (Demande de réaffectation) devient disponible.',
+    });
     articles.push({
       titre: 'Conformité',
-      texte: 'Elle monte avec la rigueur du guichet : dossiers rejetés, pièces exigées en plus. À 100 %, la note n° 22 clôt l’acte.',
+      texte: 'Elle monte avec la rigueur du guichet : dossiers rejetés, pièces exigées en plus. À 100 %, la note n° 22 devient disponible.',
     });
   }
 
@@ -91,7 +90,6 @@ export default function ReglementInterieur({ ouvertParDefaut = false }: { ouvert
             <Text style={styles.texte}>{a.texte}</Text>
           </View>
         ))}
-      {ouvert && <Text style={styles.astuce}>Astuce : touchez un compteur (budget, formulaires…) pour sa définition.</Text>}
     </Panneau>
   );
 }
@@ -131,13 +129,5 @@ const styles = StyleSheet.create({
     fontSize: Typo.corps,
     lineHeight: Interligne.corps,
     color: Colors.anthracite,
-  },
-  astuce: {
-    fontFamily: Fonts.texte,
-    fontSize: Typo.petit,
-    color: Colors.crayon,
-    borderTopWidth: Charte.traitFin,
-    borderTopColor: Colors.carton,
-    paddingTop: Espace.s,
   },
 });

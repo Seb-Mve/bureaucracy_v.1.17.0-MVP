@@ -2,11 +2,10 @@ import React, { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FileStack, UserRound } from 'lucide-react-native';
 import { useGameState, type AgentAffiche } from '@/context/GameStateContext';
-import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
+import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import { BALANCE } from '@/constants/balance';
 import { formatEntier, formatEuros, formatNumberFrench, formatMontant } from '@/utils/formatters';
 import Hud from '@/components/Hud';
-import BandeauAnnulation from '@/components/BandeauAnnulation';
 import Panneau from '@/components/charte/Panneau';
 
 interface BoutonAchatProps {
@@ -44,11 +43,9 @@ const BoutonAchat = memo(function BoutonAchat({ libelle, actif, onPress, accessi
 
 const CarteAgent = memo(function CarteAgent({
   agent,
-  budget,
   onAcheter,
 }: {
   agent: AgentAffiche;
-  budget: number;
   onAcheter: (id: AgentAffiche['id'], nb: number) => void;
 }) {
   const max = agent.maxAchetables;
@@ -63,12 +60,6 @@ const CarteAgent = memo(function CarteAgent({
             {agent.nom} <Text style={styles.possedes}>×{agent.possedes}</Text>
           </Text>
           <Text style={styles.description}>{agent.description}</Text>
-          <Text style={styles.detail}>+{formatNumberFrench(agent.gain)} dossier/s au prochain recrutement</Text>
-          <Text style={styles.anciennete}>
-            {agent.prochainPalier === null
-              ? `Ancienneté maximale : vitesse ×${agent.multiplicateur}`
-              : `Ancienneté : vitesse ×${agent.multiplicateur * 2} dès ${agent.prochainPalier} recrues (×${agent.multiplicateur} aujourd’hui)`}
-          </Text>
         </View>
       </View>
       <View style={styles.achatsAgent}>
@@ -97,17 +88,16 @@ const CarteAgent = memo(function CarteAgent({
           large
         />
       </View>
-      {/* Ligne toujours présente (même hauteur dans les deux cas) : la carte ne grandit pas sous le doigt. */}
-      <Text style={[styles.manque, agent.achetable && styles.suffisant]} numberOfLines={1}>
-        {agent.achetable ? 'Budget suffisant.' : `Il manque ${formatMontant(Math.ceil(agent.cout - budget))}.`}
-      </Text>
     </Panneau>
   );
 });
 
-/** Recrutement des collègues et achat de formulaires. */
-export default function RecrutementScreen() {
-  const { agents, acheterAgent, acheterRamettes, prixRamette, maxRamettes, etat, vitesse, demandeLimitante } = useGameState();
+/** Onglet Service : fournitures (ramettes) et recrutement des collègues. */
+export default function ServiceScreen() {
+  const { agents, acheterAgent, acheterRamettes, prixRamette, maxRamettes, etat, mods, vitesse, demandeLimitante, demanderRequisition } =
+    useGameState();
+  // Rupture sans de quoi payer une ramette : le ×1 devient une réquisition gratuite (le guichet n'est jamais bloqué).
+  const requisition = etat.formulaires < mods.pieces && etat.budget < prixRamette;
 
   return (
     <View style={styles.ecran}>
@@ -125,14 +115,25 @@ export default function RecrutementScreen() {
             </View>
           </View>
           <View style={styles.achatsAgent}>
-            <BoutonAchat
-              libelle="×1"
-              detail={`${formatMontant(prixRamette)}`}
-              actif={etat.budget >= prixRamette}
-              onPress={() => acheterRamettes(1)}
-              accessibilityLabel={`Acheter une ramette, ${formatEuros(prixRamette)} euros`}
-              large
-            />
+            {requisition ? (
+              <BoutonAchat
+                libelle="Réquisition"
+                detail="Gratuit"
+                actif
+                onPress={demanderRequisition}
+                accessibilityLabel="Demander une ramette de réquisition, gratuite"
+                large
+              />
+            ) : (
+              <BoutonAchat
+                libelle="×1"
+                detail={`${formatMontant(prixRamette)}`}
+                actif={etat.budget >= prixRamette}
+                onPress={() => acheterRamettes(1)}
+                accessibilityLabel={`Acheter une ramette, ${formatEuros(prixRamette)} euros`}
+                large
+              />
+            )}
             <BoutonAchat
               libelle="×10"
               detail={`${formatMontant(prixRamette * 10)}`}
@@ -146,13 +147,10 @@ export default function RecrutementScreen() {
               detail={maxRamettes > 0 ? `×${formatEntier(maxRamettes)}\n${formatMontant(maxRamettes * prixRamette)}` : '×0'}
               actif={maxRamettes > 0}
               onPress={() => acheterRamettes(maxRamettes)}
-              accessibilityLabel={`Acheter ${maxRamettes} ramettes (ce que permet le budget, au plus 10 minutes de stock), ${formatEuros(maxRamettes * prixRamette)} euros`}
+              accessibilityLabel={`Acheter ${maxRamettes} ramettes (ce que permet le budget), ${formatEuros(maxRamettes * prixRamette)} euros`}
               large
             />
           </View>
-          <Text style={[styles.manque, maxRamettes >= 1 && styles.suffisant]} numberOfLines={1}>
-            {maxRamettes >= 1 ? 'Budget suffisant.' : `Il manque ${formatMontant(Math.ceil(prixRamette - etat.budget))}.`}
-          </Text>
         </Panneau>
 
         <Text style={styles.titre}>
@@ -165,11 +163,9 @@ export default function RecrutementScreen() {
           </Text>
         )}
         {agents.map((a) => (
-          <CarteAgent key={a.id} agent={a} budget={etat.budget} onAcheter={acheterAgent} />
+          <CarteAgent key={a.id} agent={a} onAcheter={acheterAgent} />
         ))}
       </ScrollView>
-      {/* Sous la liste, au-dessus des onglets : son apparition raccourcit la liste par le bas, rien ne saute sous le doigt. */}
-      <BandeauAnnulation style={styles.annulation} />
     </View>
   );
 }
@@ -194,10 +190,6 @@ const styles = StyleSheet.create({
     fontSize: Typo.petit,
     color: Colors.crayon,
   },
-  annulation: {
-    marginHorizontal: Espace.m,
-    marginTop: Espace.s,
-  },
   carteAgent: {
     padding: Espace.m,
     gap: Espace.m,
@@ -210,16 +202,6 @@ const styles = StyleSheet.create({
   achatsAgent: {
     flexDirection: 'row',
     gap: Espace.s,
-  },
-  suffisant: {
-    color: Colors.crayon,
-  },
-  manque: {
-    fontFamily: Fonts.texteGras,
-    fontSize: Typo.petit,
-    lineHeight: Interligne.petit,
-    color: Colors.encreTexte,
-    textAlign: 'right',
   },
   achatLarge: {
     flex: 1,
@@ -256,16 +238,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.texte,
     fontSize: Typo.petit,
     color: Colors.crayon,
-  },
-  detail: {
-    fontFamily: Fonts.chiffresRegular,
-    fontSize: Typo.petit,
-    color: Colors.anthracite,
-  },
-  anciennete: {
-    fontFamily: Fonts.texteGras,
-    fontSize: Typo.petit,
-    color: Colors.encreTexte,
   },
   alerte: {
     fontFamily: Fonts.texteGras,

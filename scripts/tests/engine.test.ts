@@ -149,40 +149,6 @@ test('hors-ligne : la simulation s’arrête au plafond, même après une longue
   assert.equal(r.s.derniereMaj, 2 * 60 * 60 * 1000, 'le temps au-delà du plafond est perdu, pas reporté');
 });
 
-test('annuler un achat rembourse et retire ce qui a été acheté', () => {
-  const avant = { ...avecNotes(base(), ['renfort']), budget: 1000 };
-  const apres = E.acheterRamettes(E.acheterAgent(avant, 'stagiaire', 0), 2, 0);
-  const achat = E.differenceAchat(avant, apres);
-  assert.ok(achat);
-  assert.equal(achat.agent?.nb, 1);
-  assert.equal(achat.formulaires, 2 * BALANCE.ramette);
-  const annule = E.annulerAchat(apres, achat);
-  assert.ok(annule);
-  assert.equal(annule.budget, avant.budget);
-  assert.equal(annule.formulaires, avant.formulaires);
-  assert.equal(annule.agents.stagiaire, avant.agents.stagiaire);
-  // Formulaires déjà en partie consommés : remboursement au prorata de ce qui reste.
-  const seulRamette = E.differenceAchat(avant, E.acheterRamettes(avant, 1, 0));
-  assert.ok(seulRamette);
-  const entame = E.annulerAchat({ ...avant, formulaires: BALANCE.ramette / 2 }, seulRamette);
-  assert.ok(entame);
-  assert.equal(entame.formulaires, 0);
-  assert.ok(Math.abs(entame.budget - (avant.budget + seulRamette.budget / 2)) < 1e-9);
-  // Une note visée se reprend aussi : elle repasse « à viser » et son coût est rendu.
-  const riche = { ...avecNotes(base(), ['renfort']), budget: 100000, tampons: 1e6 };
-  const id = E.notesVisibles(riche).find((n) => !riche.notes[n] && n !== 'reaffectation');
-  assert.ok(id);
-  const vise = E.acheterNote(riche, id, 0);
-  const achatNote = E.differenceAchat(riche, vise);
-  assert.equal(achatNote?.note, id);
-  const repris = achatNote && E.annulerAchat(vise, achatNote);
-  assert.ok(repris);
-  assert.equal(repris.notes[id], undefined);
-  assert.equal(repris.budget, riche.budget);
-  // Tout consommé : plus rien à rendre.
-  assert.equal(E.annulerAchat({ ...apres, formulaires: 0 }, seulRamette), null);
-});
-
 test('réquisition d’urgence : seulement en rupture et sans budget pour une ramette', () => {
   const coince = { ...avecNotes(base(), ['renfort']), formulaires: 0, budget: 3 };
   assert.equal(E.requisitionUrgence(coince, 0).formulaires, BALANCE.ramette);
@@ -203,34 +169,9 @@ test('grades : rang selon les tampons, +10 % de dotation par grade', () => {
   assert.ok(Math.abs(m2.dotationMult / m0.dotationMult - 1.2) < 1e-9);
 });
 
-test('relance : −1 s par tap, quelle que soit la puissance du tap', () => {
-  // Dateur et double encrage effectifs (5 dossiers par tap), note n° 7 (90 s) en instruction depuis t = 0.
-  let s = avecNotes(base(), ['renfort', 'rejet', 'horaires', 'ramettes', 'dateur', 'doubleEncrage']);
-  s = { ...s, notes: { ...s.notes, tilleuls: { achetee: 0, effective: 90_000 } } };
-  assert.equal(E.getModifiers(s, 0).tapPower, 5);
-  const r = E.tamponner(s, 1000);
-  assert.equal(r.ev.relance, 'transmise');
-  assert.equal(r.ev.traites, 5);
-  assert.equal(r.s.notes.tilleuls?.effective, 89_000);
-});
-
-test('relance : jamais plus de la moitié du délai, puis classée sans suite', () => {
-  let s = { ...base(), notes: { tilleuls: { achetee: 0, effective: 90_000 } } };
-  let derniere: string | null = null;
-  for (let i = 0; i < 100; i++) {
-    const r = E.tamponner(s, 1000);
-    s = r.s;
-    derniere = r.ev.relance;
-  }
-  assert.equal(s.notes.tilleuls?.effective, 45_000);
-  assert.equal(derniere, 'classee');
-});
-
-test('relance : rien à relancer sans note en instruction', () => {
+test('tamponner ne raccourcit pas le délai d’instruction d’une note', () => {
   const s = { ...base(), notes: { tilleuls: { achetee: 0, effective: 90_000 } } };
-  const r = E.tamponner(s, 95_000);
-  assert.equal(r.ev.relance, null);
-  assert.equal(r.s.notes.tilleuls?.effective, 90_000);
+  assert.equal(E.tamponner(s, 1000).s.notes.tilleuls?.effective, 90_000);
 });
 
 test('le prix du stagiaire monte moins vite que celui du titulaire', () => {

@@ -43,7 +43,7 @@ const Colors = {
   pastelBleu: '#A0C4FF',
   pastelJaune: '#FFEAA7',
   pastelVert: '#C7ECB5',
-  /** Papier des documents officiels (Cerfa, circulaires, lettres). */
+  /** Papier des documents officiels (Cerfa, lettres). */
   papierFiche: '#FFFEF9',
   /** Voile derrière une fenêtre (anthracite translucide). */
   voile: 'rgba(45,52,54,0.55)',

@@ -3,12 +3,11 @@ import { StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import Colors, { Charte } from '@/constants/Colors';
 import ScenePixel from '@/components/scene/ScenePixel';
-import PuceFlux from '@/components/guichet/PuceFlux';
 import { usePreferences } from '@/context/PreferencesContext';
 
 /**
  * La scène du guichet, entière : le moteur cadre lui-même le monde dans la zone (mur, fenêtre,
- * file et agent), sans zoom supplémentaire. Rien n'est posé dessus, sauf le débit.
+ * file et agent), sans zoom supplémentaire. Rien n'est posé dessus.
  */
 export default function SceneGuichet() {
   const secousse = useSharedValue(0);
@@ -24,7 +23,6 @@ export default function SceneGuichet() {
   return (
     <Animated.View style={[styles.cadre, style]}>
       <ScenePixel onImpact={surImpact} />
-      <PuceFlux />
     </Animated.View>
   );
 }

@@ -5,10 +5,9 @@ import { useGameState, type NoteAffichee } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import { formatMontant } from '@/utils/formatters';
 import Hud from '@/components/Hud';
-import BandeauAnnulation from '@/components/BandeauAnnulation';
 import Panneau from '@/components/charte/Panneau';
 
-/** Temps pendant lequel une note visée reste à sa place avant de changer de section (ms). */
+/** Temps pendant lequel une note approuvée reste à sa place avant de changer de section (ms). */
 const RETENUE_MS = 1200;
 
 function duree(sec: number): string {
@@ -19,12 +18,9 @@ function duree(sec: number): string {
 
 const CarteNote = memo(function CarteNote({
   note,
-  manque,
   onSigner,
 }: {
   note: NoteAffichee;
-  /** Budget manquant pour viser la note (0 si elle est à portée). */
-  manque: number;
   onSigner: () => void;
 }) {
   const signee = note.statut === 'instruction' || note.statut === 'effective';
@@ -41,7 +37,6 @@ const CarteNote = memo(function CarteNote({
     action = (
       <View style={[styles.etiquette, styles.etiquetteInstruction]}>
         <Text style={styles.etiquetteTexte}>En instruction · {duree(note.resteSec)}</Text>
-        <Text style={styles.relance}>Tamponnez au guichet pour relancer</Text>
       </View>
     );
   } else {
@@ -51,21 +46,13 @@ const CarteNote = memo(function CarteNote({
         onPress={onSigner}
         disabled={!actif}
         accessibilityRole="button"
-        accessibilityLabel={`Viser la note de service numéro ${note.numero}, ${cout}`}
+        accessibilityLabel={`Approuver la note de service numéro ${note.numero}, ${cout}`}
         accessibilityState={{ disabled: !actif }}
         style={({ pressed }) => [styles.viser, actif ? styles.viserActif : styles.viserInactif, pressed && styles.presse]}
       >
-        <Text style={[styles.viserTexte, !actif && styles.viserTexteInactif]}>Viser · {cout}</Text>
+        <Text style={[styles.viserTexte, !actif && styles.viserTexteInactif]}>Approuver · {cout}</Text>
       </Pressable>
     );
-    if (!actif && manque > 0) {
-      action = (
-        <View style={styles.colonneAction}>
-          {action}
-          <Text style={styles.manque}>Il manque {formatMontant(Math.ceil(manque))}</Text>
-        </View>
-      );
-    }
   }
 
   return (
@@ -91,8 +78,8 @@ const CarteNote = memo(function CarteNote({
 
 /** Notes de service : le fil de projets du jeu. */
 export default function NotesScreen() {
-  const { notes, acheterNote, marquerNotesVues, etat } = useGameState();
-  // Une note qui vient d'être visée reste à sa place un instant (au tampon « EN VIGUEUR ») avant de rejoindre
+  const { notes, acheterNote, marquerNotesVues } = useGameState();
+  // Une note qui vient d'être approuvée reste à sa place un instant (au tampon « EN VIGUEUR ») avant de rejoindre
   // sa section : la carte suivante ne glisse pas sous le doigt.
   const [retenue, setRetenue] = useState<string | null>(null);
   useEffect(() => {
@@ -127,34 +114,18 @@ export default function NotesScreen() {
           <Text style={styles.vide}>Aucune note de service. Continuez à tamponner : la hiérarchie vous observe.</Text>
         )}
         {aTraiter.map((n) => (
-          <CarteNote key={n.id} note={n} manque={Math.max(0, n.cout - etat.budget)} onSigner={() => viser(n.id)} />
+          <CarteNote key={n.id} note={n} onSigner={() => viser(n.id)} />
         ))}
         {enVigueur.length > 0 && <Text style={styles.section}>En vigueur</Text>}
         {enVigueur.map((n) => (
-          <CarteNote key={n.id} note={n} manque={0} onSigner={() => undefined} />
+          <CarteNote key={n.id} note={n} onSigner={() => undefined} />
         ))}
       </ScrollView>
-      {/* Sous la liste, au-dessus des onglets : son apparition raccourcit la liste par le bas, rien ne saute sous le doigt. */}
-      <BandeauAnnulation style={styles.annulation} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  annulation: {
-    marginHorizontal: Espace.m,
-    marginTop: Espace.s,
-  },
-  colonneAction: {
-    alignItems: 'flex-end',
-    gap: Espace.xs,
-  },
-  manque: {
-    fontFamily: Fonts.texteGras,
-    fontSize: Typo.petit,
-    lineHeight: Interligne.petit,
-    color: Colors.encreTexte,
-  },
   ecran: {
     flex: 1,
     backgroundColor: Colors.creme,
@@ -276,11 +247,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.texteGras,
     fontSize: Typo.petit,
     color: Colors.anthracite,
-  },
-  relance: {
-    fontFamily: Fonts.texte,
-    fontSize: Typo.petit,
-    color: Colors.crayon,
   },
   texteEffectif: {
     fontFamily: Fonts.titreGras,

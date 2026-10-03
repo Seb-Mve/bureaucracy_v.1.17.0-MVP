@@ -4,7 +4,7 @@
  */
 import type { GameState, Lettre, LettreId, NoteId } from '../types/game';
 import { BALANCE, GRADES } from '../constants/balance';
-import { conformite, noteEffective, rangGrade } from './engine';
+import { conformite, dossiersEnAttente, getModifiers, noteEffective, rangGrade } from './engine';
 import { NOTES_PAR_ID } from './notes';
 
 interface LettreDef {
@@ -117,7 +117,8 @@ const LETTRES: LettreDef[] = [
     objet: 'Excédent de productivité',
     corps: () =>
       'Le S.I.C. constate que votre guichet manque d’usagers.\n\nUne étude est en cours pour déterminer si un dossier a réellement besoin d’un usager.\n\nLes premiers résultats sont encourageants.',
-    declencheur: (s) => s.circulairesVues.includes('penurie'),
+    // Fin d'acte : les collègues traitent plus vite que la population ne dépose, la file se vide.
+    declencheur: (s, t) => getModifiers(s, t).conformiteVisible && dossiersEnAttente(s) < 1,
   },
   ...LETTRES_AVANCEMENT,
   {

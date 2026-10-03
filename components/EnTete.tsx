@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleHelp, Mail } from 'lucide-react-native';
+import { Mail } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import NotificationBadge from '@/components/NotificationBadge';
@@ -11,9 +11,9 @@ import { formatEntier } from '@/utils/formatters';
 
 /**
  * En-tête commun à tous les onglets : le compteur « Tampons apposés »
- * (repère qui ne quitte jamais le haut de l'écran), l'aide et l'enveloppe du S.I.C.
+ * (repère qui ne quitte jamais le haut de l'écran) et l'enveloppe du S.I.C.
  */
-export default function EnTete({ onAide }: { onAide: () => void }) {
+export default function EnTete() {
   const { etat, lettresNonLues, verdict } = useGameState();
   const [courrier, setCourrier] = useState(false);
   const insets = useSafeAreaInsets();
@@ -23,7 +23,7 @@ export default function EnTete({ onAide }: { onAide: () => void }) {
 
   return (
     <View style={[styles.entete, { paddingTop: insets.top + (compact ? 2 : 6) }]}>
-      <View style={styles.compteur} accessible accessibilityRole="header" accessibilityLabel={`Tampons apposés : ${tampons}, acte I`}>
+      <View style={styles.compteur} accessible accessibilityRole="header" accessibilityLabel={`Tampons apposés : ${tampons}`}>
         {!compact && <Text style={styles.label}>TAMPONS APPOSÉS</Text>}
         <View style={styles.ligneCompteur}>
           <ValeurAnimee
@@ -33,21 +33,14 @@ export default function EnTete({ onAide }: { onAide: () => void }) {
             effet="saut"
             numberOfLines={1}
           />
-          {/* L'avancement (Conformité) est dans le tableau des ressources, juste dessous : pas de doublon ici.
-              Petit écran : le libellé passe à côté du chiffre, avec le même nom. */}
-          <Text style={styles.acte} numberOfLines={2}>
-            {compact ? 'tampons apposés' : 'Acte I'}
-          </Text>
+          {/* Petit écran : le libellé passe à côté du chiffre, avec le même nom. Rien ne dit que le jeu a des actes. */}
+          {compact && (
+            <Text style={styles.acte} numberOfLines={2}>
+              tampons apposés
+            </Text>
+          )}
         </View>
       </View>
-      <Pressable
-        onPress={onAide}
-        style={({ pressed }) => [styles.enveloppe, pressed && styles.presse]}
-        accessibilityRole="button"
-        accessibilityLabel="Aide : règlement intérieur"
-      >
-        <CircleHelp size={20} color={Colors.anthracite} />
-      </Pressable>
       <Pressable
         onPress={() => setCourrier(true)}
         style={({ pressed }) => [styles.enveloppe, pressed && styles.presse]}

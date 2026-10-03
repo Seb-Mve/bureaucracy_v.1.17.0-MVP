@@ -16,8 +16,14 @@ import { EXTENSIONS_PERIMETRE, NOTES, NOTES_PAR_ID } from './notes';
 
 const somme = (a: ParPatience): number => a[1] + a[2] + a[3];
 
+/** Seuil d'apparition de la note n° 1, tiré au sort dans `BALANCE.seuilRenfort` (bornes incluses). */
+export function tirerSeuilRenfort(alea: () => number = Math.random): number {
+  const [min, max] = BALANCE.seuilRenfort;
+  return min + Math.floor(alea() * (max - min + 1));
+}
+
 /** Nouvelle partie, Cerfa non signé. */
-export function etatInitial(maintenant: number): GameState {
+export function etatInitial(maintenant: number, alea: () => number = Math.random): GameState {
   return {
     version: 1,
     cerfa: { signe: false, prenom: '', signeLe: null },
@@ -39,7 +45,7 @@ export function etatInitial(maintenant: number): GameState {
     acteTermine: false,
     finActeVue: false,
     fichePosteVue: false,
-    circulairesVues: [],
+    seuilRenfort: tirerSeuilRenfort(alea),
     stats: {
       traites: 0,
       rejetes: 0,
@@ -199,7 +205,7 @@ function partRejetee(n: number, taux: number, alea: () => number): number {
  * `alea` fourni : tirage dossier par dossier (le coup de tampon du joueur).
  */
 function traiter(s: GameState, demande: number, m: Modifiers, alea?: () => number): { s: GameState; ev: GameEvents } {
-  const ev: GameEvents = { traites: 0, rejetes: 0, budget: 0, rupture: false, fileVide: false, relance: null };
+  const ev: GameEvents = { traites: 0, rejetes: 0, budget: 0, rupture: false, fileVide: false };
   const enFile = somme(s.file);
   if (enFile <= 0) {
     ev.fileVide = true;
@@ -326,34 +332,7 @@ export function tick(
 }
 
 /**
- * Relance du service instructeur : chaque tap retire `relanceParTap` secondes au délai
- * des notes en instruction, sans descendre sous (1 − relanceMax) du délai réglementaire.
- * Indépendant de la puissance du tap : on relance un service, pas un dossier.
- */
-export function relancer(
-  s: GameState,
-  maintenant: number,
-): { s: GameState; relance: GameEvents['relance'] } {
-  let notes: GameState['notes'] | null = null;
-  let enInstruction = false;
-  for (const [id, n] of Object.entries(s.notes)) {
-    if (!n || n.effective <= maintenant) continue;
-    enInstruction = true;
-    const def = NOTES_PAR_ID[id as NoteId];
-    const plancher = n.achetee + def.instruction * 1000 * (1 - BALANCE.relanceMax);
-    const effective = Math.max(plancher, n.effective - BALANCE.relanceParTap * 1000);
-    if (effective < n.effective) {
-      notes = notes ?? { ...s.notes };
-      notes[id as NoteId] = { ...n, effective };
-    }
-  }
-  if (!enInstruction) return { s, relance: null };
-  if (!notes) return { s, relance: 'classee' };
-  return { s: { ...s, notes }, relance: 'transmise' };
-}
-
-/**
- * Un tap sur TAMPONNER : traite `tapPower` dossiers et relance les notes en instruction.
+ * Un tap sur TAMPONNER : traite `tapPower` dossiers. Le délai d'instruction des notes n'en dépend pas.
  * Chaque dossier tamponné est rejeté avec la probabilité du taux de rejet (`alea`, Math.random par défaut).
  */
 export function tamponner(
@@ -363,13 +342,9 @@ export function tamponner(
 ): { s: GameState; ev: GameEvents } {
   const m = getModifiers(s, maintenant);
   const r = traiter(s, m.tapPower, m, alea);
-  const rel = relancer(r.s, maintenant);
   return {
-    ev: { ...r.ev, relance: rel.relance },
-    s: {
-      ...rel.s,
-      stats: { ...rel.s.stats, taps: rel.s.stats.taps + 1 },
-    },
+    ev: r.ev,
+    s: { ...r.s, stats: { ...r.s.stats, taps: r.s.stats.taps + 1 } },
   };
 }
 
@@ -402,59 +377,6 @@ export function acheterRamettes(s: GameState, nb: number, maintenant: number): G
   const possibles = Math.min(nb, Math.floor(s.budget / prix));
   if (possibles <= 0) return s;
   return acheterRamettesSans(s, possibles, prix);
-}
-
-/** Ce qu'un achat a coûté et rapporté, pour pouvoir l'annuler. */
-export interface Achat {
-  budget: number;
-  agent?: { id: AgentId; nb: number };
-  formulaires?: number;
-  /** Note de service visée (elle repasse « à viser »). */
-  note?: NoteId;
-}
-
-function sansNote(notes: GameState['notes'], id: NoteId): GameState['notes'] {
-  const copie = { ...notes };
-  delete copie[id];
-  return copie;
-}
-
-/** Différence entre l'état avant et après un achat (null si rien n'a été acheté). */
-export function differenceAchat(avant: GameState, apres: GameState): Achat | null {
-  const budget = Math.max(0, avant.budget - apres.budget);
-  const achat: Achat = { budget };
-  for (const id of Object.keys(apres.notes) as NoteId[]) {
-    if (!avant.notes[id]) achat.note = id;
-  }
-  for (const id of Object.keys(apres.agents) as AgentId[]) {
-    const nb = apres.agents[id] - avant.agents[id];
-    if (nb > 0) achat.agent = { id, nb };
-  }
-  const formulaires = apres.formulaires - avant.formulaires;
-  if (formulaires > 0) achat.formulaires = formulaires;
-  if (!achat.agent && !achat.formulaires && !achat.note) return null;
-  return achat;
-}
-
-/**
- * Annule un achat : retire ce qui a été acheté et rembourse. Des formulaires déjà consommés
- * ne se rendent pas : on rembourse au prorata de ceux qui restent. Null s'il n'y a plus rien à rendre.
- */
-export function annulerAchat(s: GameState, a: Achat): GameState | null {
-  if (a.agent && s.agents[a.agent.id] < a.agent.nb) return null;
-  // La note de réaffectation clôt l'acte : elle ne se reprend pas.
-  if (a.note && (!s.notes[a.note] || a.note === 'reaffectation')) return null;
-  const rendus = a.formulaires ? Math.min(a.formulaires, Math.max(0, s.formulaires)) : 0;
-  if (a.formulaires && rendus <= 0) return null;
-  const part = a.formulaires ? rendus / a.formulaires : 1;
-  return {
-    ...s,
-    budget: s.budget + a.budget * part,
-    formulaires: s.formulaires - rendus,
-    agents: a.agent ? { ...s.agents, [a.agent.id]: s.agents[a.agent.id] - a.agent.nb } : s.agents,
-    notes: a.note ? sansNote(s.notes, a.note) : s.notes,
-    stats: rendus > 0 ? { ...s.stats, formulairesAchetes: s.stats.formulairesAchetes - rendus } : s.stats,
-  };
 }
 
 /**

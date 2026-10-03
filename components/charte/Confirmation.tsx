@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
-import { useFenetreBloquante } from '@/context/GameStateContext';
+import { useFermetureEchap } from '@/context/GameStateContext';
 
 interface ConfirmationProps {
   visible: boolean;
@@ -25,7 +25,7 @@ export default function Confirmation({
   onConfirmer,
   onAnnuler,
 }: ConfirmationProps) {
-  useFenetreBloquante('confirmation', visible, onAnnuler);
+  useFermetureEchap(visible, onAnnuler);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onAnnuler}>
       <Pressable style={styles.voile} onPress={onAnnuler} accessible={false}>

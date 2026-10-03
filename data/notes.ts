@@ -34,10 +34,10 @@ export const NOTES: NoteDef[] = [
     titre: 'Renfort estival',
     texte:
       "Un stagiaire est disponible. Merci de ne pas lui confier de tâches, ni de responsabilités, ni la photocopieuse.",
-    effet: "Débloque l’onglet Recrutement.",
+    effet: "Débloque l’onglet Service.",
     cout: 0,
     instruction: 0,
-    visible: (s) => s.tampons >= 8,
+    visible: (s) => s.tampons >= s.seuilRenfort,
     appliquer: (m) => {
       m.recrutementVisible = true;
       m.agentsDisponibles.push('stagiaire');
@@ -314,7 +314,7 @@ export const NOTES: NoteDef[] = [
     titre: 'Demande de réaffectation',
     texte:
       'Votre niveau de conformité a été jugé satisfaisant. Une réaffectation de niveau supérieur pourrait être envisagée…',
-    effet: "Termine l’acte I.",
+    effet: "Réaffectation à un poste de niveau supérieur.",
     cout: 0,
     instruction: 0,
     visible: (s) => achetee(s, 'audit') && conformitePct(s) >= 100,

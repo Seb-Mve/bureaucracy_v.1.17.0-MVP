@@ -1,12 +1,15 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Coins, FileText, Inbox, Stamp } from 'lucide-react-native';
-import { useFenetreBloquante, useGameState } from '@/context/GameStateContext';
+import { useFermetureEchap, useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
+import { BALANCE } from '@/constants/balance';
+import { formatEntier, formatMontant } from '@/utils/formatters';
 
-const MISSIONS = [
+/** Les missions du poste, avec la dotation et la consommation en vigueur (la fiche se relit depuis Options). */
+const missions = (dotation: number, pieces: number) => [
   {
     Icone: Inbox,
     fond: Colors.pastelBleu,
@@ -22,22 +25,24 @@ const MISSIONS = [
   {
     Icone: Coins,
     fond: Colors.pastelJaune,
-    titre: 'Chaque dossier rapporte 1\u00a0€',
+    titre: `Chaque dossier rapporte ${formatMontant(dotation)}`,
     texte: 'C’est la dotation versée à votre service pour chaque dossier traité.',
   },
   {
     Icone: FileText,
     fond: Colors.pastelVert,
-    titre: 'Et consomme 1 formulaire',
+    titre: pieces === 1 ? 'Et consomme 1 formulaire' : `Et consomme ${formatEntier(pieces)} formulaires`,
     texte: 'Sans formulaires, plus rien ne se traite. Les ramettes s’achètent avec le budget.',
   },
 ];
 
 /** Fiche de poste : explique le principe du guichet à la prise de fonction. */
 export default function FichePoste() {
-  const { etat, marquerFichePoste } = useGameState();
+  const { etat, mods, marquerFichePoste } = useGameState();
+  // Relue depuis Options en cours de partie : on referme simplement la fiche.
+  const relue = etat.tampons > 0;
   const visible = etat.cerfa.signe && !etat.fichePosteVue;
-  useFenetreBloquante('fiche-poste', visible, () => marquerFichePoste(true));
+  useFermetureEchap(visible, () => marquerFichePoste(true));
   const agent = etat.cerfa.prenom || 'Agent sans prénom';
 
   return (
@@ -51,7 +56,7 @@ export default function FichePoste() {
               <Text style={styles.titulaire}>Agent : {agent}</Text>
 
               <View style={styles.missions}>
-                {MISSIONS.map(({ Icone, fond, titre, texte }, i) => (
+                {missions(BALANCE.dotation * mods.dotationMult, mods.pieces).map(({ Icone, fond, titre, texte }, i) => (
                   <View key={titre} style={styles.mission}>
                     <View style={[styles.pastille, { backgroundColor: fond }]}>
                       <Icone size={18} color={Colors.anthracite} />
@@ -69,7 +74,7 @@ export default function FichePoste() {
               <Text style={styles.chute}>
                 Objectif : tamponner. Le reste relève de votre appréciation, et de la hiérarchie.
               </Text>
-              <BoutonPoussoir libelle="PRENDRE MON POSTE" taille={Typo.titre} hauteur={56} onPress={() => marquerFichePoste(true)} />
+              <BoutonPoussoir libelle={relue ? 'FERMER' : 'PRENDRE MON POSTE'} taille={Typo.titre} hauteur={56} onPress={() => marquerFichePoste(true)} />
             </Panneau>
           </Pressable>
         </ScrollView>

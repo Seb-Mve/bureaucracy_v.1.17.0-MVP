@@ -8,11 +8,9 @@ const CLE_PREFERENCES = 'bureaucracy_preferences_v1';
 export interface Preferences {
   vibrations: boolean;
   animationsReduites: boolean;
-  /** Le joueur a déjà ouvert une définition de compteur (l'astuce n'est plus utile). */
-  definitionsDecouvertes: boolean;
 }
 
-const DEFAUT: Preferences = { vibrations: true, animationsReduites: false, definitionsDecouvertes: false };
+const DEFAUT: Preferences = { vibrations: true, animationsReduites: false };
 
 interface PreferencesContextType extends Preferences {
   /** Réglage du joueur ou réglage système « Réduire les animations ». */
@@ -34,8 +32,6 @@ export default function PreferencesProvider({ children }: { children: React.Reac
         setPrefs({
           vibrations: typeof lu.vibrations === 'boolean' ? lu.vibrations : DEFAUT.vibrations,
           animationsReduites: typeof lu.animationsReduites === 'boolean' ? lu.animationsReduites : DEFAUT.animationsReduites,
-          definitionsDecouvertes:
-            typeof lu.definitionsDecouvertes === 'boolean' ? lu.definitionsDecouvertes : DEFAUT.definitionsDecouvertes,
         });
       })
       .catch(() => undefined);
