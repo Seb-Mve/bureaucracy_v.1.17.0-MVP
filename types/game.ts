@@ -3,6 +3,8 @@
  * Voir specs/007-acte1-guichet/spec.md.
  */
 
+import type { EtatActe2 } from './acte2';
+
 export type AgentId = 'stagiaire' | 'accueil' | 'instructeur' | 'titulaire';
 
 export type NoteId =
@@ -68,6 +70,10 @@ export interface GameStats {
 
 export interface GameState {
   version: 1;
+  /** Acte en cours (1 = Le Guichet, 2 = La Direction). */
+  acte: 1 | 2;
+  /** État de l'acte II, null tant que l'acte I n'est pas terminé. */
+  acte2: EtatActe2 | null;
   cerfa: {
     signe: boolean;
     prenom: string;

@@ -28,15 +28,18 @@ export function estSauvegardeValide(x: unknown): x is GameState {
     typeof s.notes === 'object' &&
     Array.isArray(s.courrier) &&
     typeof s.stats === 'object' &&
-    estNombre(s.derniereMaj)
+    estNombre(s.derniereMaj) &&
+    (s.acte !== 2 || (typeof s.acte2 === 'object' && s.acte2 !== null))
   );
 }
 
 /**
- * Met à niveau une sauvegarde plus ancienne : retire les champs qui n'existent plus (`circulairesVues`)
- * et complète `seuilRenfort` (ancien seuil fixe de 8 tampons, pour ne pas cacher une note déjà vue).
+ * Met à niveau une sauvegarde plus ancienne : retire les champs qui n'existent plus (`circulairesVues`),
+ * complète `seuilRenfort` (ancien seuil fixe de 8 tampons, pour ne pas cacher une note déjà vue)
+ * et, sans `acte` (antérieure à l'acte II), place la partie à l'acte I.
  */
 export function normaliserSauvegarde(s: GameState): GameState {
   const { circulairesVues: _, ...reste } = s as GameState & { circulairesVues?: unknown };
-  return estNombre(reste.seuilRenfort) ? reste : { ...reste, seuilRenfort: 8 };
+  const avecSeuil = estNombre(reste.seuilRenfort) ? reste : { ...reste, seuilRenfort: 8 };
+  return (avecSeuil as Partial<GameState>).acte === undefined ? { ...avecSeuil, acte: 1, acte2: null } : avecSeuil;
 }

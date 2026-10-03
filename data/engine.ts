@@ -26,6 +26,8 @@ export function tirerSeuilRenfort(alea: () => number = Math.random): number {
 export function etatInitial(maintenant: number, alea: () => number = Math.random): GameState {
   return {
     version: 1,
+    acte: 1,
+    acte2: null,
     cerfa: { signe: false, prenom: '', signeLe: null },
     tampons: 0,
     budget: BALANCE.budgetInitial,
