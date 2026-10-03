@@ -7,6 +7,7 @@ import { procsEnBoucle } from '../../data/acte2/procedures';
 import { estSauvegardeValide } from '../../data/save';
 import { PRESETS, sauvegardeActe2 } from '../presets-acte2';
 import { vueAtelier } from '../../data/acte2/vueAtelier';
+import { nouvellesLettres } from '../../data/courrier';
 import { BALANCE2 } from '../../constants/balanceActe2';
 import type { GameState } from '../../types/game';
 import type { EtatActe2, Note2Id } from '../../types/acte2';
@@ -173,4 +174,14 @@ test('préréglages de vérification : sauvegardes valides, à l’acte voulu', 
   assert.equal(V.vueDirection(sauvegardeActe2('fin', t), t)?.demat, 100);
   assert.notEqual(vueAtelier(sauvegardeActe2('atelier', t), t), null);
   assert.equal(sauvegardeActe2('finActeI', t).acteTermine, true);
+  assert.deepEqual(
+    nouvellesLettres(sauvegardeActe2('debut', t), t).map((l) => l.id),
+    ['a2-prise'],
+    'debut preset should only have a2-prise',
+  );
+  assert.deepEqual(
+    nouvellesLettres(sauvegardeActe2('fin', t), t).map((l) => l.id),
+    ['a2-rapport'],
+    'fin preset should only have a2-rapport',
+  );
 });

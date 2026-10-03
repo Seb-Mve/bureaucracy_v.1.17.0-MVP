@@ -133,7 +133,28 @@ export function sauvegardeActe2(preset: Preset, maintenant: number): GameState {
   }
   s = { ...s, acte2: x };
   // Courrier déjà mérité : réputé envoyé, sauf à l'entrée (Prise de fonctions) et à la fin (Rapport annuel).
-  if (preset === 'debut' || preset === 'fin') return s;
+  if (preset === 'debut') {
+    return {
+      ...s,
+      lettresEnvoyees: [
+        ...s.lettresEnvoyees,
+        ...nouvellesLettres(s, maintenant)
+          .filter((l) => l.id !== 'a2-prise')
+          .map((l) => l.id),
+      ],
+    };
+  }
+  if (preset === 'fin') {
+    return {
+      ...s,
+      lettresEnvoyees: [
+        ...s.lettresEnvoyees,
+        ...nouvellesLettres(s, maintenant)
+          .filter((l) => l.id !== 'a2-rapport')
+          .map((l) => l.id),
+      ],
+    };
+  }
   return {
     ...s,
     lettresEnvoyees: [
