@@ -14,7 +14,7 @@ import { formatEntier } from '@/utils/formatters';
  * (repère qui ne quitte jamais le haut de l'écran) et l'enveloppe du S.I.C.
  */
 export default function EnTete() {
-  const { etat, lettresNonLues, verdict } = useGameState();
+  const { etat, lettresNonLues, verdict, encre } = useGameState();
   const [courrier, setCourrier] = useState(false);
   const insets = useSafeAreaInsets();
   const tampons = Math.floor(etat.tampons);
@@ -35,7 +35,7 @@ export default function EnTete() {
           />
           {/* Petit écran : le libellé passe à côté du chiffre, avec le même nom. Rien ne dit que le jeu a des actes. */}
           {compact && (
-            <Text style={styles.acte} numberOfLines={2}>
+            <Text style={[styles.acte, { color: encre.texte }]} numberOfLines={2}>
               tampons apposés
             </Text>
           )}

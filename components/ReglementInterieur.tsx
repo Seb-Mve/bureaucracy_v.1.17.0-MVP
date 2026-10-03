@@ -23,7 +23,7 @@ const parCoup = (n: number) => (n === 1 ? 'le dossier posé' : `${formatEntier(n
  * Un article n'apparaît qu'une fois la mécanique débloquée (rien n'est dévoilé à l'avance).
  */
 export default function ReglementInterieur() {
-  const { mods, notes, prixRamette, direction } = useGameState();
+  const { mods, notes, prixRamette, direction, encre } = useGameState();
   const [ouvert, setOuvert] = useState(false);
 
   const articles: Article[] = [
@@ -89,7 +89,7 @@ export default function ReglementInterieur() {
       {ouvert &&
         affiches.map((a, i) => (
           <View key={a.titre} style={styles.article}>
-            <Text style={styles.titre}>
+            <Text style={[styles.titre, { color: encre.texte }]}>
               Article {i + 1} · {a.titre}
             </Text>
             <Text style={styles.texte}>{a.texte}</Text>

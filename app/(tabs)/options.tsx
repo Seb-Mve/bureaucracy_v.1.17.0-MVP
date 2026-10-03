@@ -17,7 +17,7 @@ function dureeJeu(sec: number): string {
 
 /** Options : dossier administratif, règlement intérieur, confort, démission, remise à zéro. */
 export default function OptionsScreen() {
-  const { etat, grade, direction, deposerDemission, nouvellePartie, marquerFichePoste } = useGameState();
+  const { etat, grade, direction, deposerDemission, nouvellePartie, marquerFichePoste, encre } = useGameState();
   const [demande, setDemande] = useState<'demission' | 'effacer' | null>(null);
   const deposee = etat.demission.deposeeLe !== null;
   const agent = etat.cerfa.prenom || 'Agent sans prénom';
@@ -130,6 +130,7 @@ export default function OptionsScreen() {
           titre="Déposer votre démission ?"
           message="Votre demande sera transmise au Service Inconnu de Coordination."
           libelleConfirmer="Déposer"
+          couleur={encre.face}
           onAnnuler={() => setDemande(null)}
           onConfirmer={() => {
             setDemande(null);

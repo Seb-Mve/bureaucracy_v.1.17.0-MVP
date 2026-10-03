@@ -11,6 +11,8 @@ interface ConfirmationProps {
   libelleConfirmer: string;
   /** Action irréversible : le bouton de confirmation passe en rouge. */
   destructive?: boolean;
+  /** Couleur du bouton de confirmation (encre de l'acte) ; orange par défaut. */
+  couleur?: string;
   onConfirmer: () => void;
   onAnnuler: () => void;
 }
@@ -22,6 +24,7 @@ export default function Confirmation({
   message,
   libelleConfirmer,
   destructive = false,
+  couleur,
   onConfirmer,
   onAnnuler,
 }: ConfirmationProps) {
@@ -48,6 +51,7 @@ export default function Confirmation({
                 style={({ pressed }) => [
                   styles.bouton,
                   destructive ? styles.danger : styles.confirmer,
+                  !destructive && couleur ? { backgroundColor: couleur } : null,
                   pressed && styles.presse,
                 ]}
                 accessibilityRole="button"

@@ -66,7 +66,7 @@ export function articlesDirection(
     articles.push({
       titre: 'Exemplaires exigés',
       texte:
-        'Chaque étape exige un, deux ou trois exemplaires : plus de dotation et de conformité, plus de formulaires, moins de patience.',
+        'Chaque étape exige un, deux ou trois exemplaires : plus de dotation, plus de formulaires, moins de patience.',
     });
   }
   if (d.demat !== null) {

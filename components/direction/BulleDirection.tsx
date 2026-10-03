@@ -13,7 +13,7 @@ import { formatEntier } from '@/utils/formatters';
 
 /** Numéro sur trois chiffres au moins, comme un registre (« 048 », puis « 9 412 »). */
 const numeroParapheur = (n: number): string =>
-  n < 1000 ? n.toString().padStart(3, '0') : n.toLocaleString('fr-FR');
+  n < 1000 ? n.toString().padStart(3, '0') : formatEntier(n);
 
 /**
  * Bulle de l'écran Direction, au-dessus de la scène : le parapheur que le prochain coup vise, et sa procédure
@@ -158,6 +158,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -8,
     left: '50%',
+    marginLeft: -7,
     width: 14,
     height: 14,
     backgroundColor: Colors.papier,

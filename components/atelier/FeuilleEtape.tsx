@@ -100,7 +100,9 @@ export default function FeuilleEtape({
     ? atelier.procedures.find((p) => p.id === mode.p)
     : undefined;
   const avecExige = etape === 'pieceService';
-  const valide = etape !== null && (!avecExige || exige !== null);
+  // Exiger la procédure déjà exigée ne changerait rien : le bouton reste éteint.
+  const inchange = mode?.type === 'exiger' && exige === mode.actuelle;
+  const valide = etape !== null && (!avecExige || exige !== null) && !inchange;
 
   const documentExige = proc ? (
     <View

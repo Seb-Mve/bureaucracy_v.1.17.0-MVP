@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, StyleSheet, Switch, Text, View, type SwitchProps } from 'react-native';
+import { useGameState } from '@/context/GameStateContext';
 import { usePreferences } from '@/context/PreferencesContext';
 import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
 import Panneau from '@/components/charte/Panneau';
@@ -15,6 +16,7 @@ interface LigneProps {
 }
 
 function Ligne({ titre, aide, valeur, surChange }: LigneProps) {
+  const { encre } = useGameState();
   return (
     <View style={styles.ligne}>
       <View style={styles.textes}>
@@ -24,7 +26,7 @@ function Ligne({ titre, aide, valeur, surChange }: LigneProps) {
       <Switch
         value={valeur}
         onValueChange={surChange}
-        trackColor={{ false: Colors.carton, true: Colors.encre }}
+        trackColor={{ false: Colors.carton, true: encre.face }}
         thumbColor={Colors.papier}
         {...(Platform.OS === 'web' ? PASTILLE_WEB : null)}
         accessibilityLabel={titre}
