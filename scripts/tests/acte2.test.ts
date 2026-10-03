@@ -10,6 +10,8 @@ import {
   procsEnBoucle,
 } from '../../data/acte2/procedures';
 import { BALANCE2, PROCEDURES_INITIALES } from '../../constants/balanceActe2';
+import { NOTES2 } from '../../data/acte2/notes2';
+import type { Note2Id } from '../../types/acte2';
 import type { Etape, EtapeType, EtatActe2, ProcId } from '../../types/acte2';
 
 /** Entrée dans l'acte II à t = 0, budget et formulaires illimités. */
@@ -283,4 +285,54 @@ test('Atelier : changer la procédure exigée', () => {
     ),
     a,
   );
+});
+
+/** Marque des notes de l'acte II comme achetées et effectives depuis t = 0. */
+function avecNotes2(s: GameState, ids: Note2Id[]): GameState {
+  const notes = { ...x(s).notes };
+  for (const id of ids) notes[id] = { achetee: 0, effective: 0 };
+  return avec2(s, { notes });
+}
+
+test('début d’acte : seule la Carte d’identité est ouverte, l’Atelier est fermé', () => {
+  const m = D.getModifiers2(base2(), 0);
+  assert.deepEqual(m.procsOuvertes, ['identite']);
+  assert.deepEqual(m.etapesDisponibles, ['visa']);
+  assert.equal(m.atelierVisible, false);
+  assert.equal(m.recrutementVisible, false);
+  assert.equal(m.rejetMax, 0.5);
+});
+
+test('le catalogue compte 17 notes numérotées de 1 à 17', () => {
+  assert.deepEqual(NOTES2.map((n) => n.numero), Array.from({ length: 17 }, (_, i) => i + 1));
+});
+
+test('la note n° 1 est visible d’emblée et ouvre le recrutement', () => {
+  const s = base2();
+  assert.ok(D.notesVisibles2(s).includes('prise'));
+  assert.equal(D.getModifiers2(D.acheterNote2(s, 'prise', 0), 0).recrutementVisible, true);
+});
+
+test('l’Atelier ouvre le Justificatif de domicile et la Pièce justificative', () => {
+  const m = D.getModifiers2(avecNotes2(base2(), ['atelier']), 0);
+  assert.equal(m.atelierVisible, true);
+  assert.deepEqual(m.procsOuvertes, ['identite', 'domicile']);
+  assert.ok(m.etapesDisponibles.includes('piece'));
+});
+
+test('une note en instruction ne s’applique qu’à la fin de son délai', () => {
+  let s = avec2(base2(), { stats: { ...x(base2()).stats, franchies: 3000 } });
+  s = D.acheterNote2(s, 'atelier', 0);
+  assert.equal(D.getModifiers2(s, 1000).atelierVisible, false);
+  assert.equal(D.getModifiers2(s, 120_000).atelierVisible, true);
+});
+
+test('Promotion : visible à 100 % de dématérialisation, termine l’acte', () => {
+  const s = avec2(base2(), { demaPoints: BALANCE2.demaCible });
+  assert.ok(D.notesVisibles2(s).includes('promotion'));
+  assert.equal(x(D.acheterNote2(s, 'promotion', 0)).acteTermine, true);
+});
+
+test('grades : la dotation de l’acte II suit le compteur de tampons', () => {
+  proche(D.getModifiers2({ ...base2(), tampons: 10000 }, 0).dotationMult, 1.2);
 });
