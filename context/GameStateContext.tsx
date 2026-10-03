@@ -313,6 +313,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
   const acheterAgent = useCallback(
     (id: AgentId, nb = 1) => {
+      if (etatRef.current.acte === 2) return;
       const maintenant = Date.now();
       let s = etatRef.current;
       for (let i = 0; i < Math.min(nb, ACHAT_MAX); i++) {
@@ -469,18 +470,20 @@ export default function GameStateProvider({ children }: { children: React.ReactN
 
   const notes = useMemo<NoteAffichee[]>(
     () =>
-      etat.acte === 2 ? V.notesAffichees2(etat, maintenant) : E.notesVisibles(etat).map((id) => {
-        const def = NOTES_PAR_ID[id];
-        const st = etat.notes[id];
-        let statut: StatutNote = etat.budget >= def.cout ? 'disponible' : 'tropCher';
-        let resteSec = 0;
-        if (st) {
-          resteSec = Math.max(0, Math.ceil((st.effective - maintenant) / 1000));
-          statut = resteSec > 0 ? 'instruction' : 'effective';
-        }
-        const { visible: _v, appliquer: _a, ...rest } = def;
-        return { ...rest, statut, resteSec, nouvelle: !etat.notesVues.includes(id) };
-      }),
+      etat.acte === 2
+        ? V.notesAffichees2(etat, maintenant)
+        : E.notesVisibles(etat).map((id) => {
+            const def = NOTES_PAR_ID[id];
+            const st = etat.notes[id];
+            let statut: StatutNote = etat.budget >= def.cout ? 'disponible' : 'tropCher';
+            let resteSec = 0;
+            if (st) {
+              resteSec = Math.max(0, Math.ceil((st.effective - maintenant) / 1000));
+              statut = resteSec > 0 ? 'instruction' : 'effective';
+            }
+            const { visible: _v, appliquer: _a, ...rest } = def;
+            return { ...rest, statut, resteSec, nouvelle: !etat.notesVues.includes(id) };
+          }),
     [etat, maintenant],
   );
 
