@@ -3,12 +3,31 @@
  * L'ancienne sauvegarde (clé 'bureaucracy_game_state', schéma v4) est ignorée.
  */
 import type { GameState } from '../types/game';
+import { PROCS } from '../types/acte2';
 
 export const CLE_SAUVEGARDE = 'bureaucracy_acte1_v1';
 
 const estNombre = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 
 /** Vrai si l'objet ressemble à une sauvegarde v1 exploitable. */
+function acte2Valide(x: unknown): boolean {
+  if (typeof x !== 'object' || x === null) return false;
+  const a = x as Record<string, unknown>;
+  const rec = (v: unknown): Record<string, unknown> | null =>
+    typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null;
+  const procedures = rec(a.procedures);
+  const usagers = rec(a.usagers);
+  const boucles = rec(a.boucles);
+  if (!procedures || !usagers || !boucles) return false;
+  return PROCS.every((p) => {
+    const etapes = procedures[p];
+    if (!Array.isArray(etapes)) return false;
+    return [usagers[p], boucles[p]].every(
+      (v) => Array.isArray(v) && v.length === etapes.length && v.every(estNombre),
+    );
+  });
+}
+
 export function estSauvegardeValide(x: unknown): x is GameState {
   if (typeof x !== 'object' || x === null) return false;
   const s = x as Partial<GameState>;
@@ -29,7 +48,8 @@ export function estSauvegardeValide(x: unknown): x is GameState {
     Array.isArray(s.courrier) &&
     typeof s.stats === 'object' &&
     estNombre(s.derniereMaj) &&
-    (s.acte !== 2 || (typeof s.acte2 === 'object' && s.acte2 !== null))
+    (s.acte === undefined || s.acte === 1 || s.acte === 2) &&
+    (s.acte !== 2 || acte2Valide(s.acte2))
   );
 }
 

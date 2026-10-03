@@ -571,3 +571,30 @@ test('rapport annuel à 100 % de dématérialisation', () => {
   const l = nouvellesLettres(s, 0).find((v) => v.id === 'a2-rapport');
   assert.ok(l?.corps.includes('Taux de satisfaction : 100 % (sur les usagers restants)'));
 });
+
+test('démission déposée à l’acte II : ni demission1 ni demission2 (a2-demission seule)', () => {
+  const s = avec2({ ...base2(), demission: { deposeeLe: 0, relances: 0 } }, { premiereModif: 'domicile' });
+  const ids = lettres(s, 60 * 60_000);
+  assert.ok(!ids.includes('demission1'));
+  assert.ok(!ids.includes('demission2'));
+  assert.ok(ids.includes('a2-demission'));
+});
+
+test('sauvegarde d’acte II : structure validée', () => {
+  const bonne = base2();
+  assert.equal(estSauvegardeValide(bonne), true);
+  assert.equal(estSauvegardeValide({ ...bonne, acte: 3 }), false);
+  const a2 = bonne.acte2 as EtatActe2;
+  assert.equal(estSauvegardeValide({ ...bonne, acte2: { ...a2, procedures: undefined } }), false);
+  assert.equal(
+    estSauvegardeValide({ ...bonne, acte2: { ...a2, usagers: { identite: [] } } }),
+    false,
+  );
+  assert.equal(
+    estSauvegardeValide({
+      ...bonne,
+      acte2: { ...a2, boucles: { ...a2.boucles, domicile: [...a2.boucles.domicile, 0] } },
+    }),
+    false,
+  );
+});

@@ -105,14 +105,16 @@ const LETTRES: LettreDef[] = [
     objet: 'Votre demande n° 000001',
     corps: (s) =>
       `Votre demande de démission (n° 000001) a bien été reçue.\n\nElle est incomplète.\n\nPièce manquante : ${dernierePiece(s)}.`,
-    declencheur: (s, t) => s.demission.deposeeLe !== null && t - s.demission.deposeeLe >= minutes(3),
+    declencheur: (s, t) =>
+      s.acte === 1 && s.demission.deposeeLe !== null && t - s.demission.deposeeLe >= minutes(3),
   },
   {
     id: 'demission2',
     objet: 'Relance — demande n° 000001',
     corps: (s) =>
       `Votre demande de démission demeure incomplète.\n\nPièce manquante : ${dernierePiece(s)}.\n\nLe S.I.C. vous remercie de votre patience, qui n’est pas illimitée.`,
-    declencheur: (s, t) => s.demission.deposeeLe !== null && t - s.demission.deposeeLe >= minutes(30),
+    declencheur: (s, t) =>
+      s.acte === 1 && s.demission.deposeeLe !== null && t - s.demission.deposeeLe >= minutes(30),
   },
   {
     id: 'penurie',
