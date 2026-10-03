@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
 import * as D from '../../data/acte2/moteur';
 import * as V from '../../data/acte2/vues';
+import { procsEnBoucle } from '../../data/acte2/procedures';
+import { estSauvegardeValide } from '../../data/save';
+import { PRESETS, sauvegardeActe2 } from '../presets-acte2';
+import { vueAtelier } from '../../data/acte2/vueAtelier';
 import { BALANCE2 } from '../../constants/balanceActe2';
 import type { GameState } from '../../types/game';
 import type { EtatActe2, Note2Id } from '../../types/acte2';
@@ -155,4 +159,18 @@ test('notes de l’acte II : statut, instruction et pastille', () => {
 test('identifiants de notes : ceux de l’acte II sont reconnus', () => {
   assert.equal(V.estNote2('pieceService'), true);
   assert.equal(V.estNote2('reaffectation'), false);
+});
+
+test('préréglages de vérification : sauvegardes valides, à l’acte voulu', () => {
+  const t = 1_000_000_000;
+  for (const p of PRESETS) {
+    const s = sauvegardeActe2(p, t);
+    assert.equal(estSauvegardeValide(s), true, p);
+    assert.equal(s.acte, p === 'finActeI' ? 1 : 2, p);
+  }
+  const boucle = sauvegardeActe2('boucle', t);
+  assert.deepEqual(procsEnBoucle(x(boucle).procedures, ['identite', 'domicile']), ['identite', 'domicile']);
+  assert.equal(V.vueDirection(sauvegardeActe2('fin', t), t)?.demat, 100);
+  assert.notEqual(vueAtelier(sauvegardeActe2('atelier', t), t), null);
+  assert.equal(sauvegardeActe2('finActeI', t).acteTermine, true);
 });
