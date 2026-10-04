@@ -17,6 +17,7 @@ import * as D from '@/data/acte2/moteur';
 import * as V from '@/data/acte2/vues';
 import * as A from '@/data/acte2/vueAtelier';
 import * as F from '@/data/acte2/fiche';
+import { lignesProduction, type LigneProduction } from '@/data/acte2/production';
 import {
   DEBITS_NULS,
   ajouterFlux,
@@ -35,6 +36,7 @@ export type { ActionAtelier, Agent2Id, EtapeType, Exemplaires, ProcId } from '@/
 export type { EtapeChaine, ParapheurAffiche, UniteAffichee, VueDirection, VueService2 } from '@/data/acte2/vues';
 export type { ChoixEtape, EffetAffiche, EtapeAtelier, ProcAtelier, VueAtelier } from '@/data/acte2/vueAtelier';
 export type { LigneFicheAffichee, VueFiche2 } from '@/data/acte2/fiche';
+export type { LigneProduction } from '@/data/acte2/production';
 export type { Debits } from '@/data/acte2/debits';
 export type { LigneFiche2Id } from '@/types/acte2';
 export type { Encre };
@@ -144,6 +146,8 @@ interface GameContextType {
   atelier: A.VueAtelier | null;
   /** Fiche de poste du chef de service (acte II) ; null à l'acte I. */
   fiche2: F.VueFiche2 | null;
+  /** Relevé « Production du service » : une ligne par procédure ouverte (acte II) ; null à l'acte I. */
+  production: LigneProduction[] | null;
   /** Débits lissés de l'en-tête, €/s et formulaires/s (acte II) ; null à l'acte I. */
   debits: Debits | null;
   /** Trombones, Réforme possible et Jurisprudence (dossier administratif). */
@@ -653,6 +657,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const service2 = useMemo(() => V.vueService2(etat, maintenant), [etat, maintenant]);
   const atelier = useMemo(() => A.vueAtelier(etat, maintenant), [etat, maintenant]);
   const fiche2 = useMemo(() => F.vueFiche2(etat, maintenant), [etat, maintenant]);
+  const production = useMemo(() => lignesProduction(etat, maintenant), [etat, maintenant]);
   const rejet = useMemo(
     () =>
       direction
@@ -699,6 +704,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       service2,
       atelier,
       fiche2,
+      production,
       debits: direction ? debits : null,
       reforme,
       cerfaNumero: R.numeroCerfa(etat),
@@ -733,7 +739,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste,
       nouvellePartie, rupture, rejet, prixRamette, direction, service2, atelier, acheterGuichet, acheterAgent2,
       reglerExemplaires, modifierProcedure, entrerDirection, reforme, reformer, acheterJurisprudence, chargerRaccourci,
-      fiche2, debits, reglerAchats,
+      fiche2, production, debits, reglerAchats,
     ],
   );
 
