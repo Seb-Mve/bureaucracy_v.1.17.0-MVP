@@ -11,6 +11,7 @@ import CerfaEcran from '@/components/CerfaEcran';
 import FinActeModal from '@/components/FinActeModal';
 import FinActe2Modal from '@/components/direction/FinActe2Modal';
 import FichePoste from '@/components/FichePoste';
+import FichePosteDirection from '@/components/direction/FichePosteDirection';
 
 /** Hauteur de la barre d'onglets hors marge du bas (icône + libellé). */
 const HAUTEUR_ONGLETS = 58;
@@ -29,6 +30,7 @@ export default function TabLayout() {
     rupture,
     encre,
     raccourcisActifs,
+    fiche2,
   } = useGameState();
   // « ?test » sur n'importe quelle adresse ouvre les raccourcis de test (développement, aperçus Netlify).
   const { test } = useGlobalSearchParams<{ test?: string }>();
@@ -50,12 +52,15 @@ export default function TabLayout() {
   // Rupture de formulaires : un « ! » sur l'onglet où s'en procurer (Service, ou Notes avant la note n° 1).
   const ruptureService = rupture && recrutementVisible;
   const ruptureNotes = rupture && !recrutementVisible;
+  // Acte II : lignes ajoutées à la fiche de poste depuis sa dernière lecture (elle se relit dans Options).
+  const ficheNonLues = fiche2?.nonLues ?? 0;
 
   return (
     <>
       <FinActeModal />
       <FinActe2Modal />
       <FichePoste />
+      <FichePosteDirection />
       <Tabs
         screenOptions={{
           header: () => <EnTete />,
@@ -135,8 +140,13 @@ export default function TabLayout() {
           name="options"
           options={{
             title: 'Options',
-            tabBarAccessibilityLabel: 'Options',
-            tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+            tabBarAccessibilityLabel: ficheNonLues > 0 ? 'Options, fiche de poste complétée' : 'Options',
+            tabBarIcon: ({ color, size }) => (
+              <View>
+                <Settings size={size} color={color} />
+                <NotificationBadge count={ficheNonLues} />
+              </View>
+            ),
           }}
         />
       </Tabs>

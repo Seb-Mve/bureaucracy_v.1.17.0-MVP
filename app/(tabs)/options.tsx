@@ -10,6 +10,7 @@ import ReglagesConfort from '@/components/ReglagesConfort';
 import Confirmation from '@/components/charte/Confirmation';
 import SectionReforme from '@/components/reforme/SectionReforme';
 import ListeJurisprudence from '@/components/reforme/ListeJurisprudence';
+import NotificationBadge from '@/components/NotificationBadge';
 
 function dureeJeu(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -25,8 +26,9 @@ function aService(nom: string): string {
 
 /** Options : dossier administratif, règlement intérieur, confort, démission, remise à zéro. */
 export default function OptionsScreen() {
-  const { etat, grade, direction, reforme, deposerDemission, nouvellePartie, marquerFichePoste, encre } =
+  const { etat, grade, direction, reforme, deposerDemission, nouvellePartie, marquerFichePoste, encre, fiche2 } =
     useGameState();
+  const ficheNonLues = fiche2?.nonLues ?? 0;
   const [demande, setDemande] = useState<'demission' | 'effacer' | null>(null);
   const deposee = etat.demission.deposeeLe !== null;
   const agent = etat.cerfa.prenom || 'Agent sans prénom';
@@ -78,17 +80,16 @@ export default function OptionsScreen() {
               <Text style={styles.valeur}>{v}</Text>
             </View>
           ))}
-          {/* La fiche de poste est celle du guichet 3 : elle ne se relit plus à la Direction. */}
-          {!direction && (
-            <Pressable
-              style={({ pressed }) => [styles.relire, pressed && styles.presse]}
-              accessibilityRole="button"
-              accessibilityLabel="Relire ma fiche de poste"
-              onPress={() => marquerFichePoste(false)}
-            >
-              <Text style={styles.relireTexte}>Relire ma fiche de poste</Text>
-            </Pressable>
-          )}
+          {/* Acte I : la fiche du guichet 3 ; acte II : celle du chef de service, complétée au fil des notes. */}
+          <Pressable
+            style={({ pressed }) => [styles.relire, pressed && styles.presse]}
+            accessibilityRole="button"
+            accessibilityLabel={ficheNonLues > 0 ? 'Relire ma fiche de poste, complétée' : 'Relire ma fiche de poste'}
+            onPress={() => marquerFichePoste(false)}
+          >
+            <Text style={styles.relireTexte}>Relire ma fiche de poste</Text>
+            <NotificationBadge count={ficheNonLues} />
+          </Pressable>
         </Panneau>
 
         {reforme.possible && (
