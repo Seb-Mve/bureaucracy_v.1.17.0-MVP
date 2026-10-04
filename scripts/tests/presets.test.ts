@@ -6,6 +6,8 @@ import { nouvellesLettres } from '../../data/courrier';
 import { PRESETS, PRESETS_INFO, sauvegardePreset } from '../../data/presets';
 import * as D from '../../data/acte2/moteur';
 import * as F from '../../data/acte2/fiche';
+import * as P from '../../data/acte2/production';
+import { procsEnBoucle } from '../../data/acte2/procedures';
 import type { EtatActe2 } from '../../types/acte2';
 
 const T = 1_000_000_000;
@@ -15,7 +17,10 @@ const ACTE: Record<string, 1 | 2> = {
   finActeI: 1,
   debut: 2,
   atelier: 2,
+  compliquer: 2,
   achats: 2,
+  pieceService: 2,
+  avantBoucle: 2,
   boucle: 2,
   demat: 2,
   fin: 2,
@@ -30,7 +35,10 @@ test('raccourcis : ordre des préréglages, de l’acte I à la Réforme', () =>
     'finActeI',
     'debut',
     'atelier',
+    'compliquer',
     'achats',
+    'pieceService',
+    'avantBoucle',
     'boucle',
     'demat',
     'fin',
@@ -106,4 +114,54 @@ test('préréglage « service des achats » : note en vigueur, ×2, fiche lue ; 
   for (const p of ['atelier', 'boucle', 'demat', 'fin', 'reforme'] as const)
     assert.equal(F.vueFiche2(sauvegardePreset(p, T), T)?.nonLues, 0, p);
   assert.equal(F.vueFiche2(sauvegardePreset('debut', T), T)?.visible, true);
+});
+
+const x2 = (s: ReturnType<typeof sauvegardePreset>): EtatActe2 => s.acte2 as EtatActe2;
+
+test('raccourci « compliquer rapporte » : Atelier ouvert, Signature permise, la carte seule demandée', () => {
+  const s = sauvegardePreset('compliquer', T);
+  const m = D.getModifiers2(s, T);
+  assert.equal(m.atelierVisible, true);
+  assert.ok(m.etapesDisponibles.includes('signature'));
+  const [carte, justificatif] = P.lignesProduction(s, T) as P.LigneProduction[];
+  assert.ok(carte.demandes > 0 && carte.delivres > 0 && carte.versUsagers);
+  assert.equal(justificatif.demandes, 0);
+  assert.equal(justificatif.delivres, 0);
+  assert.equal(F.vueFiche2(s, T)?.nonLues, 0);
+});
+
+test('raccourci « pièce de nos services » : il ne reste qu’à exiger un justificatif', () => {
+  const s = sauvegardePreset('pieceService', T);
+  assert.ok(D.getModifiers2(s, T).etapesDisponibles.includes('pieceService'));
+  assert.ok(
+    Object.values(x2(s).procedures)
+      .flat()
+      .every((e) => e.type !== 'pieceService'),
+  );
+  const exige = D.modifierProcedure(
+    s,
+    { type: 'ajouter', p: 'identite', etape: 'pieceService', exige: 'domicile' },
+    T,
+  );
+  assert.notEqual(exige, s);
+  assert.deepEqual(procsEnBoucle(x2(exige).procedures, ['identite', 'domicile']), []);
+});
+
+test('raccourci « boucle sur le point de se former » : le justificatif peut exiger une carte', () => {
+  const s = sauvegardePreset('avantBoucle', T);
+  assert.equal(x2(s).premiereBoucle, null);
+  const [, justificatif] = P.lignesProduction(s, T) as P.LigneProduction[];
+  assert.ok(justificatif.demandes > 0 && !justificatif.versUsagers);
+  const b = D.modifierProcedure(
+    s,
+    { type: 'ajouter', p: 'domicile', etape: 'pieceService', exige: 'identite' },
+    T,
+  );
+  assert.deepEqual(procsEnBoucle(x2(b).procedures, ['identite', 'domicile']), [
+    'identite',
+    'domicile',
+  ]);
+  let r = b;
+  for (let i = 1; i <= 600; i++) r = D.tick2(r, 0.1, T + i * 100).s;
+  assert.ok(x2(r).premiereBoucle !== null);
 });

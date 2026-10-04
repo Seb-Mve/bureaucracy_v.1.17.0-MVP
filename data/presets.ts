@@ -4,7 +4,7 @@
  * par scripts/save-acte2.ts et par les tests. Fonctions pures, sans React.
  */
 import type { GameState, NoteId } from '../types/game';
-import type { Etape, EtatActe2, Note2Id, ProcId, Stocks } from '../types/acte2';
+import type { Etape, EtatActe2, Note2Id, ProcId, StatsActe2, Stocks } from '../types/acte2';
 import * as E from './engine';
 import * as D from './acte2/moteur';
 import { nouvellesLettres } from './courrier';
@@ -19,7 +19,10 @@ export type Preset =
   | 'finActeI'
   | 'debut'
   | 'atelier'
+  | 'compliquer'
   | 'achats'
+  | 'pieceService'
+  | 'avantBoucle'
   | 'boucle'
   | 'demat'
   | 'fin'
@@ -44,9 +47,24 @@ export const PRESETS_INFO: PresetInfo[] = [
   { id: 'debut', titre: 'Acte II — prise de fonctions', detail: 'Entrée à la Direction' },
   { id: 'atelier', titre: 'Acte II — Atelier ouvert', detail: 'Atelier des procédures, 5 guichets' },
   {
+    id: 'compliquer',
+    titre: 'Acte II — compliquer rapporte',
+    detail: 'Atelier ouvert, Carte d’identité seule demandée',
+  },
+  {
     id: 'achats',
     titre: 'Acte II — service des achats',
     detail: 'Marché public de fournitures en vigueur, ×2 exemplaires',
+  },
+  {
+    id: 'pieceService',
+    titre: 'Acte II — pièce de nos services',
+    detail: 'Il ne reste qu’à exiger un justificatif',
+  },
+  {
+    id: 'avantBoucle',
+    titre: 'Acte II — boucle sur le point de se former',
+    detail: 'Le justificatif peut exiger une carte',
   },
   {
     id: 'boucle',
@@ -68,6 +86,7 @@ const NOTES_ACHATS: Note2Id[] = [
   'exemplaires',
   'achats',
 ];
+const NOTES_PIECE: Note2Id[] = [...NOTES_ACHATS, 'chefBureau', 'pieceService'];
 const NOTES_BOUCLE: Note2Id[] = [...NOTES_ACHATS, 'pieceService'];
 const NOTES_DEMAT: Note2Id[] = [
   ...NOTES_BOUCLE,
@@ -80,7 +99,10 @@ const NOTES_DEMAT: Note2Id[] = [
 const NOTES: Record<Exclude<Preset, 'acte1Debut' | 'acte1Milieu' | 'finActeI' | 'cerfa2'>, Note2Id[]> = {
   debut: [],
   atelier: NOTES_ATELIER,
+  compliquer: [...NOTES_ATELIER, 'signature'],
   achats: NOTES_ACHATS,
+  pieceService: NOTES_PIECE,
+  avantBoucle: NOTES_PIECE,
   boucle: NOTES_BOUCLE,
   demat: NOTES_DEMAT,
   fin: NOTES_DEMAT,
@@ -92,6 +114,38 @@ const PROCEDURES_ACHATS: Partial<Record<ProcId, Etape[]>> = {
   identite: [{ type: 'piece' }, { type: 'visa' }, { type: 'visa' }, { type: 'signature' }],
   domicile: [{ type: 'piece' }, { type: 'visa' }, { type: 'signature' }],
 };
+
+/** Avant la pièce de service : la Carte d'identité déjà compliquée, le Justificatif que personne ne demande. */
+const PROCEDURES_PIECE: Partial<Record<ProcId, Etape[]>> = {
+  identite: [{ type: 'piece' }, { type: 'signature' }, { type: 'visa' }],
+  domicile: [{ type: 'piece' }, { type: 'visa' }],
+};
+
+/** La Carte d'identité exige un Justificatif de domicile ; il ne reste qu'à faire exiger une carte au justificatif. */
+const PROCEDURES_AVANT_BOUCLE: Partial<Record<ProcId, Etape[]>> = {
+  identite: [
+    { type: 'piece' },
+    { type: 'signature' },
+    { type: 'pieceService', exige: 'domicile' },
+    { type: 'visa' },
+  ],
+  domicile: [{ type: 'piece' }, { type: 'visa' }],
+};
+
+/** Documents délivrés et usagers perdus depuis l'entrée dans l'acte. */
+function production(
+  x: EtatActe2,
+  delivresUsagers: number,
+  delivresService: Partial<Record<ProcId, number>>,
+  abandons: number,
+): StatsActe2 {
+  return {
+    ...x.stats,
+    delivresUsagers: { ...x.stats.delivresUsagers, identite: delivresUsagers },
+    delivresService: { ...x.stats.delivresService, ...delivresService },
+    abandonsProc: { ...x.stats.abandonsProc, identite: abandons },
+  };
+}
 
 /** Une boucle Carte d'identité ⇄ Justificatif de domicile. */
 const PROCEDURES_BOUCLE: Partial<Record<ProcId, Etape[]>> = {
@@ -228,15 +282,55 @@ export function sauvegardePreset(preset: Preset, maintenant: number): GameState 
     };
     s = { ...s, budget: 6_400, formulaires: 2_300 };
   }
+  if (preset === 'compliquer') {
+    // Vers 11 min : l'Atelier et la Signature en vigueur, la Carte d'identité telle que le S.I.C. l'a laissée.
+    x = {
+      ...x,
+      guichets: 8,
+      agents: { ...x.agents, instructeur: 6 },
+      usagers: remplir(D.stocksPour(x.procedures), { identite: [40, 12] }),
+      population: 3_800,
+      stats: { ...production(x, 2_000, {}, 600), franchies: 10_000 },
+    };
+    s = { ...s, budget: 3_000, formulaires: 1_500 };
+  }
+  if (preset === 'pieceService' || preset === 'avantBoucle') {
+    // Vers 27 min : la note n° 8 en vigueur ; le Justificatif ne reçoit rien tant qu'aucune pièce ne l'exige.
+    const exige = preset === 'avantBoucle';
+    const procedures = {
+      ...x.procedures,
+      ...(exige ? PROCEDURES_AVANT_BOUCLE : PROCEDURES_PIECE),
+    };
+    x = {
+      ...x,
+      procedures,
+      usagers: remplir(D.stocksPour(procedures), {
+        identite: exige ? [60, 20, 10, 25] : [60, 20, 25],
+        domicile: exige ? [20, 6] : [0, 0],
+      }),
+      boucles: D.stocksPour(procedures),
+      suites: D.stocksPour(procedures),
+      guichets: 12,
+      agents: { ...x.agents, instructeur: 10, chefBureau: 2 },
+      population: 3_700,
+      exemplaires: 2,
+      premiereModif: 'identite',
+      stats: {
+        ...production(x, exige ? 5_400 : 5_000, exige ? { domicile: 150 } : {}, 1_500),
+        franchies: exige ? 42_000 : 40_000,
+      },
+    };
+    s = { ...s, budget: 6_000, formulaires: 3_000 };
+  }
   if (preset === 'achats') {
     // Le robot de simulate-acte2 vers 17 min : la note vient d'entrer en vigueur, le stock est bas.
     const procedures = { ...x.procedures, ...PROCEDURES_ACHATS };
     x = {
       ...x,
       procedures,
+      // Personne ne demande de justificatif (specs/011) : seule la Carte d'identité a des usagers.
       usagers: remplir(D.stocksPour(procedures), {
         identite: [30, 6, 4, 8],
-        domicile: [12, 3, 5],
       }),
       boucles: D.stocksPour(procedures),
       suites: D.stocksPour(procedures),
@@ -255,19 +349,19 @@ export function sauvegardePreset(preset: Preset, maintenant: number): GameState 
       procedures,
       usagers: remplir(D.stocksPour(procedures), {
         identite: [20, 5, 8],
-        domicile: [6, 2],
       }),
       boucles: remplir(D.stocksPour(procedures), {
-        identite: [10, 4, 20],
+        identite: [10, 4, 0],
         domicile: [12, 6],
       }),
-      suites: D.stocksPour(procedures),
+      // Ceux qui ont déposé leur pièce poursuivent jusqu'au visa (specs/011).
+      suites: remplir(D.stocksPour(procedures), { identite: [0, 0, 20] }),
       guichets: 8,
       agents: { ...x.agents, instructeur: 10 },
       premiereBoucle: avant,
       premiereModif: 'identite',
       stats: {
-        ...x.stats,
+        ...production(x, 5_900, { identite: 800, domicile: 700 }, 5_700),
         franchies: 40_000,
         franchiesBoucle: 6_000,
         abandonsDemarche: 350,

@@ -2,7 +2,8 @@
  * Imprime la ligne JavaScript qui charge une sauvegarde de vérification dans le navigateur
  * (dans le jeu, l'écran /test fait la même chose : ?test sur n'importe quelle adresse).
  * Usage : node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/resoudre-ts.ts scripts/save-acte2.ts <préréglage>
- * Préréglages : acte1Debut, acte1Milieu, finActeI, debut, atelier, achats, boucle, demat, fin, reforme, cerfa2
+ * Préréglages : acte1Debut, acte1Milieu, finActeI, debut, atelier, compliquer, achats, pieceService, avantBoucle,
+ * boucle, demat, fin, reforme, cerfa2
  * (voir data/presets.ts).
  */
 import { CLE_SAUVEGARDE } from '../data/save';
