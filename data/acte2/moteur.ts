@@ -28,7 +28,13 @@ import {
 import { multiplicateurAnciennete, partRejetee, rangGrade } from '../engine';
 import { NOTES2, NOTES2_PAR_ID, dematPct } from './notes2';
 import { appliquerAction, estBoucle } from './procedures';
-import { aJurisprudence } from '../jurisprudence';
+import {
+  aJurisprudence,
+  conditionsNote,
+  dejaInstruite2,
+  dotationJurisprudence,
+  prixFormulairesJurisprudence,
+} from '../jurisprudence';
 
 export function copieProcedures(
   p: Record<ProcId, Etape[]>,
@@ -98,10 +104,11 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
  */
 export function entrerActe2(s: GameState, maintenant: number): GameState {
   if (s.acte === 2) return s;
+  const x = etatInitialActe2(maintenant);
   return {
     ...s,
     acte: 2,
-    acte2: etatInitialActe2(maintenant),
+    acte2: { ...x, guichets: guichetsOfferts(s) },
     budget: BALANCE2.budgetInitial,
     formulaires: BALANCE2.formulairesInitiaux,
     derniereMaj: maintenant,
@@ -122,7 +129,9 @@ export function noteEffective2(
 export function getModifiers2(s: GameState, maintenant: number): Modifiers2 {
   const m: Modifiers2 = {
     tapPower: 1,
-    dotationMult: 1 + BALANCE.bonusGrade * rangGrade(s.tampons),
+    dotationMult:
+      (1 + BALANCE.bonusGrade * rangGrade(s.tampons)) *
+      dotationJurisprudence(s),
     primeRejet: BALANCE2.primeRejet,
     rejetMax: BALANCE2.rejetMaxInitial,
     recrutementVisible: false,
@@ -152,6 +161,15 @@ export function notesVisibles2(s: GameState): Note2Id[] {
   );
 }
 
+/** Coût et délai d'instruction d'une note de l'acte II, déjà-vu administratif compris. */
+export function conditionsNote2(
+  s: GameState,
+  id: Note2Id,
+): { cout: number; instruction: number } {
+  const n = NOTES2_PAR_ID[id];
+  return conditionsNote(dejaInstruite2(s, id), n.cout, n.instruction);
+}
+
 export function peutAcheterNote2(s: GameState, id: Note2Id): boolean {
   const x = s.acte2;
   const n = NOTES2_PAR_ID[id];
@@ -159,7 +177,7 @@ export function peutAcheterNote2(s: GameState, id: Note2Id): boolean {
     x !== null &&
     x.notes[id] === undefined &&
     n.visible(s) &&
-    s.budget >= n.cout
+    s.budget >= conditionsNote2(s, id).cout
   );
 }
 
@@ -170,17 +188,17 @@ export function acheterNote2(
 ): GameState {
   if (!peutAcheterNote2(s, id)) return s;
   const x = s.acte2 as EtatActe2;
-  const n = NOTES2_PAR_ID[id];
+  const { cout, instruction } = conditionsNote2(s, id);
   return {
     ...s,
-    budget: s.budget - n.cout,
+    budget: s.budget - cout,
     acte2: {
       ...x,
       notes: {
         ...x.notes,
         [id]: {
           achetee: maintenant,
-          effective: maintenant + n.instruction * 1000,
+          effective: maintenant + instruction * 1000,
         },
       },
       acteTermine: x.acteTermine || id === 'promotion',
@@ -328,8 +346,12 @@ function franchir(
     if (e.type === 'visa') ev.visas += u0 + b0;
 
     // Patience : une part des usagers abandonne à chaque étape.
+    // Droit acquis (Jurisprudence) : la première étape de chaque procédure ne coûte aucune patience.
     const ab =
-      u0 * Math.min(1, def.patience * BALANCE2.abandonParPoint * ex.patience);
+      m.droitAcquis && l.k === 0
+        ? 0
+        : u0 *
+          Math.min(1, def.patience * BALANCE2.abandonParPoint * ex.patience);
     population -= ab;
     abandons += ab;
     let u = u0 - ab;
@@ -434,7 +456,11 @@ export function tick2(
       dt;
 
   // Les services vieillissent pendant le jeu comme pendant une absence (simulée, plafonnée).
-  const x: EtatActe2 = { ...x0, usagers, population, duree: x0.duree + dt };
+  const x: EtatActe2 = restaurerMemoire(
+    s0,
+    { ...x0, usagers, population, duree: x0.duree + dt },
+    m,
+  );
   const s: GameState = {
     ...s0,
     acte2: x,
@@ -469,6 +495,45 @@ export function tick2(
     ...visa.map((l) => ({ ...l, u: l.u * rV, b: l.b * rV })),
   ];
   return franchir(s, lots, enJeu ? m : { ...m, rejetMax: 0 }, maintenant);
+}
+
+/**
+ * Mémoire des services (Jurisprudence) : à l'ouverture de l'Atelier, avant toute modification du joueur,
+ * les procédures d'avant la Réforme sont restaurées, une seule fois. Les dossiers engagés gardent leur
+ * rang (ou passent à la dernière étape).
+ */
+export function restaurerMemoire(
+  s: GameState,
+  x: EtatActe2,
+  m: Modifiers2,
+): EtatActe2 {
+  const memoire = s.reformes.procedures;
+  if (
+    x.memoireRestauree ||
+    x.premiereModif !== null ||
+    !m.atelierVisible ||
+    !memoire ||
+    !aJurisprudence(s, 'memoire')
+  )
+    return x;
+  const procedures = copieProcedures(memoire);
+  const ranger = (st: Stocks): Stocks =>
+    Object.fromEntries(
+      PROCS.map((p) => {
+        const v = procedures[p].map(() => 0);
+        st[p].forEach((n, k) => {
+          v[Math.min(k, v.length - 1)] += n;
+        });
+        return [p, v];
+      }),
+    ) as Stocks;
+  return {
+    ...x,
+    procedures,
+    usagers: ranger(x.usagers),
+    boucles: ranger(x.boucles),
+    memoireRestauree: true,
+  };
 }
 
 /** Un tap sur TAMPONNER : accorde `tapPower` visas en attente ; le rejet de chaque dossier est tiré au sort. */
@@ -516,18 +581,28 @@ export function tamponner2(
   };
 }
 
-/** Prix du prochain Guichet : le guichet 3, offert, ne compte pas. */
-export function coutGuichet(possedes: number): number {
+/** Guichets offerts à l'entrée dans l'acte : le guichet 3, ou dix avec Antériorité (Jurisprudence). */
+export function guichetsOfferts(s: GameState): number {
+  return aJurisprudence(s, 'anteriorite')
+    ? REFORME.guichetsAnteriorite
+    : BALANCE2.guichetsInitiaux;
+}
+
+/** Prix du prochain Guichet : les guichets offerts ne comptent pas. */
+export function coutGuichet(
+  possedes: number,
+  offerts: number = BALANCE2.guichetsInitiaux,
+): number {
   const g = BALANCE2.guichet;
   return Math.ceil(
-    g.coutBase * Math.pow(g.croissance, possedes - BALANCE2.guichetsInitiaux),
+    g.coutBase * Math.pow(g.croissance, Math.max(0, possedes - offerts)),
   );
 }
 
 export function acheterGuichet(s: GameState, maintenant: number): GameState {
   const x = s.acte2;
   if (!x || !getModifiers2(s, maintenant).recrutementVisible) return s;
-  const cout = coutGuichet(x.guichets);
+  const cout = coutGuichet(x.guichets, guichetsOfferts(s));
   if (s.budget < cout) return s;
   return {
     ...s,
@@ -580,13 +655,22 @@ export function acheterAgent2(
   };
 }
 
-/** Achète `nb` ramettes au prix de l'acte I (sinon le maximum possible). */
+/** Prix d'une ramette à l'acte II : celui de l'acte I, Vide juridique compris. */
+export function prixRamette2(s: GameState): number {
+  return (
+    Math.round(BALANCE.prixRamette * prixFormulairesJurisprudence(s) * 100) /
+    100
+  );
+}
+
+/** Achète `nb` ramettes (sinon le maximum possible). */
 export function acheterRamettes2(s: GameState, nb: number): GameState {
-  const possibles = Math.min(nb, Math.floor(s.budget / BALANCE.prixRamette));
+  const prix = prixRamette2(s);
+  const possibles = Math.min(nb, Math.floor(s.budget / prix));
   if (possibles <= 0) return s;
   return {
     ...s,
-    budget: s.budget - possibles * BALANCE.prixRamette,
+    budget: s.budget - possibles * prix,
     formulaires: s.formulaires + possibles * BALANCE.ramette,
     stats: {
       ...s.stats,
@@ -599,7 +683,7 @@ export function acheterRamettes2(s: GameState, nb: number): GameState {
 /** En rupture et sans de quoi payer une ramette, le service en fournit une, gratuitement. */
 export function requisitionUrgence2(s: GameState): GameState {
   const x = s.acte2;
-  if (!x || s.formulaires >= x.exemplaires || s.budget >= BALANCE.prixRamette)
+  if (!x || s.formulaires >= x.exemplaires || s.budget >= prixRamette2(s))
     return s;
   return { ...s, formulaires: s.formulaires + BALANCE.ramette };
 }

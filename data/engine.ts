@@ -13,7 +13,13 @@ import {
 } from '../types/game';
 import { AGENTS, BALANCE, GRADES, type AgentDef } from '../constants/balance';
 import { EXTENSIONS_PERIMETRE, NOTES, NOTES_PAR_ID } from './notes';
-import { reformesInitiales } from './jurisprudence';
+import {
+  conditionsNote,
+  dejaInstruite,
+  dotationJurisprudence,
+  prixFormulairesJurisprudence,
+  reformesInitiales,
+} from './jurisprudence';
 
 const somme = (a: ParPatience): number => a[1] + a[2] + a[3];
 
@@ -100,7 +106,8 @@ export function getModifiers(s: GameState, maintenant: number): Modifiers {
   for (const note of NOTES) {
     if (noteEffective(s, note.id, maintenant)) note.appliquer(m);
   }
-  m.dotationMult *= 1 + BALANCE.bonusGrade * rangGrade(s.tampons);
+  m.dotationMult *= (1 + BALANCE.bonusGrade * rangGrade(s.tampons)) * dotationJurisprudence(s);
+  m.prixFormulaireMult *= prixFormulairesJurisprudence(s);
   return m;
 }
 
@@ -430,18 +437,24 @@ export function notesVisibles(s: GameState): NoteId[] {
   return NOTES.filter((n) => s.notes[n.id] !== undefined || n.visible(s)).map((n) => n.id);
 }
 
+/** Coût et délai d'instruction d'une note de l'acte I, déjà-vu administratif compris. */
+export function conditionsNoteActe1(s: GameState, id: NoteId): { cout: number; instruction: number } {
+  const n = NOTES_PAR_ID[id];
+  return conditionsNote(dejaInstruite(s, id), n.cout, n.instruction);
+}
+
 export function peutAcheterNote(s: GameState, id: NoteId): boolean {
   const n = NOTES_PAR_ID[id];
-  return s.notes[id] === undefined && n.visible(s) && s.budget >= n.cout;
+  return s.notes[id] === undefined && n.visible(s) && s.budget >= conditionsNoteActe1(s, id).cout;
 }
 
 export function acheterNote(s: GameState, id: NoteId, maintenant: number): GameState {
   if (!peutAcheterNote(s, id)) return s;
-  const n = NOTES_PAR_ID[id];
+  const { cout, instruction } = conditionsNoteActe1(s, id);
   return {
     ...s,
-    budget: s.budget - n.cout,
-    notes: { ...s.notes, [id]: { achetee: maintenant, effective: maintenant + n.instruction * 1000 } },
+    budget: s.budget - cout,
+    notes: { ...s.notes, [id]: { achetee: maintenant, effective: maintenant + instruction * 1000 } },
     acteTermine: s.acteTermine || id === 'reaffectation',
   };
 }

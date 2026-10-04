@@ -5,7 +5,8 @@
 import type { GameState, Lettre, NoteId } from '../types/game';
 import type { Note2Id, ProcId } from '../types/acte2';
 import { PROCS } from '../types/acte2';
-import { REFORME } from '../constants/balanceActe2';
+import type { JurisprudenceId } from '../types/reforme';
+import { JURISPRUDENCE, REFORME } from '../constants/balanceActe2';
 import { etatInitial } from './engine';
 import { copieProcedures, getModifiers2 } from './acte2/moteur';
 import { tirerDenomination } from './jurisprudence';
@@ -91,6 +92,59 @@ export function reformer(
       },
     },
   };
+}
+
+export function coutJurisprudence(id: JurisprudenceId): number {
+  return JURISPRUDENCE.find((j) => j.id === id)?.cout ?? Infinity;
+}
+
+export function peutAcheterJurisprudence(
+  s: GameState,
+  id: JurisprudenceId,
+): boolean {
+  return (
+    !s.reformes.jurisprudence.includes(id) &&
+    s.reformes.trombones >= coutJurisprudence(id)
+  );
+}
+
+/**
+ * Achat d'un bonus de Jurisprudence avec les trombones (définitif). Précédent et Antériorité valent aussi
+ * pour la partie en cours : acheté à l'acte I, Précédent complète les stagiaires à 3 ; acheté à l'acte II,
+ * Antériorité complète les guichets à 10.
+ */
+export function acheterJurisprudence(
+  s: GameState,
+  id: JurisprudenceId,
+): GameState {
+  if (!peutAcheterJurisprudence(s, id)) return s;
+  const r: GameState = {
+    ...s,
+    reformes: {
+      ...s.reformes,
+      trombones: s.reformes.trombones - coutJurisprudence(id),
+      jurisprudence: [...s.reformes.jurisprudence, id],
+    },
+  };
+  if (id === 'precedent' && r.acte === 1) {
+    return {
+      ...r,
+      agents: {
+        ...r.agents,
+        stagiaire: Math.max(r.agents.stagiaire, REFORME.stagiairesPrecedent),
+      },
+    };
+  }
+  if (id === 'anteriorite' && r.acte2 && r.acte === 2) {
+    return {
+      ...r,
+      acte2: {
+        ...r.acte2,
+        guichets: Math.max(r.acte2.guichets, REFORME.guichetsAnteriorite),
+      },
+    };
+  }
+  return r;
 }
 
 /** Lettre du S.I.C. après chaque Réforme : la nouvelle dénomination des services. Une par Réforme. */

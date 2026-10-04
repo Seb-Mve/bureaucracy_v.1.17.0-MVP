@@ -7,6 +7,9 @@ import { nouvellesLettres } from '../../data/courrier';
 import { estSauvegardeValide, normaliserSauvegarde } from '../../data/save';
 import { BALANCE } from '../../constants/balance';
 import { BALANCE2, REFORME } from '../../constants/balanceActe2';
+import { NOTES_PAR_ID } from '../../data/notes';
+import { NOTES2_PAR_ID } from '../../data/acte2/notes2';
+import type { JurisprudenceId } from '../../types/reforme';
 import { PROCS, type EtatActe2, type Note2Id } from '../../types/acte2';
 import type { GameState } from '../../types/game';
 
@@ -45,6 +48,14 @@ function avantReforme(): GameState {
     budget: 99_999,
   };
 }
+
+const avecJurisprudence = (
+  s: GameState,
+  ids: JurisprudenceId[],
+): GameState => ({
+  ...s,
+  reformes: { ...s.reformes, jurisprudence: ids },
+});
 
 test('sauvegardes antérieures à la Réforme : reformes complétées, âge des services déduit', () => {
   const acte1: Partial<GameState> = { ...E.etatInitial(0) };
@@ -223,4 +234,151 @@ test('les lettres d’avancement ne repartent pas après la Réforme, les autres
     lettresEnvoyees: ['grade1', 'bienvenue', 'a2-prise'],
   };
   assert.deepEqual(R.reformer(s0, 0, zero).lettresEnvoyees, ['grade1']);
+});
+
+test('Jurisprudence : achat définitif avec les trombones, une seule fois', () => {
+  const apres = R.reformer(avantReforme(), 0, zero);
+  const s = { ...apres, reformes: { ...apres.reformes, trombones: 10 } };
+  const r = R.acheterJurisprudence(s, 'videJuridique');
+  assert.equal(r.reformes.trombones, 10 - R.coutJurisprudence('videJuridique'));
+  assert.deepEqual(r.reformes.jurisprudence, ['videJuridique']);
+  assert.equal(R.acheterJurisprudence(r, 'videJuridique'), r);
+  const pauvre = { ...s, reformes: { ...s.reformes, trombones: 0 } };
+  assert.equal(R.acheterJurisprudence(pauvre, 'memoire'), pauvre);
+});
+
+test('Ancienneté reconnue : dotation +20 % aux deux actes', () => {
+  const s1 = E.signerCerfa(E.etatInitial(0), 'Test', 0);
+  proche(
+    E.getModifiers(avecJurisprudence(s1, ['anciennete']), 0).dotationMult,
+    1.2,
+  );
+  const s2 = D.entrerActe2(s1, 0);
+  proche(
+    D.getModifiers2(avecJurisprudence(s2, ['anciennete']), 0).dotationMult,
+    1.2,
+  );
+});
+
+test('Vide juridique : formulaires −25 % aux deux actes', () => {
+  const s1 = E.signerCerfa(E.etatInitial(0), 'Test', 0);
+  proche(
+    E.prixRamette(E.getModifiers(avecJurisprudence(s1, ['videJuridique']), 0)),
+    BALANCE.prixRamette * 0.75,
+  );
+  const s2 = {
+    ...avecJurisprudence(D.entrerActe2(s1, 0), ['videJuridique']),
+    budget: 60,
+  };
+  proche(D.prixRamette2(s2), BALANCE.prixRamette * 0.75);
+  assert.equal(
+    D.acheterRamettes2(s2, 100).formulaires,
+    BALANCE2.formulairesInitiaux + 10 * BALANCE.ramette,
+  );
+});
+
+test('Précédent : l’acte I recommence avec 3 stagiaires, ou les reçoit aussitôt', () => {
+  const s0 = avecJurisprudence(avantReforme(), ['precedent']);
+  assert.equal(
+    R.reformer(s0, 0, zero).agents.stagiaire,
+    REFORME.stagiairesPrecedent,
+  );
+  const acte1 = R.reformer(avantReforme(), 0, zero);
+  const riche = { ...acte1, reformes: { ...acte1.reformes, trombones: 99 } };
+  assert.equal(
+    R.acheterJurisprudence(riche, 'precedent').agents.stagiaire,
+    REFORME.stagiairesPrecedent,
+  );
+});
+
+test('Antériorité : l’acte II commence avec 10 guichets, le suivant au prix du deuxième', () => {
+  const s1 = avecJurisprudence(E.signerCerfa(E.etatInitial(0), 'Test', 0), [
+    'anteriorite',
+  ]);
+  const s2 = D.entrerActe2(s1, 0);
+  assert.equal(x(s2).guichets, REFORME.guichetsAnteriorite);
+  assert.equal(
+    D.coutGuichet(x(s2).guichets, D.guichetsOfferts(s2)),
+    D.coutGuichet(1),
+  );
+});
+
+test('Droit acquis : la première étape de chaque procédure ne coûte aucune patience', () => {
+  const base = avec2(
+    D.entrerActe2(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0),
+    {
+      population: BALANCE2.fileInitiale,
+    },
+  );
+  const sans = D.tick2(base, 1, 1000).s;
+  const avec = D.tick2(avecJurisprudence(base, ['droitAcquis']), 1, 1000).s;
+  assert.ok(x(sans).abandons > 0);
+  assert.equal(x(avec).abandons, 0);
+});
+
+test('Mémoire des services : procédures restaurées à l’ouverture de l’Atelier, avant toute modification', () => {
+  const s1 = R.reformer(avantReforme(), 0, zero);
+  const memoire = {
+    ...s1.reformes.procedures!,
+    identite: [
+      { type: 'piece' as const },
+      { type: 'pieceService' as const, exige: 'domicile' as const },
+    ],
+  };
+  const avant = {
+    ...s1,
+    reformes: {
+      ...s1.reformes,
+      jurisprudence: ['memoire' as const],
+      procedures: memoire,
+    },
+  };
+  const s2 = D.entrerActe2(E.signerCerfa(avant, 'Camille', 0), 0);
+  // Atelier fermé : rien ne change.
+  assert.deepEqual(
+    x(D.tick2(s2, 1, 1000).s).procedures.identite.map((e) => e.type),
+    ['piece', 'visa'],
+  );
+  const ouvert = D.tick2(avecNotes2(s2, ['atelier']), 1, 1000).s;
+  assert.deepEqual(x(ouvert).procedures.identite, memoire.identite);
+  assert.equal(x(ouvert).usagers.identite.length, 2);
+  assert.equal(x(ouvert).memoireRestauree, true);
+  // Le joueur a déjà modifié une procédure : la mémoire ne l'écrase pas.
+  const modifie = avec2(avecNotes2(s2, ['atelier']), {
+    premiereModif: 'identite',
+  });
+  assert.equal(x(D.tick2(modifie, 1, 1000).s).memoireRestauree, false);
+});
+
+test('déjà-vu administratif : une note déjà instruite a son délai ÷ 4 et son coût ÷ 6', () => {
+  const s1 = R.reformer(avantReforme(), 0, zero);
+  const acte1 = {
+    ...E.signerCerfa(s1, 'Camille', 0),
+    tampons: 300_000,
+    budget: 1e6,
+  };
+  const tilleuls = NOTES_PAR_ID.tilleuls;
+  assert.deepEqual(E.conditionsNoteActe1(acte1, 'tilleuls'), {
+    cout: Math.round(tilleuls.cout / REFORME.dejaVuCout),
+    instruction: tilleuls.instruction / REFORME.dejaVuDelai,
+  });
+  const achete = E.acheterNote(acte1, 'tilleuls', 0);
+  assert.equal(
+    achete.notes.tilleuls?.effective,
+    (tilleuls.instruction / REFORME.dejaVuDelai) * 1000,
+  );
+  assert.equal(
+    achete.budget,
+    1e6 - Math.round(tilleuls.cout / REFORME.dejaVuCout),
+  );
+  // Une note jamais achetée garde ses conditions.
+  assert.equal(
+    E.conditionsNoteActe1(acte1, 'commune').cout,
+    NOTES_PAR_ID.commune.cout,
+  );
+  const acte2 = { ...D.entrerActe2(acte1, 0), budget: 1e6 };
+  assert.deepEqual(D.conditionsNote2(acte2, 'atelier'), {
+    cout: Math.round(NOTES2_PAR_ID.atelier.cout / REFORME.dejaVuCout),
+    instruction: NOTES2_PAR_ID.atelier.instruction / REFORME.dejaVuDelai,
+  });
 });
