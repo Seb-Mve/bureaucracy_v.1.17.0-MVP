@@ -8,6 +8,7 @@ import { conformite, dossiersEnAttente, getModifiers, noteEffective, rangGrade }
 import { NOTES_PAR_ID } from './notes';
 import { formatEntier, formatMontant, formatPourcent } from '../utils/formatters';
 import { LETTRES_ACTE2 } from './acte2/courrier2';
+import { lettreReforme } from './reforme';
 
 export interface LettreDef {
   id: LettreId;
@@ -139,9 +140,12 @@ const LETTRES: LettreDef[] = [
 export function nouvellesLettres(s: GameState, maintenant: number): Lettre[] {
   // À l'acte II, les lettres de l'acte I se taisent (champs figés) ; le grade, lui, est conservé.
   const candidates = s.acte === 2 ? [...LETTRES_AVANCEMENT, ...LETTRES_ACTE2] : LETTRES;
-  return candidates
+  const lettres: Lettre[] = candidates
     .filter((l) => !s.lettresEnvoyees.includes(l.id) && l.declencheur(s, maintenant))
     .map((l) => ({ id: l.id, objet: l.objet, corps: l.corps(s), recue: maintenant, lue: false }));
+  // Après chaque Réforme : la nouvelle dénomination des services (une lettre par Réforme).
+  const reforme = lettreReforme(s, maintenant);
+  return reforme ? [reforme, ...lettres] : lettres;
 }
 
 /** Lettre de résumé après une absence. */
