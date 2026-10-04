@@ -10,7 +10,7 @@ export interface Article {
 const pct = (x: number) => `${Math.round(x * 100)} %`;
 
 /**
- * Règlement intérieur de la Direction (acte II) : un article par mécanique débloquée.
+ * Règlement intérieur du service (acte II) : un article par mécanique débloquée.
  * Aucun article ne nomme la boucle : le joueur la construit lui-même.
  */
 export function articlesDirection(
@@ -80,7 +80,7 @@ export function articlesDirection(
     articles.push({
       titre: 'Dématérialisation',
       texte:
-        'Le taux publié par le S.I.C. mesure la part de l’activité de la Direction qui se passe d’usager.',
+        'Le taux publié par le S.I.C. mesure la part de l’activité du service qui se passe d’usager.',
     });
   }
   return articles;

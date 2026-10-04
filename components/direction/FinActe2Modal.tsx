@@ -52,7 +52,7 @@ export default function FinActe2Modal() {
               Le service reste ouvert : vos tampons continuent de compter.
             </Text>
             <BoutonPoussoir
-              libelle="RETOURNER À LA DIRECTION"
+              libelle="RETOURNER AU SERVICE"
               taille={Typo.titre}
               hauteur={56}
               couleur={encre.face}
