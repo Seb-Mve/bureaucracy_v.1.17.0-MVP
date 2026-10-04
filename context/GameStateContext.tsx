@@ -551,8 +551,6 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         appliquer({ ...s, fichePosteVue: vue });
         return;
       }
-      // Les lignes ne sont lues qu'en refermant une fiche ouverte : déjà refermée, rien ne change (badge intact).
-      if (vue && s.acte2?.ficheVue) return;
       appliquer(F.marquerFiche2(s, vue, Date.now()));
     },
     [appliquer],

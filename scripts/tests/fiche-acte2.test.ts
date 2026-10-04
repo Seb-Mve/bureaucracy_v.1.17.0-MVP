@@ -56,6 +56,11 @@ test('fiche de poste : refermée, elle est lue ; une note en vigueur ajoute une 
     lue,
     'rien à marquer : même objet',
   );
+  // Fiche déjà refermée : la refermer n'a aucun effet, même avec des lignes non lues (badge intact).
+  const nonLue = avecNotes(lue, ['agents']);
+  assert.equal(F.vueFiche2(nonLue, 0)?.nonLues, 1);
+  assert.equal(F.marquerFiche2(nonLue, true, 0), nonLue);
+  assert.equal(F.vueFiche2(F.marquerFiche2(nonLue, true, 0), 0)?.nonLues, 1);
   // Une note achetée mais en instruction n'ajoute rien.
   const instruction = avec2(lue, {
     notes: { agents: { achetee: 0, effective: 30_000 } },

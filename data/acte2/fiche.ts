@@ -129,7 +129,7 @@ export function vueFiche2(s: GameState, maintenant: number): VueFiche2 | null {
 
 /**
  * Ouvre (`vue` faux, « Relire ma fiche de poste ») ou referme la fiche. La refermer marque lues toutes les
- * lignes en vigueur. Même objet si rien ne change.
+ * lignes en vigueur ; déjà refermée, elle ne change rien. Même objet si rien ne change.
  */
 export function marquerFiche2(
   s: GameState,
@@ -139,8 +139,9 @@ export function marquerFiche2(
   const x = s.acte2;
   if (!x || s.acte !== 2) return s;
   if (!vue) return x.ficheVue ? { ...s, acte2: { ...x, ficheVue: false } } : s;
+  // Déjà refermée : rien ne change (les lignes non lues gardent leur pastille).
+  if (x.ficheVue) return s;
   const lues = lignesFiche2(s, maintenant);
-  if (x.ficheVue && lues.every((id) => x.ficheLues.includes(id))) return s;
   const y: EtatActe2 = { ...x, ficheVue: true, ficheLues: lues };
   return { ...s, acte2: y };
 }

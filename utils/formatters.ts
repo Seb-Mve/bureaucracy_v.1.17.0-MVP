@@ -62,6 +62,6 @@ export function formatPourcent(value: number): string {
  * typographique ; « 0 » quand il est négligeable.
  */
 export function formatDebitSigne(value: number): string {
-  if (Math.abs(value) < 0.005) return '0';
+  if (!Number.isFinite(value) || Math.abs(value) < 0.01) return '0';
   return `${value > 0 ? '+' : '−'}${formatDebit(Math.abs(value))}`;
 }

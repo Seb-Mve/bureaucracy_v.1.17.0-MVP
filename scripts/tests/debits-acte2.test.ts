@@ -92,5 +92,8 @@ test('débit signé : signe typographique, format des débits, zéro sans signe'
   assert.equal(formatDebitSigne(-13), '−13');
   assert.equal(formatDebitSigne(0.4), '+0,40');
   assert.equal(formatDebitSigne(0.001), '0');
+  assert.equal(formatDebitSigne(0.007), '0');
+  assert.equal(formatDebitSigne(-0.007), '0');
+  assert.equal(formatDebitSigne(Number.NaN), '0');
   assert.equal(formatDebitSigne(-124_560), '−124 k');
 });
