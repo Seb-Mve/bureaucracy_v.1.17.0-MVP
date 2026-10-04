@@ -124,7 +124,7 @@ function visasDe(x: EtatActe2, p: ProcId): { u: number; b: number } {
   x.procedures[p].forEach((e, k) => {
     if (e.type !== 'visa') return;
     u += x.usagers[p][k];
-    b += x.boucles[p][k];
+    b += x.boucles[p][k] + x.suites[p][k];
   });
   return { u, b };
 }
@@ -132,7 +132,7 @@ function visasDe(x: EtatActe2, p: ProcId): { u: number; b: number } {
 /** Tableau de circulation d'une procédure : dossiers en attente à chaque étape, et qui la traite. */
 export function tableauCirculation(x: EtatActe2, p: ProcId): EtapeChaine[] {
   const attentes = x.procedures[p].map((_, k) =>
-    Math.floor(x.usagers[p][k] + x.boucles[p][k]),
+    Math.floor(x.usagers[p][k] + x.boucles[p][k] + x.suites[p][k]),
   );
   const max = Math.max(...attentes);
   const rangMax = max >= 1 ? attentes.indexOf(max) : -1;

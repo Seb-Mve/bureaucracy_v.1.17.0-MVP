@@ -494,6 +494,7 @@ test('sans nouvel usager, les dossiers en boucle circulent sans se multiplier', 
       vie: [BALANCE2.populationMax],
     },
     boucles: { ...x(s).boucles, identite: [50, 0], domicile: [0, 0] },
+    suites: { ...x(s).suites, identite: [0, 0], domicile: [0, 0] },
   });
   s = avancer2(s, 600);
   proche(D.dossiersEnBoucle(x(s)), 50, 1e-6);

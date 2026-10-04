@@ -23,6 +23,7 @@ import {
   ETAPES,
   EXEMPLAIRES,
   PROCEDURES_INITIALES,
+  PROCS_DEMANDEES,
   REFORME,
 } from '../../constants/balanceActe2';
 import { multiplicateurAnciennete, partRejetee, rangGrade } from '../engine';
@@ -241,6 +242,19 @@ export function marquerFinActeVue2(s: GameState): GameState {
 export const usagersEnCours = (x: EtatActe2): number => sommeStocks(x.usagers);
 export const dossiersEnBoucle = (x: EtatActe2): number =>
   sommeStocks(x.boucles);
+/** Dossiers sans usager : en boucle, et ceux qui poursuivent leur procédure après avoir déposé leur pièce. */
+export const dossiersDuService = (x: EtatActe2): number =>
+  sommeStocks(x.boucles) + sommeStocks(x.suites);
+
+/**
+ * Usagers qui ont une démarche en cours : leurs dossiers dans les procédures qu'ils demandent. Un dossier lié
+ * (déposé par une pièce de service dans une autre procédure) appartient à un usager déjà compté.
+ */
+export function usagersAvecDemarche(x: EtatActe2): number {
+  let t = 0;
+  for (const p of PROCS_DEMANDEES) for (const v of x.usagers[p]) t += v;
+  return t;
+}
 
 /** Taux de dématérialisation affichable, plafonné à 100 %. */
 export function dematerialisation(x: EtatActe2): number {
@@ -252,7 +266,8 @@ export function visasEnAttente(x: EtatActe2): number {
   let t = 0;
   for (const p of PROCS) {
     x.procedures[p].forEach((e, k) => {
-      if (e.type === 'visa') t += x.usagers[p][k] + x.boucles[p][k];
+      if (e.type === 'visa')
+        t += x.usagers[p][k] + x.boucles[p][k] + x.suites[p][k];
     });
   }
   return t;
@@ -285,12 +300,13 @@ export function rendementDemat(s: GameState, x: EtatActe2): number {
   );
 }
 
-/** Dossiers d'une étape qui la franchissent : `u` d'usagers, `b` en boucle. */
+/** Dossiers d'une étape qui la franchissent : `u` d'usagers, `b` en boucle, `c` qui poursuivent leur procédure. */
 interface Lot {
   p: ProcId;
   k: number;
   u: number;
   b: number;
+  c: number;
 }
 
 const evVide = (): Events2 => ({
@@ -324,7 +340,7 @@ function franchir(
   const x0 = s.acte2 as EtatActe2;
   const ev = evVide();
   let total = 0;
-  for (const l of lots) total += l.u + l.b;
+  for (const l of lots) total += l.u + l.b + l.c;
   if (total <= 0) return { s, ev };
   // Formulaires : on franchit au prorata de ce que le stock permet.
   const ratio = Math.min(
@@ -339,6 +355,9 @@ function franchir(
   const taux = Math.min(x0.tauxRejet, m.rejetMax);
   const usagers = copieStocks(x0.usagers);
   const boucles = copieStocks(x0.boucles);
+  const suites = copieStocks(x0.suites);
+  const delivresUsagers = { ...x0.stats.delivresUsagers };
+  const delivresService = { ...x0.stats.delivresService };
   let budget = 0;
   let conf = 0;
   let franchies = 0;
@@ -352,17 +371,21 @@ function franchir(
   for (const l of lots) {
     const u0 = l.u * ratio;
     const b0 = l.b * ratio;
-    if (u0 + b0 <= 0) continue;
+    const c0 = l.c * ratio;
+    if (u0 + b0 + c0 <= 0) continue;
     const etapes = x0.procedures[l.p];
     const e = etapes[l.k];
     const def = ETAPES[e.type];
     usagers[l.p][l.k] -= u0;
     boucles[l.p][l.k] -= b0;
-    franchies += u0 + b0;
-    franchiesBoucle += b0;
-    budget += (u0 + b0) * dot * def.dotation;
-    conf += (u0 + b0) * def.conf * ex.conf;
-    if (e.type === 'visa') ev.visas += u0 + b0;
+    suites[l.p][l.k] -= c0;
+    // Tout dossier sans usager compte pour la dématérialisation, qu'il tourne en boucle ou poursuive sa procédure.
+    const sans = b0 + c0;
+    franchies += u0 + sans;
+    franchiesBoucle += sans;
+    budget += (u0 + sans) * dot * def.dotation;
+    conf += (u0 + sans) * def.conf * ex.conf;
+    if (e.type === 'visa') ev.visas += u0 + sans;
 
     // Patience : une part des usagers abandonne à chaque étape.
     // Droit acquis (Jurisprudence) : la première étape de chaque procédure ne coûte aucune patience.
@@ -376,25 +399,29 @@ function franchir(
     abandonsProc[l.p] += ab;
     let u = u0 - ab;
     let b = b0;
+    let c = c0;
 
-    // Pièce délivrée par nos services : un dossier lié est déposé dans la procédure exigée.
-    // Un dossier en boucle n'est pas dupliqué : il passe dans la procédure exigée.
+    // Pièce délivrée par nos services : la demande liée est déposée dans la procédure exigée, et le dossier
+    // poursuit sa propre procédure jusqu'à la délivrance. Un dossier qui a déjà déposé sa pièce (`c`) ne dépose
+    // plus rien : le nombre de dossiers en boucle reste celui des usagers entrés dans le circuit.
     if (
       e.type === 'pieceService' &&
       e.exige !== undefined &&
       m.procsOuvertes.includes(e.exige)
     ) {
       if (estBoucle(x0.procedures, m.procsOuvertes, l.p, e.exige)) {
-        // La chaîne ne peut plus aboutir : l'usager est renvoyé chez lui, le dossier continue sans lui.
+        // La chaîne ne peut plus aboutir : l'usager est renvoyé chez lui, sa demande tourne sans lui.
         abandonsDemarche += u;
         boucles[e.exige][0] += b + u;
         if (b + u > 0 && premiereBoucle === null) premiereBoucle = maintenant;
-        // Le dossier part dans la procédure exigée : il ne poursuit pas la sienne (un seul dossier par usager).
+        c += b + u;
         b = 0;
         u = 0;
       } else {
+        // Simple dépendance : l'usager suit les deux démarches ; un dossier en boucle passe sa demande.
         usagers[e.exige][0] += u;
         boucles[e.exige][0] += b;
+        c += b;
         b = 0;
       }
     }
@@ -402,21 +429,30 @@ function franchir(
     if (l.k + 1 < etapes.length) {
       usagers[l.p][l.k + 1] += u;
       boucles[l.p][l.k + 1] += b;
+      suites[l.p][l.k + 1] += c;
       continue;
     }
 
-    // Fin de procédure : rejet. Sans usager, le rejet ne coûte rien.
-    const part = alea ? partRejetee(u + b, taux, alea) : taux;
+    // Fin de procédure : rejet. Sans usager, le rejet ne coûte rien (le dossier reprend en tête).
+    const part = alea ? partRejetee(u + b + c, taux, alea) : taux;
     const rejU = u * part;
     const rejB = b * part;
-    budget += (rejU + rejB) * dot * m.primeRejet;
-    conf += (rejU + rejB) * BALANCE2.confParRejet;
+    const rejC = c * part;
+    budget += (rejU + rejB + rejC) * dot * m.primeRejet;
+    conf += (rejU + rejB + rejC) * BALANCE2.confParRejet;
     const abRejet = rejU * BALANCE2.abandonRejet;
     population -= abRejet;
     abandons += abRejet;
     abandonsProc[l.p] += abRejet;
     usagers[l.p][0] += rejU - abRejet;
     boucles[l.p][0] += rejB;
+    suites[l.p][0] += rejC;
+    // Délivrance : remis à l'usager dans une procédure qu'il demande, sinon délivré pour un dossier du service.
+    const livresU = u - rejU;
+    const livresS = b - rejB + c - rejC;
+    if (PROCS_DEMANDEES.includes(l.p)) delivresUsagers[l.p] += livresU;
+    else delivresService[l.p] += livresU;
+    delivresService[l.p] += livresS;
   }
 
   ev.franchies = franchies;
@@ -426,6 +462,7 @@ function franchir(
     ...x0,
     usagers: nettoyer(usagers),
     boucles: nettoyer(boucles),
+    suites: nettoyer(suites),
     population: Math.max(0, population),
     abandons,
     conformitePoints: x0.conformitePoints + conf * BALANCE2.conformiteParPoint,
@@ -437,6 +474,8 @@ function franchir(
       franchiesBoucle: x0.stats.franchiesBoucle + franchiesBoucle,
       abandonsDemarche,
       abandonsProc,
+      delivresUsagers,
+      delivresService,
     },
   };
   return {
@@ -466,12 +505,12 @@ export function tick2(
   if (!x0) return { s: s0, ev: evVide() };
   const m = getModifiers2(s0, maintenant);
 
-  // Nouvelles demandes des usagers inactifs, réparties entre les procédures ouvertes.
+  // Nouvelles demandes des usagers inactifs, seulement dans les procédures qu'ils demandent (specs/011).
   const usagers = copieStocks(x0.usagers);
   const inactifs = Math.max(0, x0.population - sommeStocks(usagers));
   const nouvelles = inactifs * (1 - Math.exp(-BALANCE2.demandeRate * dt));
-  for (const p of m.procsOuvertes)
-    usagers[p][0] += nouvelles / m.procsOuvertes.length;
+  const demandees = PROCS_DEMANDEES.filter((p) => m.procsOuvertes.includes(p));
+  for (const p of demandees) usagers[p][0] += nouvelles / demandees.length;
   const population =
     x0.population +
     Math.max(0, BALANCE2.populationMax - x0.population) *
@@ -504,21 +543,27 @@ export function tick2(
   for (const p of m.procsOuvertes) {
     x.procedures[p].forEach((e, k) => {
       const f = 1 - Math.exp(-dt / ETAPES[e.type].delai);
-      const lot = { p, k, u: x.usagers[p][k] * f, b: x.boucles[p][k] * f };
+      const lot = {
+        p,
+        k,
+        u: x.usagers[p][k] * f,
+        b: x.boucles[p][k] * f,
+        c: x.suites[p][k] * f,
+      };
       if (e.type === 'visa') {
         visa.push(lot);
-        totalV += lot.u + lot.b;
+        totalV += lot.u + lot.b + lot.c;
       } else {
         guichet.push(lot);
-        totalG += lot.u + lot.b;
+        totalG += lot.u + lot.b + lot.c;
       }
     });
   }
   const rG = totalG > 0 ? Math.min(1, (vitesseGuichets(x) * dt) / totalG) : 0;
   const rV = totalV > 0 ? Math.min(1, (vitesseVisas(x) * dt) / totalV) : 0;
   const lots = [
-    ...guichet.map((l) => ({ ...l, u: l.u * rG, b: l.b * rG })),
-    ...visa.map((l) => ({ ...l, u: l.u * rV, b: l.b * rV })),
+    ...guichet.map((l) => ({ ...l, u: l.u * rG, b: l.b * rG, c: l.c * rG })),
+    ...visa.map((l) => ({ ...l, u: l.u * rV, b: l.b * rV, c: l.c * rV })),
   ];
   const r = franchir(s, lots, enJeu ? m : { ...m, rejetMax: 0 }, maintenant);
   return { s: r.s, ev: { ...r.ev, achats: commande.cout } };
@@ -619,15 +664,22 @@ export function tamponner2(
   for (const p of m.procsOuvertes) {
     x0.procedures[p].forEach((e, k) => {
       if (e.type !== 'visa') return;
-      lots.push({ p, k, u: x0.usagers[p][k], b: x0.boucles[p][k] });
-      total += x0.usagers[p][k] + x0.boucles[p][k];
+      const l = {
+        p,
+        k,
+        u: x0.usagers[p][k],
+        b: x0.boucles[p][k],
+        c: x0.suites[p][k],
+      };
+      lots.push(l);
+      total += l.u + l.b + l.c;
     });
   }
   if (total < 1e-9) return { s, ev: { ...evVide(), aucunVisa: true } };
   const part = Math.min(1, m.tapPower / total);
   const r = franchir(
     s,
-    lots.map((l) => ({ ...l, u: l.u * part, b: l.b * part })),
+    lots.map((l) => ({ ...l, u: l.u * part, b: l.b * part, c: l.c * part })),
     m,
     maintenant,
     alea,

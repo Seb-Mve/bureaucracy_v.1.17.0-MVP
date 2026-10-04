@@ -5,8 +5,9 @@ import * as D from '../../data/acte2/moteur';
 import { appliquerAction } from '../../data/acte2/procedures';
 import { estSauvegardeValide, normaliserSauvegarde } from '../../data/save';
 import { PRESETS, sauvegardePreset } from '../../data/presets';
+import { BALANCE2 } from '../../constants/balanceActe2';
 import type { GameState } from '../../types/game';
-import type { EtatActe2, ProcId } from '../../types/acte2';
+import type { Etape, EtatActe2, Note2Id, ProcId } from '../../types/acte2';
 
 /** Entrée dans l'acte II à t = 0, budget et formulaires illimités. */
 function base2(): GameState {
@@ -90,4 +91,175 @@ test('préréglages : un compteur de dossiers qui poursuivent par étape de chaq
     for (const [q, etapes] of Object.entries(x(s).procedures))
       assert.equal(x(s).suites[q as ProcId].length, etapes.length, `${p} ${q}`);
   }
+});
+
+function avec2(s: GameState, patch: Partial<EtatActe2>): GameState {
+  return { ...s, acte2: { ...x(s), ...patch } };
+}
+
+/** Notes de l'acte II en vigueur depuis t = 0. */
+function avecNotes(s: GameState, ids: Note2Id[]): GameState {
+  const notes = { ...x(s).notes };
+  for (const id of ids) notes[id] = { achetee: 0, effective: 0 };
+  return avec2(s, { notes });
+}
+
+/** Remplace des procédures ; leurs stocks repartent à zéro (usagers, en boucle, qui poursuivent). */
+function avecProcedures(
+  s: GameState,
+  procedures: Partial<Record<ProcId, Etape[]>>,
+): GameState {
+  const toutes = { ...x(s).procedures, ...procedures };
+  return avec2(s, {
+    procedures: toutes,
+    usagers: D.stocksPour(toutes),
+    boucles: D.stocksPour(toutes),
+    suites: D.stocksPour(toutes),
+  });
+}
+
+/** `secondes` de jeu par pas de 0,1 s depuis t = 0. */
+function avancer(s0: GameState, secondes: number): GameState {
+  let s = s0;
+  for (let i = 1; i <= secondes * 10; i++) s = D.tick2(s, 0.1, i * 100).s;
+  return s;
+}
+
+const proche = (a: number, b: number, eps = 1e-6) =>
+  assert.ok(Math.abs(a - b) < eps, `${a} ≠ ${b}`);
+
+const PS = (exige: ProcId): Etape => ({ type: 'pieceService', exige });
+
+/** Boucle Carte d'identité ⇄ Justificatif de domicile ; le visa de la carte vient après sa pièce de service. */
+const BOUCLE: Partial<Record<ProcId, Etape[]>> = {
+  identite: [{ type: 'piece' }, PS('domicile'), { type: 'visa' }],
+  domicile: [{ type: 'piece' }, PS('identite')],
+};
+
+/** Toute la population garée dans une procédure fermée : aucune demande, ni installation ni exode. */
+function sansDemande(s: GameState): GameState {
+  return avec2(s, {
+    population: BALANCE2.populationMax,
+    usagers: { ...x(s).usagers, vie: [BALANCE2.populationMax] },
+  });
+}
+
+test('seule la Carte d’identité reçoit des demandes : le Justificatif attend qu’on l’exige', () => {
+  const s = D.tick2(avecNotes(base2(), ['atelier']), 1, 1000).s;
+  assert.equal(x(s).usagers.domicile[0], 0);
+  assert.ok(x(s).usagers.identite[0] > BALANCE2.fileInitiale - 0.5);
+});
+
+test('un visa délivre la carte à l’usager ; un justificatif est délivré au service', () => {
+  const jamais = () => 0.999;
+  let s = avecProcedures(avecNotes(base2(), ['atelier']), {
+    identite: [{ type: 'visa' }],
+    domicile: [{ type: 'visa' }],
+  });
+  s = avec2(s, { usagers: { ...x(s).usagers, identite: [5] } });
+  const carte = D.tamponner2(s, 0, jamais).s;
+  // 4 % des usagers abandonnent au visa ; les autres repartent avec leur carte.
+  proche(x(carte).stats.delivresUsagers.identite, 1 - BALANCE2.abandonParPoint);
+  assert.equal(x(carte).stats.delivresService.identite, 0);
+  // Un dossier d'usager dans une procédure que personne ne demande : un dossier lié, délivré au service.
+  s = avec2(s, { usagers: { ...x(s).usagers, identite: [0], domicile: [5] } });
+  const justificatif = D.tamponner2(s, 0, jamais).s;
+  proche(
+    x(justificatif).stats.delivresService.domicile,
+    1 - BALANCE2.abandonParPoint,
+  );
+  assert.equal(x(justificatif).stats.delivresUsagers.domicile, 0);
+});
+
+test('simple dépendance : la carte est remise à l’usager, le justificatif délivré au service', () => {
+  let s = avecProcedures(avecNotes(base2(), ['atelier', 'pieceService']), {
+    identite: [PS('domicile')],
+    domicile: [{ type: 'piece' }],
+  });
+  s = avec2(s, {
+    guichets: 100,
+    population: 10,
+    usagers: { ...x(s).usagers, identite: [10] },
+  });
+  s = avancer(s, 60);
+  const st = x(s).stats;
+  assert.ok(st.delivresUsagers.identite > 8, `${st.delivresUsagers.identite}`);
+  assert.ok(st.delivresService.domicile > 8, `${st.delivresService.domicile}`);
+  assert.equal(st.delivresService.identite, 0);
+  assert.equal(st.delivresUsagers.domicile, 0);
+  assert.equal(x(s).premiereBoucle, null);
+});
+
+test('après la boucle, la demande liée tourne et le dossier poursuit jusqu’au visa, où sa carte est délivrée', () => {
+  let s = avecProcedures(
+    avecNotes(base2(), ['atelier', 'pieceService']),
+    BOUCLE,
+  );
+  s = sansDemande(
+    avec2(s, {
+      guichets: 100,
+      agents: { instructeur: 100, chefBureau: 0, sousDirecteur: 0 },
+      boucles: { ...x(s).boucles, identite: [20, 0, 0] },
+    }),
+  );
+  s = avancer(s, 300);
+  // Le nombre de dossiers en boucle ne bouge pas : chacun dépose une demande et poursuit sans en redéposer.
+  proche(D.dossiersEnBoucle(x(s)), 20);
+  const st = x(s).stats;
+  assert.ok(
+    st.delivresService.identite > 100,
+    `${st.delivresService.identite}`,
+  );
+  assert.ok(
+    st.delivresService.domicile > 100,
+    `${st.delivresService.domicile}`,
+  );
+  assert.equal(st.delivresUsagers.identite, 0);
+  // Ceux qui poursuivent ne s'accumulent pas : ils sortent à la délivrance.
+  assert.ok(D.sommeStocks(x(s).suites) < 20, `${D.sommeStocks(x(s).suites)}`);
+  assert.ok(D.visasEnAttente(x(s)) > 0, 'le visa reste alimenté');
+  proche(D.dossiersDuService(x(s)), 20 + D.sommeStocks(x(s).suites));
+});
+
+test('rejetés, les dossiers qui poursuivent reprennent en tête sans redéposer de demande', () => {
+  let s = avecProcedures(
+    avecNotes(base2(), ['atelier', 'pieceService']),
+    BOUCLE,
+  );
+  s = sansDemande(
+    avec2(s, {
+      guichets: 100,
+      tauxRejet: 0.5,
+      agents: { instructeur: 100, chefBureau: 0, sousDirecteur: 0 },
+      boucles: { ...x(s).boucles, identite: [20, 0, 0] },
+    }),
+  );
+  s = avancer(s, 600);
+  proche(D.dossiersEnBoucle(x(s)), 20);
+  assert.ok(D.sommeStocks(x(s).suites) < 60, `${D.sommeStocks(x(s).suites)}`);
+  assert.ok(x(s).stats.franchiesBoucle > 1000);
+});
+
+test('un usager qui atteint la pièce de service en boucle est renvoyé chez lui ; son dossier poursuit sans lui', () => {
+  let s = avecProcedures(
+    avecNotes(base2(), ['atelier', 'pieceService']),
+    BOUCLE,
+  );
+  s = sansDemande(
+    avec2(s, {
+      guichets: 100,
+      agents: { instructeur: 100, chefBureau: 0, sousDirecteur: 0 },
+    }),
+  );
+  s = avec2(s, { usagers: { ...x(s).usagers, identite: [0, 10, 0] } });
+  s = avancer(s, 120);
+  assert.ok(x(s).premiereBoucle !== null);
+  // Un seul dossier en boucle par usager renvoyé chez lui (spec 009).
+  proche(D.dossiersEnBoucle(x(s)), x(s).stats.abandonsDemarche);
+  assert.ok(D.usagersAvecDemarche(x(s)) < 1e-6);
+  // Sa carte est délivrée quand même, au service.
+  assert.ok(
+    x(s).stats.delivresService.identite > 9,
+    `${x(s).stats.delivresService.identite}`,
+  );
 });

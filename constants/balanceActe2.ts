@@ -149,6 +149,12 @@ export const PROC_NOMS: Record<ProcId, string> = {
   vie: 'Certificat de vie',
 };
 
+/**
+ * Procédures que les usagers demandent d'eux-mêmes (specs/011) : les autres ne se remplissent que lorsqu'une
+ * pièce de service exige leur document. Leurs documents sont remis aux usagers.
+ */
+export const PROCS_DEMANDEES: ProcId[] = ['identite'];
+
 /** Procédures à l'entrée dans l'acte : la Carte d'identité est imposée par le S.I.C. */
 export const PROCEDURES_INITIALES: Record<ProcId, Etape[]> = {
   identite: [{ type: 'piece' }, { type: 'visa' }],

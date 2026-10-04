@@ -175,7 +175,8 @@ export function vueAtelier(
         nom: noms[p],
         enCours: Math.floor(
           x.usagers[p].reduce((a, v) => a + v, 0) +
-            x.boucles[p].reduce((a, v) => a + v, 0),
+            x.boucles[p].reduce((a, v) => a + v, 0) +
+            x.suites[p].reduce((a, v) => a + v, 0),
         ),
         abandons: Math.floor(x.stats.abandonsProc[p]),
         bilan: bilanProcedure(x, p, m),
