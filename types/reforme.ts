@@ -38,6 +38,8 @@ export interface Reformes {
   notes2Instruites: Note2Id[];
   /** Procédures telles qu'avant la dernière Réforme (Mémoire des services), null avant la première. */
   procedures: Record<ProcId, Etape[]> | null;
+  /** Nom du service du chef avant la dernière Réforme (pour la lettre qui l'annonce). */
+  ancienneDirection: string;
   denomination: Denomination;
   /** Le premier Cerfa tamponné, stocké inchangé : l'original exigé à l'acte VI. Null avant la première Réforme. */
   premierCerfa: { prenom: string; signeLe: number | null } | null;

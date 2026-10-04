@@ -85,6 +85,7 @@ export function reformer(
         Object.keys(s.acte2.notes) as Note2Id[],
       ),
       procedures: copieProcedures(s.acte2.procedures),
+      ancienneDirection: r.denomination.direction,
       denomination: tirerDenomination(r.denomination, alea),
       premierCerfa: r.premierCerfa ?? {
         prenom: s.cerfa.prenom,
@@ -159,7 +160,7 @@ export function lettreReforme(s: GameState, maintenant: number): Lettre | null {
   return {
     id,
     objet: 'Réforme : nouvelle dénomination de vos services',
-    corps: `Dans le cadre de la réforme de l’action publique, vos services sont réorganisés sans modification de leur fonctionnement.\n\nLa Direction devient : ${d.direction}.\n\nVos procédures deviennent :\n${procedures}\n\nVotre réembauche (Cerfa n° ${numeroCerfa(s)}) a été enregistrée. Le Cerfa n° 00001*01 demeure l’original.`,
+    corps: `Dans le cadre de la réforme de l’action publique, vos services sont réorganisés sans modification de leur fonctionnement.\n\n${s.reformes.ancienneDirection} devient : ${d.direction}.\n\nVos procédures deviennent :\n${procedures}\n\nVotre réembauche (Cerfa n° ${numeroCerfa(s)}) a été enregistrée. Le Cerfa n° 00001*01 demeure l’original.`,
     recue: maintenant,
     lue: false,
   };

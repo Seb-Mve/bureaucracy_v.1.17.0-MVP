@@ -460,7 +460,12 @@ export function acheterNote(s: GameState, id: NoteId, maintenant: number): GameS
 }
 
 export function signerCerfa(s: GameState, prenom: string, maintenant: number): GameState {
-  return { ...s, cerfa: { signe: true, prenom: prenom.trim().slice(0, 20), signeLe: maintenant } };
+  // La boucle est en pause tant que le Cerfa n'est pas signé : ce temps n'est pas une absence.
+  return {
+    ...s,
+    cerfa: { signe: true, prenom: prenom.trim().slice(0, 20), signeLe: maintenant },
+    derniereMaj: maintenant,
+  };
 }
 
 export function deposerDemission(s: GameState, maintenant: number): GameState {

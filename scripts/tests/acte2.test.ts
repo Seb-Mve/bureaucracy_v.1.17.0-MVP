@@ -719,7 +719,7 @@ test('lettre d’absence de l’acte II : étapes franchies et dotation de la Di
   assert.equal(l.id, 'absence-99');
   assert.equal(l.objet, 'Pendant votre absence');
   assert.match(l.corps, /\(1 h 2 min\)/);
-  assert.match(l.corps, /la Direction a franchi 1\s500 étapes/);
+  assert.match(l.corps, /vos services ont franchi 1\s500 étapes/);
   assert.match(l.corps, /2\s400\s€/);
   assert.equal(l.lue, false);
 });

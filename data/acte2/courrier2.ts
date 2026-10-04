@@ -28,7 +28,7 @@ export const LETTRES_ACTE2: LettreDef[] = [
     id: 'a2-prise',
     objet: 'Prise de fonctions',
     corps: (s) =>
-      `${nom(s)},\n\nVous êtes nommé·e chef de service à la Direction.\n\nLe budget non consommé de l’exercice précédent a été restitué au Trésor. Le guichet 3 vous est confié à titre d’unité.`,
+      `${nom(s)},\n\nVous êtes nommé·e chef de service.\n\nLe budget non consommé de l’exercice précédent a été restitué au Trésor. Le guichet 3 vous est confié à titre d’unité.`,
     declencheur: (s) => s.acte2 !== null,
   },
   {
@@ -70,7 +70,7 @@ export const LETTRES_ACTE2: LettreDef[] = [
     id: 'a2-rapport',
     objet: 'Rapport annuel de performance',
     corps: (s) =>
-      `Taux de satisfaction : 100 % (sur les usagers restants).\n\nAbandons de démarche : ${formatEntier(s.acte2?.stats.abandonsDemarche ?? 0)}.\n\nLe S.I.C. salue une Direction qui n’a plus besoin de personne.`,
+      `Taux de satisfaction : 100 % (sur les usagers restants).\n\nAbandons de démarche : ${formatEntier(s.acte2?.stats.abandonsDemarche ?? 0)}.\n\nLe S.I.C. salue un service qui n’a plus besoin de personne.`,
     declencheur: (s) => s.acte2 !== null && dematPct(s.acte2) >= 100,
   },
 ];
@@ -92,7 +92,7 @@ export function lettreAbsence2(
   return {
     id: `absence-${maintenant}`,
     objet: 'Pendant votre absence',
-    corps: `Pendant votre absence (${dureeAbsence(secondes)}), la Direction a franchi ${formatEntier(franchies)} étapes et perçu ${formatMontant(budget)} de dotation.\n\nAucun dossier n’a été rejeté : la rigueur ne se délègue pas.\n\nVos procédures ont suivi leur cours.`,
+    corps: `Pendant votre absence (${dureeAbsence(secondes)}), vos services ont franchi ${formatEntier(franchies)} étapes et perçu ${formatMontant(budget)} de dotation.\n\nAucun dossier n’a été rejeté : la rigueur ne se délègue pas.\n\nVos procédures ont suivi leur cours.`,
     recue: maintenant,
     lue: false,
   };

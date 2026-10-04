@@ -432,3 +432,28 @@ test('préréglages de la Réforme : Réforme possible, puis Cerfa n° 00001*02 
   assert.equal(apres.reformes.trombones, R.trombonesReforme(avant));
   assert.equal(apres.reformes.notesInstruites.length, NOTES_ACTE1.length);
 });
+
+test('signer le Cerfa n’est pas une absence : la boucle repart du moment de la signature', () => {
+  const s = E.etatInitial(0);
+  const signe = E.signerCerfa(s, 'Camille', 400_000);
+  assert.equal(signe.derniereMaj, 400_000);
+});
+
+test('à la 2e Réforme, la lettre annonce le nom du service d’avant, pas « La Direction »', () => {
+  const s1 = R.reformer(avantReforme(), 0, () => 0.99);
+  const nom1 = s1.reformes.denomination.direction;
+  const l1 = R.lettreReforme(s1, 0);
+  assert.ok(l1?.corps.includes('La Direction devient : ' + nom1));
+  const relance = avecNotes2(
+    D.entrerActe2(E.signerCerfa(s1, 'Dominique', 9999), 0),
+    ['reforme'],
+  );
+  const s2 = R.reformer(relance, 0, () => 0);
+  const l2 = R.lettreReforme(s2, 0);
+  assert.ok(l2);
+  assert.ok(
+    l2.corps.includes(
+      `\n\n${nom1} devient : ${s2.reformes.denomination.direction}.`,
+    ),
+  );
+});

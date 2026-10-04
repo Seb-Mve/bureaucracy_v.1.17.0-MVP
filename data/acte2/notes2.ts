@@ -247,7 +247,7 @@ export const NOTES2: NoteDef2[] = [
     id: 'promotion',
     numero: 17,
     titre: 'Promotion',
-    texte: 'Vos résultats ont été jugés exemplaires. La Direction sera rattachée au ministère. Vous aussi.',
+    texte: 'Vos résultats ont été jugés exemplaires. Votre service sera rattaché au ministère. Vous aussi.',
     effet: 'Termine l’acte II.',
     cout: 0,
     instruction: 0,

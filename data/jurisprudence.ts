@@ -24,6 +24,7 @@ export function reformesInitiales(): Reformes {
     notesInstruites: [],
     notes2Instruites: [],
     procedures: null,
+    ancienneDirection: DENOMINATION_INITIALE.direction,
     denomination: {
       direction: DENOMINATION_INITIALE.direction,
       procedures: { ...DENOMINATION_INITIALE.procedures },
