@@ -62,6 +62,17 @@ function h(n: number, sel: number): number {
   return x >>> 0;
 }
 
+/** Tirage stable dans [0, 1) pour un numéro (acte II : le parapheur a-t-il un usager ?). */
+export function tirage(numero: number): number {
+  return h(numero, 7) / 4294967296;
+}
+
+/** Civilité et nom de l'usager d'un parapheur de l'acte II (« Mme Lefèvre », « M. Diallo »). */
+export function demandeur(numero: number): string {
+  const civilite = h(numero, 8) % 2 === 0 ? 'Mme' : 'M.';
+  return `${civilite} ${NOMS[h(numero, 2) % NOMS.length]}`;
+}
+
 /** Usager correspondant au numéro `numero`, avec une patience donnée. */
 export function usager(numero: number, patience: number): UsagerAffiche {
   const prenom = PRENOMS[h(numero, 1) % PRENOMS.length];

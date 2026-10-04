@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Landmark, Paperclip, Stamp } from 'lucide-react-native';
+import { IdCard, Landmark, Paperclip, Stamp } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors, {
   Charte,
@@ -11,15 +11,13 @@ import Colors, {
 } from '@/constants/Colors';
 import { formatEntier } from '@/utils/formatters';
 
-/** Numéro sur trois chiffres au moins, comme un registre (« 048 », puis « 9 412 »). */
-const numeroParapheur = (n: number): string =>
-  n < 1000 ? n.toString().padStart(3, '0') : formatEntier(n);
-
 /**
- * Bulle de l'écran Direction, au-dessus de la scène : le parapheur que le prochain coup vise, et le tableau de
- * circulation de sa procédure, en fiches reliées par des trombones. Chaque fiche porte qui la traite (guichet ou
- * tampon) et les dossiers qui y attendent ; les visas en attente s'allument (fond d'encre) ; la plus encombrée a
- * un bord épais (jamais la seule couleur).
+ * Bulle de l'écran Direction : la demande que le prochain coup vise (« Mme Lefèvre demande une Carte d’identité »,
+ * ou « Demande n° 9 907 · Carte d’identité » quand personne ne l'attend), et le tableau de circulation de sa
+ * procédure, en fiches reliées par des trombones, jusqu'à la fiche « Délivrée ». Chaque fiche porte qui la traite
+ * (guichet ou tampon) et les dossiers qui y attendent ; les visas en attente s'allument (fond d'encre) ; la plus
+ * encombrée a un bord épais ; « Délivrée » passe en gras sur fond vert dès le premier document (jamais la seule
+ * couleur).
  */
 export default function BulleDirection({
   compact = false,
@@ -28,19 +26,10 @@ export default function BulleDirection({
 }) {
   const { direction, encre } = useGameState();
   if (!direction) return null;
-  const { parapheur, etapes, usagers } = direction;
+  const { parapheur, etapes, delivrance } = direction;
 
-  let titre = 'Aucun parapheur à viser';
-  let detail: string | null = null;
-  if (usagers < 1) {
-    titre = 'Salle d’attente vide';
-    detail = 'Aucun usager · les procédures suivent leur cours';
-  } else if (parapheur) {
-    titre = `Parapheur n° ${numeroParapheur(parapheur.numero)} · ${parapheur.procNom}`;
-    detail = parapheur.sansUsager
-      ? 'Dossier sans usager'
-      : 'Visa du chef de service';
-  }
+  const titre = parapheur ? parapheur.titre : 'Aucun parapheur à viser';
+  const detail = parapheur ? 'Visa du chef de service' : null;
   const chaine = etapes
     .map(
       (e) =>
@@ -50,6 +39,7 @@ export default function BulleDirection({
             : 'traitée par les guichets'
         }${e.encombree ? ', la plus encombrée' : ''}`,
     )
+    .concat(delivrance.nom)
     .join(' ; ');
 
   return (
@@ -59,7 +49,7 @@ export default function BulleDirection({
         accessible
         accessibilityLabel={`${titre}.${detail ? ` ${detail}.` : ''} Procédure : ${chaine}.`}
       >
-        <Text style={styles.titre} numberOfLines={1}>
+        <Text style={styles.titre} numberOfLines={compact ? 1 : 2}>
           {titre}
         </Text>
         {detail && !compact && (
@@ -105,10 +95,23 @@ export default function BulleDirection({
                 </View>
               </React.Fragment>
             ))}
+            <Paperclip size={12} color={Colors.crayon} />
+            <View
+              style={[styles.fiche, delivrance.faite && styles.ficheDelivree]}
+            >
+              <IdCard size={12} color={Colors.anthracite} />
+              <Text
+                style={[
+                  styles.ficheTexte,
+                  delivrance.faite && styles.ficheAllumee,
+                ]}
+                numberOfLines={1}
+              >
+                {delivrance.nom}
+              </Text>
+            </View>
           </View>
         )}
-        {/* La pointe descend vers la corbeille du chef, au milieu de la scène. */}
-        <View style={styles.pointe} />
       </View>
     </View>
   );
@@ -118,8 +121,7 @@ const styles = StyleSheet.create({
   zone: {
     paddingHorizontal: Espace.l,
     paddingTop: Espace.s,
-    paddingBottom: Espace.m,
-    zIndex: 2,
+    paddingBottom: Espace.s,
   },
   zoneCompacte: {
     paddingTop: Espace.xs,
@@ -188,17 +190,9 @@ const styles = StyleSheet.create({
   ficheNombreEncombre: {
     fontFamily: Fonts.chiffres,
   },
-  pointe: {
-    position: 'absolute',
-    bottom: -8,
-    left: '50%',
-    marginLeft: -7,
-    width: 14,
-    height: 14,
-    backgroundColor: Colors.papier,
-    borderRightWidth: Charte.traitFin,
-    borderBottomWidth: Charte.traitFin,
-    borderColor: Colors.anthracite,
-    transform: [{ rotate: '45deg' }],
+  /** « Délivrée » : bord moyen et fond vert, en plus du texte gras. */
+  ficheDelivree: {
+    borderWidth: Charte.traitFin,
+    backgroundColor: Colors.pastelVert,
   },
 });

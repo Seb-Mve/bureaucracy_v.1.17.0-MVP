@@ -9,6 +9,7 @@ import { PRESETS, sauvegardePreset } from '../../data/presets';
 import { vueAtelier } from '../../data/acte2/vueAtelier';
 import { nouvellesLettres } from '../../data/courrier';
 import { BALANCE2 } from '../../constants/balanceActe2';
+import { formatEntier } from '../../utils/formatters';
 import type { GameState } from '../../types/game';
 import type { EtatActe2, Note2Id } from '../../types/acte2';
 
@@ -48,12 +49,12 @@ test('écran Direction à l’entrée : visas du guichet 3, Carte d’identité,
   assert.equal(d.guichets, 1);
   assert.equal(d.demat, null);
   assert.equal(d.rupture, false);
-  assert.deepEqual(d.parapheur, {
-    numero: V.PREMIER_PARAPHEUR,
-    proc: 'identite',
-    procNom: 'Carte d’identité',
-    sansUsager: false,
-  });
+  // Seuls des usagers attendent : le parapheur est la demande d'une personne.
+  assert.equal(d.parapheur?.numero, V.PREMIER_PARAPHEUR);
+  assert.equal(d.parapheur?.proc, 'identite');
+  assert.match(d.parapheur?.demandeur ?? '', /^(Mme|M\.) \S/);
+  assert.equal(d.parapheur?.titre, `${d.parapheur?.demandeur} demande une Carte d’identité`);
+  assert.deepEqual(d.delivrance, { nom: 'Délivrée', faite: false });
   assert.deepEqual(
     d.etapes.map((e) => [e.nom, e.allumee]),
     [
@@ -72,14 +73,33 @@ test('un coup de tampon passe au parapheur suivant', () => {
   assert.equal(vue(s).visas, BALANCE2.visasInitiaux - 1);
 });
 
-test('parapheur sans usager quand les dossiers en boucle dominent le visa', () => {
+test('parapheur sans usager : une demande anonyme, numérotée', () => {
   const b = base2();
   const s = avec2(b, {
-    usagers: { ...x(b).usagers, identite: [0, 2] },
+    usagers: { ...x(b).usagers, identite: [0, 0] },
     boucles: { ...x(b).boucles, identite: [0, 10] },
+    suites: { ...x(b).suites, identite: [0, 2] },
   });
-  assert.equal(vue(s).parapheur?.sansUsager, true);
+  assert.equal(vue(s).parapheur?.demandeur, null);
+  assert.equal(vue(s).parapheur?.titre, 'Demande n° 048 · Carte d’identité');
   assert.equal(vue(s).visas, 12);
+  const loin = avec2(s, { stats: { ...x(s).stats, visasTampons: 9_859 } });
+  assert.equal(vue(loin).parapheur?.titre, `Demande n° ${formatEntier(9_907)} · Carte d’identité`);
+});
+
+test('parapheur : la part des dossiers d’usagers au visa décide, numéro par numéro', () => {
+  const b = base2();
+  // Un usager sur deux au visa : sur 200 parapheurs successifs, environ la moitié portent un nom.
+  let noms = 0;
+  for (let i = 0; i < 200; i++) {
+    const s = avec2(b, {
+      usagers: { ...x(b).usagers, identite: [0, 5] },
+      boucles: { ...x(b).boucles, identite: [0, 5] },
+      stats: { ...x(b).stats, visasTampons: i },
+    });
+    if (vue(s).parapheur?.demandeur) noms++;
+  }
+  assert.ok(noms > 70 && noms < 130, `${noms} parapheurs nommés sur 200`);
 });
 
 test('sans visa en attente : aucun parapheur ; sans usager : panneau d’appel éteint', () => {
@@ -235,4 +255,13 @@ test('en-tête : les usagers qui ont une démarche en cours, pas les dossiers li
     boucles: { ...x(b).boucles, identite: [10, 0] },
   });
   assert.equal(vue(s).usagers, 5);
+});
+
+test('bulle : la chaîne se termine par « Délivrée », faite dès la première carte', () => {
+  const s = base2();
+  assert.deepEqual(vue(s).delivrance, { nom: 'Délivrée', faite: false });
+  const u = avec2(s, {
+    stats: { ...x(s).stats, delivresUsagers: { ...x(s).stats.delivresUsagers, identite: 1 } },
+  });
+  assert.deepEqual(vue(u).delivrance, { nom: 'Délivrée', faite: true });
 });

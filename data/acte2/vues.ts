@@ -12,7 +12,10 @@ import type {
   Note2Id,
   ProcId,
 } from '../../types/acte2';
-import { AGENTS2 } from '../../constants/balanceActe2';
+import { AGENTS2, PROCS_DEMANDEES } from '../../constants/balanceActe2';
+import { formatEntier } from '../../utils/formatters';
+import { demandeur, tirage } from '../usagers';
+import { documentDe } from './production';
 import {
   conditionsNote2,
   coutAgent2,
@@ -63,9 +66,15 @@ export interface ParapheurAffiche {
   numero: number;
   proc: ProcId;
   procNom: string;
-  /** La plupart des dossiers de ce visa n'ont plus d'usager. */
-  sansUsager: boolean;
+  /** L'usager qui attend ce document (« Mme Lefèvre »), null pour une demande sans usager. */
+  demandeur: string | null;
+  /** « Mme Lefèvre demande une Carte d’identité », ou « Demande n° 9 907 · Carte d’identité ». */
+  titre: string;
 }
+
+/** Numéro sur trois chiffres au moins, comme un registre (« 048 », puis « 9 412 »). */
+export const numeroRegistre = (n: number): string =>
+  n < 1000 ? n.toString().padStart(3, '0') : formatEntier(n);
 
 /**
  * Une fiche du tableau de circulation (bulle) : les dossiers qui attendent à cette étape et qui la traite.
@@ -102,6 +111,8 @@ export interface VueDirection {
   parapheur: ParapheurAffiche | null;
   /** Étapes de la procédure du parapheur (Carte d'identité s'il n'y en a pas). */
   etapes: EtapeChaine[];
+  /** Fiche qui clôt la chaîne : « Délivrée » (accordé au document), faite dès le premier document délivré. */
+  delivrance: { nom: string; faite: boolean };
   /** Numéro du panneau d'appel de la salle (null : salle vide, panneau éteint). */
   appel: number | null;
   recrutementVisible: boolean;
@@ -165,6 +176,27 @@ export function vueDirection(
   }
   const p: ProcId = tete?.p ?? 'identite';
   const usagers = Math.floor(usagersAvecDemarche(x));
+  const noms = s.reformes.denomination.procedures;
+  const doc = documentDe(noms[p]);
+  let parapheur: ParapheurAffiche | null = null;
+  if (tete) {
+    // Un usager attend ce parapheur selon la part des dossiers d'usagers à ce visa (tirage stable par numéro),
+    // et seulement dans une procédure que les usagers demandent.
+    const avecUsager =
+      PROCS_DEMANDEES.includes(tete.p) &&
+      tirage(numero) < tete.u / (tete.u + tete.b);
+    const nom = noms[tete.p];
+    const qui = avecUsager ? demandeur(numero) : null;
+    parapheur = {
+      numero,
+      proc: tete.p,
+      procNom: nom,
+      demandeur: qui,
+      titre: qui
+        ? `${qui} demande ${documentDe(nom).feminin ? 'une' : 'un'} ${nom}`
+        : `Demande n° ${numeroRegistre(numero)} · ${nom}`,
+    };
+  }
   return {
     nomService: s.reformes.denomination.direction,
     visas: Math.floor(visasEnAttente(x)),
@@ -176,15 +208,12 @@ export function vueDirection(
     rejetMax: m.rejetMax,
     exemplaires: x.exemplaires,
     exemplairesVisible: m.exemplairesVisible,
-    parapheur: tete
-      ? {
-          numero,
-          proc: tete.p,
-          procNom: s.reformes.denomination.procedures[tete.p],
-          sansUsager: tete.b > tete.u,
-        }
-      : null,
+    parapheur,
     etapes: tableauCirculation(x, p),
+    delivrance: {
+      nom: doc.feminin ? 'Délivrée' : 'Délivré',
+      faite: x.stats.delivresUsagers[p] + x.stats.delivresService[p] >= 1,
+    },
     appel: usagers >= 1 ? numero - 1 : null,
     recrutementVisible: m.recrutementVisible,
     atelierVisible: m.atelierVisible,
