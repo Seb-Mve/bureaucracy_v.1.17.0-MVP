@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions, type TextStyle } from 'react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Interligne, Typo } from '@/constants/Colors';
-import { formatEntier, formatPourcent, formatMontant } from '@/utils/formatters';
+import { formatDebitSigne, formatEntier, formatPourcent, formatMontant } from '@/utils/formatters';
 import JaugeHachuree from '@/components/charte/JaugeHachuree';
 import ValeurAnimee from '@/components/charte/ValeurAnimee';
 import { useLargeur } from '@/components/charte/useLargeur';
@@ -29,6 +29,8 @@ interface ColonneProps {
   etroit?: boolean;
   /** Part de largeur : « large » pour la valeur la plus longue (le budget), sinon pour un libellé long sur écran serré. */
   place?: 'large' | 'libelleLong' | 'libelleMoyen';
+  /** Débit signé sous la valeur (acte II : « +15 €/s »), et sa lecture (« plus 15 euros par seconde »). */
+  debit?: { texte: string; lecture: string };
   children?: React.ReactNode;
 }
 
@@ -42,6 +44,7 @@ const Colonne = memo(function Colonne({
   compact,
   etroit,
   place,
+  debit,
   children,
 }: ColonneProps) {
   const { ref, largeur, surLayout } = useLargeur();
@@ -58,7 +61,7 @@ const Colonne = memo(function Colonne({
         rupture && styles.fondRupture,
       ]}
       accessible
-      accessibilityLabel={`${label} : ${valeur}${rupture ? ', rupture' : ''}`}
+      accessibilityLabel={`${label} : ${valeur}${debit ? `, ${debit.lecture}` : ''}${rupture ? ', rupture' : ''}`}
     >
       <Text style={[styles.label, couleurTexte]} numberOfLines={1}>
         {label}
@@ -72,17 +75,31 @@ const Colonne = memo(function Colonne({
           numberOfLines={1}
         />
       </View>
+      {debit && (
+        <Text style={[styles.debit, couleurTexte]} numberOfLines={1}>
+          {debit.texte}
+        </Text>
+      )}
       {children}
     </View>
   );
 });
 
+/** Débit signé et sa lecture d'accessibilité (« −13 /s », « moins 13 formulaires par seconde »). */
+function debitAffiche(valeur: number, unite: string, uniteLue: string) {
+  const texte = formatDebitSigne(valeur);
+  const lecture = `${texte.replace('+', 'plus ').replace('−', 'moins ')}${uniteLue} par seconde`;
+  return { texte: `${texte}${unite}/s`, lecture };
+}
+
 /**
  * Tableau des ressources, à plat sous l'en-tête. Acte I : budget, formulaires, dossiers en attente et, une fois
- * révélée, Conformité. Acte II : budget, formulaires, visas et, après sa note, Taux de dématérialisation.
+ * révélée, Conformité. Acte II : budget, formulaires (chacun avec son débit signé), visas et, après sa note,
+ * Taux de dématérialisation.
  */
 export default function Hud() {
-  const { etat, mods, conformite, verdict, enAttente, prixRamette, rupture, direction, encre } = useGameState();
+  const { etat, mods, conformite, verdict, enAttente, prixRamette, rupture, direction, encre, debits } =
+    useGameState();
   const { height, width } = useWindowDimensions();
   const compact = height < 720;
   // Écran étroit : colonnes resserrées.
@@ -106,6 +123,7 @@ export default function Hud() {
           etroit={etroit}
           rupture={sansBudget}
           declencheur={verdict?.id}
+          debit={debits ? debitAffiche(debits.budget, '\u00a0€', ' euros') : undefined}
         />
         <Colonne
           label="Formulaires"
@@ -116,6 +134,7 @@ export default function Hud() {
           rupture={rupture}
           declencheur={verdict?.id}
           effet="baisse"
+          debit={debits ? debitAffiche(debits.formulaires, '\u00a0', ' formulaires') : undefined}
         />
         {direction ? (
           <Colonne
@@ -231,6 +250,12 @@ const styles = StyleSheet.create({
   },
   texteRupture: {
     color: Colors.rougeTexte,
+  },
+  debit: {
+    fontFamily: Fonts.chiffresRegular,
+    fontSize: Typo.micro,
+    lineHeight: Interligne.micro,
+    color: Colors.crayon,
   },
   conteneur: {
     zIndex: 5,
