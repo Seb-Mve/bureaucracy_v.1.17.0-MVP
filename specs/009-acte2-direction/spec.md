@@ -274,17 +274,20 @@ Sans Réforme, en minutes depuis l'entrée dans l'acte II :
 
 | Jalon | Robot 1 tap/s | Robot 2 taps/s | Robot 3 taps/s |
 |---|---|---|---|
-| Premier agent | 3.0 | 2.8 | 3.0 |
-| Atelier | 9.8 | 9.4 | 9.3 |
-| Première boucle | 27.8 | 27.2 | 26.6 |
-| Dématérialisation 50 % | 98.5 | 97.3 | 96.1 |
-| Dématérialisation 100 % | 193.5 | 191.5 | 189.7 |
+| Premier agent | 2.2 | 2.0 | 2.2 |
+| Atelier | 9.0 | 8.7 | 8.6 |
+| Marché public de fournitures (specs/010) | 17.3 | 16.0 | 15.2 |
+| Première boucle | 27.7 | 26.4 | 25.9 |
+| Dématérialisation 50 % | 99.5 | 96.8 | 95.8 |
+| Dématérialisation 100 % | 196.0 | 191.8 | 190.2 |
 
-Avec une Réforme (2 taps/s, `balayage`) : rentable de 0 à 70 % de dématérialisation (fin de l'acte entre 124.7 et 182.2 min contre 191.5), pas à 80 % (199.5) ; l'acte I est rejoué en 18 à 22 min ; la plus petite Réforme rapporte 6 trombones.
+Depuis specs/010 (lisibilité), la ramette d'acte II coûte 80 € et l'étape rapporte 1,60 € de base : les fournitures pèsent 35 % des recettes en ×1 (44 % en ×2, le choix du robot), et le robot laisse les fournitures au Service des achats dès sa note.
 
-Le robot construit la boucle dès que l'étape est disponible. Avec 15 min de compréhension de la note n° 7 et une Réforme dès son déblocage (`node scripts/simulate-acte2.ts 2 300 0 15`) : Réforme débloquée à 42.2 min, acte I rejoué à 63.9 min, fin de l'acte à 132.7 min.
+Avec une Réforme (2 taps/s, `balayage`) : rentable de 0 à 70 % de dématérialisation (fin de l'acte entre 124.5 et 179.8 min contre 191.7), pas à 80 % (198.3) ; l'acte I est rejoué en 18 à 22 min ; la plus petite Réforme rapporte 6 trombones.
 
-Cible du robot pour 100 % sans Réforme : 150 – 200 min (mesuré : 189.7 à 193.5). L'ancienne cible du robot pour 50 % (60 – 85 min, plan 1) est remplacée par le mur approuvé au plan 3 (97.3 min à 2 taps/s). « Deux bonus à la première Réforme » se vérifie en trombones : la plus petite Réforme en rapporte 6 au moins, soit 3 + 3 (les deux bonus les moins chers), quoi que le robot choisisse d'acheter.
+Le robot construit la boucle dès que l'étape est disponible. Avec 15 min de compréhension de la note n° 8 et une Réforme dès son déblocage (`node scripts/simulate-acte2.ts 2 300 0 15`) : Réforme débloquée à 41.4 min, acte I rejoué à 63.1 min, fin de l'acte à 130.7 min.
+
+Cible du robot pour 100 % sans Réforme : 150 – 200 min (mesuré : 190.2 à 196.0). L'ancienne cible du robot pour 50 % (60 – 85 min, plan 1) est remplacée par le mur approuvé au plan 3 (96.8 min à 2 taps/s). « Deux bonus à la première Réforme » se vérifie en trombones : la plus petite Réforme en rapporte 6 au moins, soit 3 + 3 (les deux bonus les moins chers), quoi que le robot choisisse d'acheter.
 
 ## Interface
 

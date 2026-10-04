@@ -177,11 +177,11 @@ export function robotActe2(
   s = composer(s, now, decouverte);
   m = D.getModifiers2(s, now);
 
-  // Formulaires : garder 20 s de consommation.
+  // Formulaires : garder 20 s de consommation, tant que le Service des achats ne s'en charge pas.
   const x = s.acte2!;
   const conso =
     (D.vitesseGuichets(x) + D.vitesseVisas(x) + taps) * x.exemplaires * 20;
-  if (s.formulaires < conso)
+  if (!(m.achatsVisible && x.achatsActifs) && s.formulaires < conso)
     s = D.acheterRamettes2(
       s,
       Math.ceil((conso - s.formulaires) / BALANCE.ramette),

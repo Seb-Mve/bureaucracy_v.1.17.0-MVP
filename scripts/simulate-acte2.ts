@@ -23,6 +23,7 @@ registerHooks({
 });
 
 const D = await import('../data/acte2/moteur.ts');
+const { BALANCE } = await import('../constants/balance.ts');
 const R = await import('../data/reforme.ts');
 const { finActeIRobot, robotActe1, robotActe2, robotReforme } = await import('./robots.ts');
 
@@ -34,10 +35,17 @@ const decouverte = Number(process.argv[5] ?? 0) * 60;
 
 const mn = (t: number) => `${(t / 60).toFixed(1)} min`;
 
+/** Part des recettes de la partie dépensée en ramettes (à la main ou par le Service des achats), en %. */
+const partFournitures = (s: GameState): number =>
+  (100 * (s.stats.formulairesAchetes / BALANCE.ramette) * D.prixRamette2(s)) /
+  Math.max(1, s.stats.budgetGagne);
+
 interface Partie {
   jalons: Record<string, number>;
   fin: number | null;
   s: GameState;
+  /** Part des fournitures dans les recettes tant que tout se fait en ×1 (avant le curseur Exemplaires). */
+  partX1: number | null;
 }
 
 /** Joue depuis l'entrée dans l'acte II ; réforme une fois à `reformeA` % de dématérialisation (null : jamais). */
@@ -48,6 +56,7 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
     if (jalons[k] === undefined) jalons[k] = t;
   };
   const tour = () => (s.reformes.nombre > 0 ? ' (après la Réforme)' : '');
+  let partX1: number | null = null;
   for (let t = 1; t <= minutesMax * 60; t++) {
     const now = t * 1000;
     if (s.acte === 1) {
@@ -59,6 +68,8 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
       continue;
     }
     // Le temps de compréhension de l'indice ne compte qu'à la première partie : ensuite, le joueur sait.
+    if (partX1 === null && s.reformes.nombre === 0 && D.getModifiers2(s, now).exemplairesVisible)
+      partX1 = partFournitures(s);
     s = robotActe2(s, now, taps, s.reformes.nombre === 0 ? decouverte : 0);
     const x = s.acte2!;
     for (const id of Object.keys(x.notes)) marquer(`note ${id}${tour()}`, t);
@@ -76,7 +87,7 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
     }
     if (x.acteTermine) {
       marquer('fin de l’acte II', t);
-      return { jalons, fin: t, s };
+      return { jalons, fin: t, s, partX1 };
     }
     if (journal && t % 600 === 0) {
       console.log(
@@ -84,7 +95,7 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
       );
     }
   }
-  return { jalons, fin: null, s };
+  return { jalons, fin: null, s, partX1 };
 }
 
 if (mode === 'balayage') {
@@ -106,6 +117,9 @@ if (mode === 'balayage') {
   if (fin) {
     console.log('\nMesures :');
     console.log(`  visas au tap : ${Math.round(fin.stats.visasTampons)} sur ${Math.round(fin.stats.taps)} taps`);
+    console.log(
+      `  fournitures : ${p.partX1 === null ? '—' : p.partX1.toFixed(1)} % des recettes en ×1, ${partFournitures(p.s).toFixed(1)} % sur l’acte`,
+    );
     console.log(`  procédures : ${Object.entries(fin.procedures).map(([q, e]) => `${q} [${e.map((v) => v.type).join(', ')}]`).join(' · ')}`);
   }
 }
