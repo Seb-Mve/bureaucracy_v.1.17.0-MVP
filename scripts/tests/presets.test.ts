@@ -4,6 +4,9 @@ import * as E from '../../data/engine';
 import { estSauvegardeValide } from '../../data/save';
 import { nouvellesLettres } from '../../data/courrier';
 import { PRESETS, PRESETS_INFO, sauvegardePreset } from '../../data/presets';
+import * as D from '../../data/acte2/moteur';
+import * as F from '../../data/acte2/fiche';
+import type { EtatActe2 } from '../../types/acte2';
 
 const T = 1_000_000_000;
 const ACTE: Record<string, 1 | 2> = {
@@ -12,6 +15,7 @@ const ACTE: Record<string, 1 | 2> = {
   finActeI: 1,
   debut: 2,
   atelier: 2,
+  achats: 2,
   boucle: 2,
   demat: 2,
   fin: 2,
@@ -26,6 +30,7 @@ test('raccourcis : ordre des préréglages, de l’acte I à la Réforme', () =>
     'finActeI',
     'debut',
     'atelier',
+    'achats',
     'boucle',
     'demat',
     'fin',
@@ -85,4 +90,20 @@ test('raccourcis : le milieu de l’acte I a des notes en vigueur, des collègue
   let x = s;
   for (let i = 1; i <= 50; i++) x = E.tick(x, 0.1, T + i * 100).s;
   assert.ok(x.tampons > s.tampons);
+});
+
+test('préréglage « service des achats » : note en vigueur, ×2, fiche lue ; « prise de fonctions » : fiche ouverte', () => {
+  const s = sauvegardePreset('achats', T);
+  assert.equal(s.acte, 2);
+  assert.equal(D.getModifiers2(s, T).achatsVisible, true);
+  assert.equal(D.getModifiers2(s, T).exemplairesVisible, true);
+  assert.equal((s.acte2 as EtatActe2).exemplaires, 2);
+  assert.equal((s.acte2 as EtatActe2).premiereBoucle, null);
+  assert.equal(F.vueFiche2(s, T)?.visible, false);
+  assert.equal(F.vueFiche2(s, T)?.nonLues, 0);
+  // Stock bas : le Service des achats commande dès le premier tick.
+  assert.ok(D.tick2(s, 0.1, T + 100).ev.achats > 0);
+  for (const p of ['atelier', 'boucle', 'demat', 'fin', 'reforme'] as const)
+    assert.equal(F.vueFiche2(sauvegardePreset(p, T), T)?.nonLues, 0, p);
+  assert.equal(F.vueFiche2(sauvegardePreset('debut', T), T)?.visible, true);
 });

@@ -9,6 +9,7 @@ import * as E from './engine';
 import * as D from './acte2/moteur';
 import { nouvellesLettres } from './courrier';
 import * as R from './reforme';
+import { marquerFiche2 } from './acte2/fiche';
 import { BALANCE2 } from '../constants/balanceActe2';
 import { NOTES as NOTES_ACTE1 } from './notes';
 
@@ -18,6 +19,7 @@ export type Preset =
   | 'finActeI'
   | 'debut'
   | 'atelier'
+  | 'achats'
   | 'boucle'
   | 'demat'
   | 'fin'
@@ -42,25 +44,31 @@ export const PRESETS_INFO: PresetInfo[] = [
   { id: 'debut', titre: 'Acte II — prise de fonctions', detail: 'Entrée à la Direction' },
   { id: 'atelier', titre: 'Acte II — Atelier ouvert', detail: 'Atelier des procédures, 5 guichets' },
   {
+    id: 'achats',
+    titre: 'Acte II — service des achats',
+    detail: 'Marché public de fournitures en vigueur, ×2 exemplaires',
+  },
+  {
     id: 'boucle',
     titre: 'Acte II — boucle formée',
     detail: 'Carte d’identité ⇄ Justificatif de domicile',
   },
   { id: 'demat', titre: 'Acte II — dématérialisation', detail: 'Démat. à 38 %' },
   { id: 'fin', titre: 'Acte II — fin', detail: 'Démat. à 100 %, rapport annuel' },
-  { id: 'reforme', titre: 'Acte II — Réforme possible', detail: 'Démat. à 60 %, note n° 10 en vigueur' },
+  { id: 'reforme', titre: 'Acte II — Réforme possible', detail: 'Démat. à 60 %, note n° 11 en vigueur' },
   { id: 'cerfa2', titre: 'Après la Réforme', detail: 'Cerfa n° 00001*02 à signer, 15 trombones' },
 ];
 
 export const PRESETS: Preset[] = PRESETS_INFO.map((p) => p.id);
 
 const NOTES_ATELIER: Note2Id[] = ['prise', 'agents', 'atelier'];
-const NOTES_BOUCLE: Note2Id[] = [
+const NOTES_ACHATS: Note2Id[] = [
   ...NOTES_ATELIER,
   'signature',
   'exemplaires',
-  'pieceService',
+  'achats',
 ];
+const NOTES_BOUCLE: Note2Id[] = [...NOTES_ACHATS, 'pieceService'];
 const NOTES_DEMAT: Note2Id[] = [
   ...NOTES_BOUCLE,
   'reflexion',
@@ -72,10 +80,17 @@ const NOTES_DEMAT: Note2Id[] = [
 const NOTES: Record<Exclude<Preset, 'acte1Debut' | 'acte1Milieu' | 'finActeI' | 'cerfa2'>, Note2Id[]> = {
   debut: [],
   atelier: NOTES_ATELIER,
+  achats: NOTES_ACHATS,
   boucle: NOTES_BOUCLE,
   demat: NOTES_DEMAT,
   fin: NOTES_DEMAT,
   reforme: [...NOTES_DEMAT, 'reforme'],
+};
+
+/** Procédures du robot vers 17 min : un second visa et une signature, pas encore de pièce de service. */
+const PROCEDURES_ACHATS: Partial<Record<ProcId, Etape[]>> = {
+  identite: [{ type: 'piece' }, { type: 'visa' }, { type: 'visa' }, { type: 'signature' }],
+  domicile: [{ type: 'piece' }, { type: 'visa' }, { type: 'signature' }],
 };
 
 /** Une boucle Carte d'identité ⇄ Justificatif de domicile. */
@@ -213,6 +228,25 @@ export function sauvegardePreset(preset: Preset, maintenant: number): GameState 
     };
     s = { ...s, budget: 6_400, formulaires: 2_300 };
   }
+  if (preset === 'achats') {
+    // Le robot de simulate-acte2 vers 17 min : la note vient d'entrer en vigueur, le stock est bas.
+    const procedures = { ...x.procedures, ...PROCEDURES_ACHATS };
+    x = {
+      ...x,
+      procedures,
+      usagers: remplir(D.stocksPour(procedures), {
+        identite: [30, 6, 4, 8],
+        domicile: [12, 3, 5],
+      }),
+      boucles: D.stocksPour(procedures),
+      guichets: 9,
+      agents: { ...x.agents, instructeur: 9 },
+      exemplaires: 2,
+      premiereModif: 'identite',
+      stats: { ...x.stats, franchies: 20_000 },
+    };
+    s = { ...s, budget: 2_400, formulaires: 400 };
+  }
   if (preset === 'boucle' || preset === 'demat' || preset === 'fin' || preset === 'reforme') {
     const procedures = { ...x.procedures, ...PROCEDURES_BOUCLE };
     x = {
@@ -253,6 +287,8 @@ export function sauvegardePreset(preset: Preset, maintenant: number): GameState 
     s = { ...s, budget: 412_000, formulaires: 38_000 };
   }
   s = { ...s, acte2: x };
+  // La fiche de poste du chef de service est réputée lue, sauf à la prise de fonctions.
+  if (preset !== 'debut') s = marquerFiche2(s, true, maintenant);
   // Courrier déjà mérité : réputé envoyé, sauf à l'entrée (Prise de fonctions) et à la fin (Rapport annuel).
   if (preset === 'debut') {
     return {
