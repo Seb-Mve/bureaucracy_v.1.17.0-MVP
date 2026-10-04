@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**BUREAUCRACY++** is a satirical French incremental/idle mobile game built with React Native + Expo. The game is being rebuilt as a 6-act arc (see the design document); the code currently implements **Act I — Le Guichet** (spec: `specs/007-acte1-guichet/spec.md`) and **Act II — La Direction** without the Réforme yet (spec: `specs/009-acte2-direction/spec.md`; closing the end-of-Act-I window starts it).
+**BUREAUCRACY++** is a satirical French incremental/idle mobile game built with React Native + Expo. The game is being rebuilt as a 6-act arc (see the design document); the code currently implements **Act I — Le Guichet** (spec: `specs/007-acte1-guichet/spec.md`) and **Act II — La Direction** with its Réforme (spec: `specs/009-acte2-direction/spec.md`; closing the end-of-Act-I window starts it). The **Réforme** (first prestige, Options at Act II once note n° 10 is in force) is a total reset back to the Cerfa (new number `00001*02`, `*03`…) and the very start of Act I; only `GameState.reformes` (trombones, Jurisprudence, already-instructed notes, memorised procedures, drawn service names, first Cerfa), the Tampons apposés counter (hence the grade) and the first name survive. Notes bought in an earlier run cost ÷ 6 and take ÷ 4 of their delay (déjà-vu administratif). The end-of-Act-II wall is the « sclérose des services »: each loop step yields `(1 + 0.1 × trombones obtained) / (1 + service age / 1250 s)` démat points, and the Réforme resets the age.
 
 Act I loop: usagers file dossiers at the guichet; the player taps TAMPONNER (and hires collègues) to process them; each processed dossier consumes formulaires and pays a dotation. Demand is abundant (the queue rarely empties): the bottleneck is processing capacity and formulaires. A player-set **Taux de rejet** sends usagers back; a rejected dossier pays a bonus (prime de rejet) and raises hidden Conformité, but usagers who run out of patience abandon, shrinking future demand. Collègues double their speed at 10/25/50 copies (ancienneté). Each collègue type has its own cost growth (`croissance`, lower for the stagiaire). The **Tampons apposés** counter sets the player’s grade (`GRADES` in `constants/balance.ts`): +10 % dotation per grade, announced only by a S.I.C. letter and shown in Options (dossier administratif), never in the HUD. A note in instruction takes its full official delay: tapping does not shorten it. Note n° 1 (« Renfort estival », opens the Service tab) appears at a tampons count drawn per game between 20 and 30 (`GameState.seuilRenfort`, `BALANCE.seuilRenfort`), so the player senses hidden rules. Near the end of the act the collègues outrun the population and the queue empties for ~15–20 s: this is intended, explained by the bubble and a S.I.C. letter (« Excédent de productivité ») that teases Act II. There is no ordre du jour and no circulaires: the player discovers the game (fiche de poste at the start, règlement intérieur in Options, notes de service, S.I.C. letters). The game explains itself once: no counter definitions, no help button, no explanatory lines under controls, no note notification on the Guichet (a new note shows only as the Notes tab badge). Notes de service (projects) drip-feed mechanics. The act ends when Conformité reaches 100 %.
 
@@ -23,8 +23,8 @@ npm run lint                             # Run ESLint via expo lint
 ./node_modules/.bin/tsc --noEmit -p .    # Type-check (scripts/ and specs/ are excluded)
 npm test                                 # Unit tests of data/ and of the pixel-art scene engine (node:test, scripts/tests/*.test.ts)
 node scripts/simulate-acte1.ts [taps/s] [minutes]   # Balance simulator: bot player, prints milestones
-node scripts/simulate-acte2.ts [taps/s] [minutes]   # Act II balance simulator (no Réforme yet)
-node --import ./scripts/resoudre-ts.ts scripts/save-acte2.ts <preset>   # Prints the localStorage line that loads an Act II test save (finActeI, debut, atelier, boucle, demat, fin)
+node scripts/simulate-acte2.ts [taps/s] [minutes] [réformeÀ % | balayage] [découverte min]   # Act II simulator, Réforme and Act I replay included (robots: scripts/robots.ts)
+node --import ./scripts/resoudre-ts.ts scripts/save-acte2.ts <preset>   # Prints the localStorage line that loads a test save (finActeI, debut, atelier, boucle, demat, fin, reforme, cerfa2)
 node scripts/bundle-scene-pixel.ts <out.js> [--acte 2]   # Browser bundle of the pixel scenes for DESIGN/ mockups (no dependency)
 ```
 
@@ -57,6 +57,7 @@ Components must never import from `data/`. Everything goes through `useGameState
 - **Head of the queue:** the usager in the bubble (`teteDeFile(s)[0]`, patience drawn per usager number from the real queue mix) is the one whose dossier the next tap processes first (`E.tamponner(…, premier)`), so « Troisième fois… » then a rejection is an abandon. Abandons show in the scene: the usager drops their dossier (it lies on the floor 2.5 s), leaves fast with a red exit arrow (`MoteurScene.abandon`, `Verdict.abandon`, `abandonsFile` for collègue abandons, at most 2/s).
 - **Tap feedback:** a tap shows no floating numbers. It reads in the scene (arm, impact star, ink, shake) and in the counters, which react to `verdict.id` through `components/charte/ValeurAnimee`. TAMPONNER fires on press-in, one stamp per press (`BoutonPoussoir` `immediat`, no auto-repeat), and the space bar stamps on the web (the only keyboard shortcut).
 - **Acts:** the game loop, the offline catch-up and every action dispatch on `s.acte`: Act I runs `data/engine.ts`, Act II runs `data/acte2/moteur.ts` (`tick2`, `tamponner2`, `simulerAbsence2` + `lettreAbsence2`); Act I code never runs on an Act II state, and Act I fields kept in the save are never shown at Act II. Screens read Act II through `direction`, `service2` and `atelier` (pure views: `data/acte2/vues.ts`, `data/acte2/vueAtelier.ts`; null at Act I) and the act's ink `encre` (`Encres` in `constants/Colors.ts`: orange, then blue). `FinActeModal` calls `entrerDirection`.
+- **Réforme:** `reformer` (Options → Formulaire R-01) resets to the Cerfa screen (`cerfaNumero`), `acheterJurisprudence` spends trombones (final, no undo); `reforme` is the Options view (trombones and Jurisprudence appear only after the first Réforme). Components live in `components/reforme/`.
 
 ### PreferencesContext (`context/PreferencesContext.tsx`)
 
@@ -79,6 +80,8 @@ Vibrations and reduced animations, stored under their own AsyncStorage key (`bur
 | `constants/balanceActe2.ts` | Act II tuning (`BALANCE2`), steps, Exemplaires, agents |
 | `data/acte2/vues.ts` | Act II views: Direction screen (parapheur, step chain, Démat.), Service, notes |
 | `data/acte2/vueAtelier.ts` | Atelier view: step effects (symbol + word), loops, catalogue |
+| `data/jurisprudence.ts` | What survives a Réforme: initial `reformes`, Jurisprudence effects, déjà-vu, drawn service names (imported by both engines) |
+| `data/reforme.ts` | The Réforme: trombones, `reformer`, Cerfa number, its letter, Jurisprudence purchase, Options view |
 | `utils/formatters.ts` | `formatEntier` (counts) and `formatEuros` (money): full digits up to 99 999, then « 124 k », « 4,47 M »; `formatPourcent`; `formatNumberFrench` (rates) |
 
 ### Economy model (aggregate, no per-usager objects)

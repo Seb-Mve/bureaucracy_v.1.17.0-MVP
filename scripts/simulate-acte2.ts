@@ -5,7 +5,7 @@
  * Un joueur-robot entre dans l'acte II avec le compteur d'une fin d'acte I et joue (scripts/robots.ts).
  * Sans troisième argument, il ne réforme pas. Avec `réformeÀ` (en % de dématérialisation), il réforme
  * dès ce taux atteint, achète sa Jurisprudence, rejoue l'acte I, revient à l'acte II et le termine.
- * `balayage` compare la fin de l'acte sans Réforme et avec une Réforme à 30, 40 … 80 %.
+ * `balayage` compare la fin de l'acte sans Réforme et avec une Réforme à 0, 20, 40, 50, 60, 70 et 80 %.
  * Il construit la boucle instantanément : un humain mettra plus longtemps.
  */
 import { registerHooks } from 'node:module';
