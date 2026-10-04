@@ -8,6 +8,8 @@ import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 import ReglementInterieur from '@/components/ReglementInterieur';
 import ReglagesConfort from '@/components/ReglagesConfort';
 import Confirmation from '@/components/charte/Confirmation';
+import SectionReforme from '@/components/reforme/SectionReforme';
+import ListeJurisprudence from '@/components/reforme/ListeJurisprudence';
 
 function dureeJeu(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -15,22 +17,32 @@ function dureeJeu(sec: number): string {
   return h > 0 ? `${h} h ${m.toString().padStart(2, '0')} min` : `${m} min`;
 }
 
+/** « à » devant un nom de service : « au Pôle… », « à la Direction… », « à l’Agence… ». */
+function aService(nom: string): string {
+  if (nom.startsWith('Le ')) return `au ${nom.slice(3)}`;
+  return `à ${nom.charAt(0).toLowerCase()}${nom.slice(1)}`;
+}
+
 /** Options : dossier administratif, règlement intérieur, confort, démission, remise à zéro. */
 export default function OptionsScreen() {
-  const { etat, grade, direction, deposerDemission, nouvellePartie, marquerFichePoste, encre } = useGameState();
+  const { etat, grade, direction, reforme, deposerDemission, nouvellePartie, marquerFichePoste, encre } =
+    useGameState();
   const [demande, setDemande] = useState<'demission' | 'effacer' | null>(null);
   const deposee = etat.demission.deposeeLe !== null;
   const agent = etat.cerfa.prenom || 'Agent sans prénom';
 
   const prime = grade.rang > 0 ? `+${Math.round(grade.bonus * 100)} % de dotation` : 'Néant';
+  // Les trombones n'apparaissent qu'après la première Réforme.
+  const trombones: [string, string][] = reforme.trombones !== null ? [['Trombones', formatEntier(reforme.trombones)]] : [];
   // Acte II : les compteurs de la Direction ; ceux du guichet 3 restent dans la sauvegarde, sans être montrés.
   const lignes: [string, string][] = direction
     ? [
         ['Agent', agent],
         ['Grade', grade.nom],
         ['Prime d’avancement', prime],
-        ['Affectation', 'La Direction'],
+        ['Affectation', direction.nomService],
         ['Tampons apposés', formatEntier(etat.tampons)],
+        ...trombones,
         ['Visas accordés', formatEntier(direction.visasAccordes)],
         ['Usagers perdus (abandons)', formatEntier(direction.abandons)],
         // Tableau de bord (note n° 16) : il mesure ce qui a été jugé mesurable.
@@ -49,6 +61,7 @@ export default function OptionsScreen() {
         ['Affectation', 'Guichet 3'],
         // Même mot, même grandeur que l'en-tête : un tampon apposé = un dossier traité.
         ['Tampons apposés', formatEntier(etat.tampons)],
+        ...trombones,
         ['Dossiers rejetés', formatEntier(Math.floor(etat.stats.rejetes))],
         ['Usagers perdus (abandons)', formatEntier(Math.floor(etat.abandons))],
         ['Temps de service', dureeJeu(etat.stats.tempsDeJeu)],
@@ -78,6 +91,20 @@ export default function OptionsScreen() {
           )}
         </Panneau>
 
+        {reforme.possible && (
+          <>
+            <Text style={styles.titre}>Réforme</Text>
+            <SectionReforme />
+          </>
+        )}
+
+        {reforme.jurisprudence && (
+          <>
+            <Text style={styles.titre}>Jurisprudence</Text>
+            <ListeJurisprudence />
+          </>
+        )}
+
         <Text style={styles.titre}>Règlement intérieur</Text>
         <ReglementInterieur />
 
@@ -86,7 +113,8 @@ export default function OptionsScreen() {
 
         <Text style={styles.titre}>Démission</Text>
         <Panneau contenuStyle={styles.fiche} rayon={Charte.rayon}>
-          <Text style={styles.cerfa}>Cerfa n° 00001*02 — Demande de cessation volontaire de fonctions</Text>
+          {/* 00001 est le Cerfa d'embauche, redemandé en *02, *03… à chaque Réforme. */}
+          <Text style={styles.cerfa}>Cerfa n° 00002*01 — Demande de cessation volontaire de fonctions</Text>
           {deposee ? (
             <>
               <Text style={styles.texte}>Demande n° 000001 enregistrée.</Text>
@@ -97,7 +125,7 @@ export default function OptionsScreen() {
             <>
               <Text style={styles.texte}>
                 Je soussigné·e, {agent}, sollicite la cessation de mes fonctions{' '}
-                {direction ? 'à la Direction' : 'au guichet 3'}.
+                {direction ? aService(direction.nomService) : 'au guichet 3'}.
               </Text>
               <BoutonPoussoir
                 libelle="DÉPOSER MA DÉMISSION"
