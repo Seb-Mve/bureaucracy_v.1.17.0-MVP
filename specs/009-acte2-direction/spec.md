@@ -133,7 +133,7 @@ L'ancienneté de l'acte I s'applique aux agents : vitesse doublée à 10, 25 et 
 - **Effet** : retour au **début de l'acte I**. Tout repart à zéro : ressources, collègues, guichets, agents, notes, procédures, Conformité, Taux de dématérialisation. Survivent uniquement : les trombones, la Jurisprudence achetée, le compteur Tampons apposés (et le grade), le prénom et le premier Cerfa.
 - **Cerfa** : le Cerfa d'embauche est redemandé sous un nouveau numéro (« Cerfa n° 00001*02 », puis *03…). Le premier Cerfa tamponné reste stocké : c'est l'original exigé à l'acte VI.
 - **Satire** : à chaque Réforme, la Direction et les procédures changent de nom au hasard (Pôle, Agence, Direction, Mission, Délégation… ; « Carte d'identité » devient « Démarche d'identification citoyenne »…). Rien d'autre ne change.
-- **Le mur** : en fin d'acte, la montée de la dématérialisation ralentit (coût croissant des Guichets et des agents, formulaires). Continuer sans Réforme reste possible mais long ; réformer et revenir avec la Jurisprudence est plus rapide. Le simulateur vérifie que la Réforme est rentable à partir de 50 – 70 % de dématérialisation.
+- **Le mur** : en fin d'acte, la montée de la dématérialisation ralentit. Deux mécaniques invisibles le portent (plan 3) : la **sclérose des services** (chaque étape franchie en boucle rapporte `1 / (1 + durée des services / scleroseS)` point ; la durée court depuis l'entrée dans l'acte et la Réforme la remet à zéro) et la **jurisprudence constante** (+10 % de rendement par trombone obtenu, dépensé ou non). La Conformité de l'acte II compte ×120 : elle ne sert qu'aux trombones. Continuer sans Réforme reste possible mais long ; réformer et revenir avec la Jurisprudence est plus rapide. Le simulateur vérifie que la Réforme est rentable jusqu'à 70 % de dématérialisation au moins (`node scripts/simulate-acte2.ts 2 300 balayage`).
 
 ### Jurisprudence
 
@@ -152,7 +152,7 @@ Les coûts sont calés au simulateur : un joueur doit pouvoir acheter 2 bonus à
 
 ### Déjà-vu administratif
 
-Au replay, sans rien acheter : une note de service déjà achetée lors d'une partie précédente a un délai d'instruction divisé par 4 (« Dossier déjà instruit, procédure simplifiée »). La fiche de poste de l'acte I n'est pas reproposée.
+Au replay, sans rien acheter : une note de service déjà achetée lors d'une partie précédente a un délai d'instruction divisé par 4 et un coût divisé par 6 (« Dossier déjà instruit, procédure simplifiée »). La fiche de poste de l'acte I n'est pas reproposée.
 
 Cible : l'acte I rejoué en 20 à 30 minutes sans Jurisprudence.
 
@@ -268,19 +268,21 @@ Fourchettes humaines, depuis le début de l'acte II, premier passage, une Réfor
 | Première Réforme, replay de l'acte I compris | 60 – 90 min |
 | Fin de l'acte (100 %) | 105 – 135 min |
 
-### Mesures du robot (sans Réforme, `scripts/simulate-acte2.ts`)
+### Mesures du robot (`scripts/simulate-acte2.ts`)
+
+Sans Réforme, en minutes depuis l'entrée dans l'acte II :
 
 | Jalon | Robot 1 tap/s | Robot 2 taps/s | Robot 3 taps/s |
 |---|---|---|---|
-| Premier agent | 3.2 | 3.3 | 3.5 |
-| Atelier | 9.7 | 9.0 | 8.8 |
-| Première boucle | 28.6 | 27.4 | 26.4 |
-| Dématérialisation 50 % | 84.7 | 83.5 | 82.3 |
-| Dématérialisation 100 % | 126.9 | 125.7 | 124.5 |
+| Premier agent | 3.0 | 2.8 | 3.0 |
+| Atelier | 9.8 | 9.4 | 9.3 |
+| Première boucle | 27.8 | 27.2 | 26.6 |
+| Dématérialisation 50 % | 98.5 | 97.3 | 96.1 |
+| Dématérialisation 100 % | 193.5 | 191.5 | 189.7 |
 
-La dématérialisation à 100 % arrive avant sa cible robot sans Réforme, de 150 à 200 min : le mur est reporté au plan 3 (Réforme, calage du mur).
+Avec une Réforme (2 taps/s, `balayage`) : rentable de 0 à 70 % de dématérialisation (fin de l'acte entre 124.7 et 182.2 min contre 191.5), pas à 80 % (199.5) ; l'acte I est rejoué en 18 à 22 min ; la plus petite Réforme rapporte 6 trombones.
 
-Le robot construit la boucle dès que l'étape est disponible : le temps de découverte humain n'est pas mesuré ici.
+Le robot construit la boucle dès que l'étape est disponible. Avec 15 min de compréhension de la note n° 7 (`balayage 15`) et une Réforme dès son déblocage : Réforme débloquée à 42.2 min, acte I rejoué à 63.9 min, fin de l'acte à 132.7 min.
 
 ## Interface
 
@@ -294,7 +296,7 @@ Le robot construit la boucle dès que l'étape est disponible : le temps de déc
 ## Technique
 
 - Logique dans des fonctions pures de `data/` (moteur de l'acte II à côté de `data/engine.ts`), testées par `npm test` sans React.
-- Constantes dans `constants/balance.ts` (bloc acte II), vérifiées par `scripts/simulate-acte2.ts`.
+- Constantes dans `constants/balanceActe2.ts` (`BALANCE2`, `REFORME`, `JURISPRUDENCE`), vérifiées par `scripts/simulate-acte2.ts`.
 - Sauvegarde : champ `acte` (1 ou 2), état de l'acte II, `reformes` (nombre, trombones, Jurisprudence, Conformité déjà convertie), premier Cerfa. Une sauvegarde de l'acte I terminée passe à l'acte II sans perte du compteur.
 - Les dossiers en boucle sont stockés en compteurs par procédure et par étape, jamais un par un.
 

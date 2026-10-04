@@ -1,14 +1,15 @@
 /**
- * Simulateur d'équilibrage de l'acte II.
- * Usage : node scripts/simulate-acte2.ts [tapsParSeconde] [minutesMax]
+ * Simulateur d'équilibrage de l'acte II, Réforme comprise.
+ * Usage : node scripts/simulate-acte2.ts [tapsParSeconde] [minutesMax] [réformeÀ | balayage] [découverte]
  *
- * Un joueur-robot entre dans l'acte II avec le compteur d'une fin d'acte I, tamponne les visas,
- * règle les curseurs au maximum, achète les notes dès qu'il peut, compose ses procédures
- * (boucle dès que possible) et recrute selon le goulot. Il construit la boucle instantanément :
- * un humain mettra plus longtemps. Sans Réforme (plan 3).
+ * Un joueur-robot entre dans l'acte II avec le compteur d'une fin d'acte I et joue (scripts/robots.ts).
+ * Sans troisième argument, il ne réforme pas. Avec `réformeÀ` (en % de dématérialisation), il réforme
+ * dès ce taux atteint, achète sa Jurisprudence, rejoue l'acte I, revient à l'acte II et le termine.
+ * `balayage` compare la fin de l'acte sans Réforme et avec une Réforme à 30, 40 … 80 %.
+ * Il construit la boucle instantanément : un humain mettra plus longtemps.
  */
 import { registerHooks } from 'node:module';
-import type { ActionAtelier, EtapeType, ProcId } from '../types/acte2.ts';
+import type { GameState } from '../types/game.ts';
 
 registerHooks({
   resolve(specifier, context, next) {
@@ -21,120 +22,90 @@ registerHooks({
   },
 });
 
-const { BALANCE } = await import('../constants/balance.ts');
-const E = await import('../data/engine.ts');
 const D = await import('../data/acte2/moteur.ts');
-const { NOTES2 } = await import('../data/acte2/notes2.ts');
+const R = await import('../data/reforme.ts');
+const { finActeIRobot, robotActe1, robotActe2, robotReforme } = await import('./robots.ts');
 
 const taps = Number(process.argv[2] ?? 2);
-const minutesMax = Number(process.argv[3] ?? 240);
+const minutesMax = Number(process.argv[3] ?? 300);
+const mode = process.argv[4];
+/** Minutes qu'un humain met à comprendre la note n° 7 (première partie seulement). */
+const decouverte = Number(process.argv[5] ?? 0) * 60;
 
-let s = D.entrerActe2({ ...E.signerCerfa(E.etatInitial(0), 'Robot', 0), tampons: 160000 }, 0);
-const jalons: Record<string, number> = {};
-const marquer = (k: string, t: number) => {
-  if (jalons[k] === undefined) jalons[k] = t;
-};
 const mn = (t: number) => `${(t / 60).toFixed(1)} min`;
 
-/** Procédure exigée par chaque procédure : identite ↔ domicile forment la boucle. */
-const PARTENAIRE: Record<ProcId, ProcId> = {
-  identite: 'domicile',
-  domicile: 'identite',
-  hebergement: 'domicile',
-  vie: 'identite',
-};
-const VOULU: EtapeType[] = ['piece', 'visa', 'signature', 'pieceService', 'commission'];
-
-/** Ajoute à chaque procédure ouverte les étapes voulues qui manquent. */
-function composer(now: number): void {
-  for (;;) {
-    const m = D.getModifiers2(s, now);
-    if (!m.atelierVisible) return;
-    const x = s.acte2!;
-    let action: ActionAtelier | null = null;
-    for (const p of m.procsOuvertes) {
-      const types = x.procedures[p].map((e) => e.type);
-      const manque = VOULU.find((t) => m.etapesDisponibles.includes(t) && !types.includes(t));
-      if (manque === undefined) continue;
-      action =
-        manque === 'pieceService'
-          ? { type: 'ajouter', p, etape: manque, exige: PARTENAIRE[p] }
-          : { type: 'ajouter', p, etape: manque };
-      break;
-    }
-    if (!action) return;
-    const avant = s;
-    s = D.modifierProcedure(s, action, now);
-    if (s === avant) return;
-  }
+interface Partie {
+  jalons: Record<string, number>;
+  fin: number | null;
+  s: GameState;
 }
 
-for (let t = 1; t <= minutesMax * 60; t++) {
-  const now = t * 1000;
-  for (let i = 0; i < taps; i++) s = D.tamponner2(s, now).s;
-  s = D.tick2(s, 1, now).s;
-
-  let m = D.getModifiers2(s, now);
-  s = D.reglerTauxRejet2(s, m.rejetMax, now);
-  if (m.exemplairesVisible) s = D.reglerExemplaires(s, 2, now);
-
-  for (const id of D.notesVisibles2(s)) {
-    if (D.peutAcheterNote2(s, id)) {
-      s = D.acheterNote2(s, id, now);
-      marquer(`note ${id}`, t);
+/** Joue depuis l'entrée dans l'acte II ; réforme une fois à `reformeA` % de dématérialisation (null : jamais). */
+function jouer(reformeA: number | null, journal: boolean): Partie {
+  let s = D.entrerActe2({ ...finActeIRobot(), finActeVue: true }, 0);
+  const jalons: Record<string, number> = {};
+  const marquer = (k: string, t: number) => {
+    if (jalons[k] === undefined) jalons[k] = t;
+  };
+  const tour = () => (s.reformes.nombre > 0 ? ' (après la Réforme)' : '');
+  for (let t = 1; t <= minutesMax * 60; t++) {
+    const now = t * 1000;
+    if (s.acte === 1) {
+      s = robotActe1(s, now, taps);
+      if (s.acteTermine) {
+        marquer('acte I rejoué', t);
+        s = D.entrerActe2({ ...s, finActeVue: true }, now);
+      }
+      continue;
+    }
+    // Le temps de compréhension de l'indice ne compte qu'à la première partie : ensuite, le joueur sait.
+    s = robotActe2(s, now, taps, s.reformes.nombre === 0 ? decouverte : 0);
+    const x = s.acte2!;
+    for (const id of Object.keys(x.notes)) marquer(`note ${id}${tour()}`, t);
+    if (x.agents.instructeur > 0) marquer(`premier agent${tour()}`, t);
+    if (x.agents.chefBureau > 0) marquer(`premier chef de bureau${tour()}`, t);
+    if (D.getModifiers2(s, now).atelierVisible) marquer(`atelier${tour()}`, t);
+    if (x.premiereBoucle !== null) marquer(`première boucle${tour()}`, t);
+    if (R.peutReformer(s, now)) marquer('réforme débloquée', t);
+    for (const pct of [25, 50, 75, 100]) if (D.dematerialisation(x) >= pct) marquer(`dématérialisation ${pct} %${tour()}`, t);
+    if (reformeA !== null && s.reformes.nombre === 0 && D.dematerialisation(x) >= reformeA && R.peutReformer(s, now)) {
+      const gain = R.trombonesReforme(s);
+      s = robotReforme(s, now);
+      marquer(`réforme (${gain} trombones : ${s.reformes.jurisprudence.join(', ') || 'aucun bonus'})`, t);
+      continue;
+    }
+    if (x.acteTermine) {
+      marquer('fin de l’acte II', t);
+      return { jalons, fin: t, s };
+    }
+    if (journal && t % 600 === 0) {
+      console.log(
+        `${mn(t).padStart(9)} | budget ${Math.round(s.budget).toString().padStart(9)} € | guichets ${x.guichets} | agents ${x.agents.instructeur}/${x.agents.chefBureau}/${x.agents.sousDirecteur} | boucle ${Math.round(D.dossiersEnBoucle(x))} | rendement ${D.rendementDemat(s, x).toFixed(2)} | démat ${D.dematerialisation(x).toFixed(1)} %`,
+      );
     }
   }
-  composer(now);
-  m = D.getModifiers2(s, now);
+  return { jalons, fin: null, s };
+}
 
-  // Formulaires : garder 20 s de consommation.
-  const x = s.acte2!;
-  const conso = (D.vitesseGuichets(x) + D.vitesseVisas(x) + taps) * x.exemplaires * 20;
-  if (s.formulaires < conso) s = D.acheterRamettes2(s, Math.ceil((conso - s.formulaires) / BALANCE.ramette));
-  s = D.requisitionUrgence2(s);
-
-  // Recrutement : on renforce le goulot (visas ou guichets), sans affamer la prochaine note.
-  const enAttente = NOTES2.filter((n) => s.acte2!.notes[n.id] === undefined && n.visible(s) && n.cout > 0);
-  const reserve = enAttente.length ? Math.min(...enAttente.map((n) => n.cout)) : 0;
-  for (;;) {
-    const y = s.acte2!;
-    const visas = D.visasEnAttente(y);
-    const autres = D.usagersEnCours(y) + D.dossiersEnBoucle(y) - visas;
-    const agent = m.agentsDisponibles
-      .map((id) => ({ id, cout: D.coutAgent2(id, y.agents[id]), gain: D.gainAgent2(y, id) }))
-      .sort((a, b) => b.gain / b.cout - a.gain / a.cout)[0];
-    const veutAgent = agent !== undefined && visas > autres;
-    const cout = veutAgent ? agent.cout : D.coutGuichet(y.guichets);
-    if (!m.recrutementVisible || s.budget < cout) break;
-    if (reserve > 0 && cout > reserve * 0.5 && s.budget - cout < reserve) break;
-    const avant = s;
-    s = veutAgent ? D.acheterAgent2(s, agent.id, now) : D.acheterGuichet(s, now);
-    if (s === avant) break;
-    if (veutAgent) marquer('premier agent', t);
-  }
-
-  const y = s.acte2!;
-  if (m.atelierVisible) marquer('atelier', t);
-  if (y.premiereBoucle !== null) marquer('première boucle', t);
-  if (m.reformeVisible) marquer('réforme débloquée', t);
-  for (const pct of [25, 50, 75, 100]) if (D.dematerialisation(y) >= pct) marquer(`dématérialisation ${pct} %`, t);
-  if (y.acteTermine) {
-    marquer('fin de l’acte II', t);
-    break;
-  }
-
-  if (t % 600 === 0) {
+if (mode === 'balayage') {
+  const sans = jouer(null, false);
+  console.log(`Sans Réforme : fin de l’acte II à ${sans.fin === null ? `plus de ${minutesMax} min` : mn(sans.fin)}`);
+  for (const a of [0, 20, 40, 50, 60, 70, 80]) {
+    const p = jouer(a, false);
+    const reforme = Object.entries(p.jalons).find(([k]) => k.startsWith('réforme ('));
+    const gagne = p.fin !== null && (sans.fin === null || p.fin < sans.fin);
     console.log(
-      `${mn(t).padStart(9)} | budget ${Math.round(s.budget).toString().padStart(9)} € | guichets ${y.guichets} | agents ${y.agents.instructeur}/${y.agents.chefBureau}/${y.agents.sousDirecteur} | usagers ${Math.round(D.usagersEnCours(y))} | boucle ${Math.round(D.dossiersEnBoucle(y))} | pop ${Math.round(y.population)} | démarches abandonnées ${Math.round(y.stats.abandonsDemarche)} | démat ${D.dematerialisation(y).toFixed(1)} %`,
+      `Réforme à ${a} % : ${reforme ? `${reforme[0]} à ${mn(reforme[1])}` : 'pas de Réforme'} · acte I rejoué ${p.jalons['acte I rejoué'] !== undefined ? mn(p.jalons['acte I rejoué']) : '—'} · fin ${p.fin === null ? '—' : mn(p.fin)} · ${gagne ? 'rentable' : 'pas rentable'}`,
     );
   }
+} else {
+  const p = jouer(mode === undefined ? null : Number(mode), true);
+  console.log('\nJalons :');
+  for (const [k, t] of Object.entries(p.jalons).sort((a, b) => a[1] - b[1])) console.log(`  ${mn(t).padStart(9)}  ${k}`);
+  const fin = p.s.acte2;
+  if (fin) {
+    console.log('\nMesures :');
+    console.log(`  visas au tap : ${Math.round(fin.stats.visasTampons)} sur ${Math.round(fin.stats.taps)} taps`);
+    console.log(`  procédures : ${Object.entries(fin.procedures).map(([q, e]) => `${q} [${e.map((v) => v.type).join(', ')}]`).join(' · ')}`);
+  }
 }
-
-console.log('\nJalons :');
-for (const [k, t] of Object.entries(jalons).sort((a, b) => a[1] - b[1])) {
-  console.log(`  ${mn(t).padStart(9)}  ${k}`);
-}
-const fin = s.acte2!;
-console.log('\nMesures :');
-console.log(`  visas au tap : ${Math.round(fin.stats.visasTampons)} sur ${Math.round(fin.stats.taps)} taps`);
-console.log(`  procédures : ${Object.entries(fin.procedures).map(([p, e]) => `${p} [${e.map((v) => v.type).join(', ')}]`).join(' · ')}`);

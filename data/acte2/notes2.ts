@@ -171,7 +171,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Plan de dématérialisation',
     texte: 'Le S.I.C. engage la dématérialisation des démarches. Une démarche dématérialisée ne nécessite plus d’usager. Votre taux de dématérialisation sera désormais publié.',
     effet: 'Révèle le Taux de dématérialisation.',
-    cout: 50000,
+    cout: 12000,
     instruction: 300,
     visible: si((x) => x.premiereBoucle !== null && x.stats.franchiesBoucle >= 5000),
     appliquer: (m) => {
@@ -184,7 +184,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Rejet élargi',
     texte: 'Le taux de rejet maximal est relevé. Il ne s’applique, rappelons-le, qu’aux dossiers incomplets, c’est-à-dire à tous.',
     effet: 'Taux de rejet jusqu’à 80 %.',
-    cout: 80000,
+    cout: 25000,
     instruction: 180,
     visible: si((x) => achetee(x, 'demat')),
     appliquer: (m) => {
@@ -197,7 +197,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Commission ad hoc',
     texte: 'Une commission examinera les dossiers dès que son règlement intérieur aura été examiné par une commission.',
     effet: 'Débloque l’étape Commission.',
-    cout: 120000,
+    cout: 40000,
     instruction: 300,
     visible: si((x) => achetee(x, 'demat')),
     appliquer: (m) => {
@@ -210,7 +210,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Sous-directeur',
     texte: 'Le sous-directeur ne vise rien lui-même. Il délègue, ce qui va beaucoup plus vite.',
     effet: 'Débloque le Sous-directeur.',
-    cout: 200000,
+    cout: 60000,
     instruction: 300,
     visible: si((x) => x.agents.chefBureau >= 10),
     appliquer: (m) => {
@@ -223,7 +223,7 @@ export const NOTES2: NoteDef2[] = [
     titre: 'Quatrième guichet thématique',
     texte: 'Pour toute démarche, l’usager doit désormais prouver qu’il est en vie. La preuve est valable trois mois, sauf décès.',
     effet: 'Ouvre la procédure Certificat de vie.',
-    cout: 300000,
+    cout: 90000,
     instruction: 480,
     visible: si((x) => achetee(x, 'commission')),
     appliquer: (m) => {
