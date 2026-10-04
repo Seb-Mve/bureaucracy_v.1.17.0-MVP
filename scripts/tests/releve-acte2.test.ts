@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
 import * as D from '../../data/acte2/moteur';
 import * as P from '../../data/acte2/production';
+import * as V from '../../data/acte2/vues';
+import { sauvegardePreset } from '../../data/presets';
 import { NOMS_PROCEDURES } from '../../data/jurisprudence';
 import { BALANCE2, PROC_NOMS } from '../../constants/balanceActe2';
 import { formatEuros } from '../../utils/formatters';
@@ -45,7 +47,7 @@ test('relevé « Production du service » : demandes, délivrés, valeur d’une
   assert.equal(carte.nom, 'Carte d’identité');
   assert.equal(carte.demandes, BALANCE2.fileInitiale + BALANCE2.visasInitiaux);
   assert.equal(carte.demandesTexte, `${carte.demandes} demandes`);
-  assert.equal(carte.delivresTexte, '312 délivrées');
+  assert.equal(carte.delivresTexte, '313 délivrées');
   assert.equal(carte.delivresMot, 'délivrées');
   // Pièce + Visa au grade de départ, ×1.
   assert.deepEqual(carte.valeur, [
@@ -129,4 +131,13 @@ test('chaque nom de procédure a son document, avec article et genre', () => {
   assert.equal(P.compte(0, 'demande', 'demandes'), '0 demande');
   assert.equal(P.compte(1, 'demande', 'demandes'), '1 demande');
   assert.equal(P.compte(2, 'demande', 'demandes'), '2 demandes');
+});
+
+test('première carte visée : délivrée, relevé à 1 et fiche « Délivrée » allumée', () => {
+  const t = 1_000_000_000;
+  const { s } = D.tamponner2(sauvegardePreset('debut', t), t);
+  const carte = (P.lignesProduction(s, t) as P.LigneProduction[])[0];
+  assert.equal(carte.delivres, 1);
+  assert.equal(carte.delivresTexte, '1 délivrée');
+  assert.equal(V.vueDirection(s, t)?.delivrance.faite, true);
 });

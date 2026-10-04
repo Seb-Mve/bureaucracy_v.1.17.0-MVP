@@ -121,6 +121,11 @@ export interface LigneProduction {
   versUsagers: boolean;
 }
 
+/** Documents délivrés par une procédure, arrondis : 0,96 carte (4 % d'abandon au visa) compte pour une carte. */
+export function delivresEntiers(x: EtatActe2, p: ProcId): number {
+  return Math.round(x.stats.delivresUsagers[p] + x.stats.delivresService[p]);
+}
+
 /** Relevé « Production du service » : une ligne par procédure ouverte. Null hors de l'acte II. */
 export function lignesProduction(
   s: GameState,
@@ -135,9 +140,7 @@ export function lignesProduction(
     const doc = documentDe(nom);
     const demandee = PROCS_DEMANDEES.includes(p);
     const demandes = Math.floor(dossiersEnCours(x, p));
-    const delivres = Math.floor(
-      x.stats.delivresUsagers[p] + x.stats.delivresService[p],
-    );
+    const delivres = delivresEntiers(x, p);
     const abandons = Math.floor(x.stats.abandonsProc[p]);
     const demandesMot = mot(demandes, 'demande', 'demandes');
     const delivresMot = mot(

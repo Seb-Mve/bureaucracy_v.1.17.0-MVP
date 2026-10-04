@@ -15,7 +15,7 @@ import type {
 import { AGENTS2, PROCS_DEMANDEES } from '../../constants/balanceActe2';
 import { formatEntier } from '../../utils/formatters';
 import { demandeur, tirage } from '../usagers';
-import { documentDe } from './production';
+import { delivresEntiers, documentDe } from './production';
 import {
   conditionsNote2,
   coutAgent2,
@@ -212,7 +212,7 @@ export function vueDirection(
     etapes: tableauCirculation(x, p),
     delivrance: {
       nom: doc.feminin ? 'Délivrée' : 'Délivré',
-      faite: x.stats.delivresUsagers[p] + x.stats.delivresService[p] >= 1,
+      faite: delivresEntiers(x, p) >= 1,
     },
     appel: usagers >= 1 ? numero - 1 : null,
     recrutementVisible: m.recrutementVisible,
