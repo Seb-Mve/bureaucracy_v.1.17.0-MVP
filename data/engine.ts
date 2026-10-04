@@ -13,6 +13,7 @@ import {
 } from '../types/game';
 import { AGENTS, BALANCE, GRADES, type AgentDef } from '../constants/balance';
 import { EXTENSIONS_PERIMETRE, NOTES, NOTES_PAR_ID } from './notes';
+import { reformesInitiales } from './jurisprudence';
 
 const somme = (a: ParPatience): number => a[1] + a[2] + a[3];
 
@@ -58,6 +59,7 @@ export function etatInitial(maintenant: number, alea: () => number = Math.random
       tempsDeJeu: 0,
     },
     derniereMaj: maintenant,
+    reformes: reformesInitiales(),
   };
 }
 

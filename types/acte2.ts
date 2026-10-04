@@ -80,6 +80,10 @@ export interface EtatActe2 {
   premiereModif: ProcId | null;
   acteTermine: boolean;
   finActeVue: boolean;
+  /** Secondes simulées depuis l'entrée dans l'acte (absences comprises, plafonnées) : l'âge des services. */
+  duree: number;
+  /** Mémoire des services : les procédures d'avant la Réforme ont été restaurées. */
+  memoireRestauree: boolean;
   stats: StatsActe2;
 }
 
@@ -99,6 +103,8 @@ export interface Modifiers2 {
   dematVisible: boolean;
   reformeVisible: boolean;
   tableauVisible: boolean;
+  /** Jurisprudence « Droit acquis » : la première étape de chaque procédure ne coûte aucune patience. */
+  droitAcquis: boolean;
 }
 
 /** Une modification demandée dans l'Atelier. */

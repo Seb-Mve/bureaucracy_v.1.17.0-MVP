@@ -9,6 +9,7 @@ import type {
   Exemplaires,
   ProcId,
 } from '../types/acte2';
+import type { JurisprudenceId } from '../types/reforme';
 
 export const BALANCE2 = {
   /** Habitants de la ville à l'entrée dans l'acte, et capacité maximale. */
@@ -174,4 +175,40 @@ export const AGENTS2: Agent2Def[] = [
     coutBase: 20000,
     croissance: 1.15,
   },
+];
+
+/** Réforme, Jurisprudence, déjà-vu administratif et sclérose des services. Vérifié par scripts/simulate-acte2.ts. */
+export const REFORME = {
+  /** Trombones d'une Réforme : ⌊√(Conformité de la partie / k)⌋ (acte I compris). */
+  k: 250_000,
+  /** Déjà-vu administratif : une note déjà instruite a son délai divisé par… */
+  dejaVuDelai: 4,
+  /** … et son coût divisé par… (« procédure simplifiée »). */
+  dejaVuCout: 6,
+  /** Sclérose des services (le mur) : le rendement de la dématérialisation vaut 1 / (1 + durée / scleroseS), en s. */
+  scleroseS: 1250,
+  /** Jurisprudence constante : rendement de la dématérialisation +10 % par trombone obtenu. */
+  jurisprudenceConstante: 0.1,
+  guichetsAnteriorite: 10,
+  stagiairesPrecedent: 3,
+  remiseVideJuridique: 0.25,
+  bonusAnciennete: 0.2,
+} as const;
+
+export interface JurisprudenceDef {
+  id: JurisprudenceId;
+  nom: string;
+  effet: string;
+  /** Prix en trombones. */
+  cout: number;
+}
+
+/** Bonus permanents, achetés avec les trombones dans le dossier administratif. */
+export const JURISPRUDENCE: JurisprudenceDef[] = [
+  { id: 'videJuridique', nom: 'Vide juridique', effet: 'Formulaires −25 %.', cout: 3 },
+  { id: 'precedent', nom: 'Précédent', effet: 'L’acte I commence avec 3 stagiaires.', cout: 3 },
+  { id: 'droitAcquis', nom: 'Droit acquis', effet: 'Une étape sans perte de patience, par procédure.', cout: 5 },
+  { id: 'anciennete', nom: 'Ancienneté reconnue', effet: 'Dotation +20 %, à tous les actes.', cout: 6 },
+  { id: 'anteriorite', nom: 'Antériorité', effet: 'L’acte II commence avec 10 guichets.', cout: 5 },
+  { id: 'memoire', nom: 'Mémoire des services', effet: 'Vos procédures sont restaurées à l’ouverture de l’Atelier.', cout: 8 },
 ];

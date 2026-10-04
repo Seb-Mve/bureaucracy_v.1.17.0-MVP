@@ -4,6 +4,7 @@
  */
 
 import type { EtatActe2 } from './acte2';
+import type { Reformes } from './reforme';
 
 export type AgentId = 'stagiaire' | 'accueil' | 'instructeur' | 'titulaire';
 
@@ -113,6 +114,8 @@ export interface GameState {
   stats: GameStats;
   /** Dernier horodatage de simulation (ms), pour le hors-ligne. */
   derniereMaj: number;
+  /** Ce qui survit aux Réformes : trombones, Jurisprudence, notes déjà instruites, noms, premier Cerfa. */
+  reformes: Reformes;
 }
 
 /** Modificateurs dérivés des notes de service effectives. */

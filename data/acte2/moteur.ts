@@ -27,6 +27,7 @@ import {
 import { multiplicateurAnciennete, partRejetee, rangGrade } from '../engine';
 import { NOTES2, NOTES2_PAR_ID, dematPct } from './notes2';
 import { appliquerAction, estBoucle } from './procedures';
+import { aJurisprudence } from '../jurisprudence';
 
 export function copieProcedures(
   p: Record<ProcId, Etape[]>,
@@ -78,6 +79,8 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
     premiereModif: null,
     acteTermine: false,
     finActeVue: false,
+    duree: 0,
+    memoireRestauree: false,
     stats: {
       franchies: 0,
       franchiesBoucle: 0,
@@ -130,6 +133,7 @@ export function getModifiers2(s: GameState, maintenant: number): Modifiers2 {
     dematVisible: false,
     reformeVisible: false,
     tableauVisible: false,
+    droitAcquis: aJurisprudence(s, 'droitAcquis'),
   };
   const x = s.acte2;
   if (!x) return m;
