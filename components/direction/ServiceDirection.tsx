@@ -6,9 +6,13 @@ import Colors, { Espace, Fonts, Typo } from '@/constants/Colors';
 import { formatDebit } from '@/utils/formatters';
 import Hud from '@/components/Hud';
 import CarteRamettes from '@/components/service/CarteRamettes';
+import CarteAchats from '@/components/service/CarteAchats';
 import CarteUnite from '@/components/service/CarteUnite';
 
-/** Onglet Service de l'acte II : fournitures, guichets (franchissent les étapes) et agents (accordent les visas). */
+/**
+ * Onglet Service de l'acte II : fournitures (ramettes, puis Service des achats), guichets (franchissent les
+ * étapes) et agents (accordent les visas).
+ */
 export default function ServiceDirection() {
   const { service2, acheterGuichet, acheterAgent2, encre } = useGameState();
   if (!service2) return null;
@@ -20,6 +24,7 @@ export default function ServiceDirection() {
       <ScrollView contentContainerStyle={styles.contenu}>
         <Text style={styles.titre}>Fournitures</Text>
         <CarteRamettes />
+        <CarteAchats />
 
         <Text style={styles.titre}>
           Guichets{' '}

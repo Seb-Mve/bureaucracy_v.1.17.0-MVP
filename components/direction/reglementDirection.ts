@@ -69,6 +69,13 @@ export function articlesDirection(
         'Chaque étape exige un, deux ou trois exemplaires : plus de dotation, plus de formulaires, moins de patience.',
     });
   }
+  if (d.achatsVisible) {
+    articles.push({
+      titre: 'Service des achats',
+      texte:
+        'En service, il commande des ramettes sur le budget dès que le stock ne couvre plus trente secondes de travail, y compris en votre absence. Il se suspend depuis l’onglet Service.',
+    });
+  }
   if (d.reformeVisible) {
     articles.push({
       titre: 'La Réforme',
