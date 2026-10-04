@@ -373,10 +373,12 @@ test('les guichets franchissent les pièces, jamais les visas', () => {
     1,
     1000,
   ).s;
-  proche(x(s).usagers.identite[0], BALANCE2.fileInitiale - 0.5);
+  // Une seconde d'attente : une part des usagers renonce (impatience, specs/011).
+  const reste = Math.exp(-BALANCE2.impatience);
+  proche(x(s).usagers.identite[0], BALANCE2.fileInitiale * reste - 0.5);
   proche(
     x(s).usagers.identite[1],
-    BALANCE2.visasInitiaux + 0.5 * (1 - BALANCE2.abandonParPoint),
+    BALANCE2.visasInitiaux * reste + 0.5 * (1 - BALANCE2.abandonParPoint),
   );
   proche(s.tampons, 0.5);
 });

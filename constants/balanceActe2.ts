@@ -37,6 +37,16 @@ export const BALANCE2 = {
   abandonParPoint: 0.04,
   /** Part des usagers rejetés qui abandonnent (un point de patience sur trois). */
   abandonRejet: 1 / 3,
+  /**
+   * Impatience (specs/011) : part des dossiers d'usagers en cours dont l'usager renonce, chaque seconde d'attente
+   * (≈ 8 min de patience en moyenne). Il quitte la ville.
+   */
+  impatience: 0.002,
+  /**
+   * Exode (specs/011) : quand plus aucune procédure demandée n'aboutit pour les usagers, personne ne s'installe
+   * plus et cette part des habitants sans démarche quitte la ville chaque seconde.
+   */
+  exode: 0.01,
   rejetMaxInitial: 0.5,
   /** Guichets : étapes franchies par seconde et prix. */
   guichet: { vitesse: 0.5, coutBase: 30, croissance: 1.15 },

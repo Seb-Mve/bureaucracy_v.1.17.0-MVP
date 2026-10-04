@@ -126,8 +126,11 @@ test('un usager qui entre dans une boucle n’y laisse qu’un seul dossier, mê
     boucles: { ...x(s).boucles, identite: [0, 0], domicile: [0] },
   });
   for (let i = 1; i <= 6000; i++) s = D.tick2(s, 0.1, i * 100).s;
-  proche(D.dossiersEnBoucle(x(s)), 10 * (1 - BALANCE2.abandonParPoint));
-  proche(x(s).stats.abandonsDemarche, 10 * (1 - BALANCE2.abandonParPoint));
+  // Un dossier en boucle par usager renvoyé chez lui, quoi qu'il arrive ensuite (rejets compris) ; les usagers
+  // perdus en chemin (patience, impatience) n'en laissent aucun.
+  proche(D.dossiersEnBoucle(x(s)), x(s).stats.abandonsDemarche);
+  assert.ok(x(s).stats.abandonsDemarche > 9);
+  assert.ok(x(s).stats.abandonsDemarche < 10 * (1 - BALANCE2.abandonParPoint));
 });
 
 test('la Réforme ramène au tout début de l’acte I ; survivent tampons, trombones, prénom, premier Cerfa', () => {
@@ -315,8 +318,8 @@ test('Droit acquis : la première étape de chaque procédure ne coûte aucune p
   );
   const sans = D.tick2(base, 1, 1000).s;
   const avec = D.tick2(avecJurisprudence(base, ['droitAcquis']), 1, 1000).s;
-  assert.ok(x(sans).abandons > 0);
-  assert.equal(x(avec).abandons, 0);
+  // La même impatience des deux côtés ; seule la Pièce (0,5 dossier franchi, 1 point) coûte de la patience sans.
+  proche(x(sans).abandons - x(avec).abandons, 0.5 * BALANCE2.abandonParPoint);
 });
 
 test('Mémoire des services : procédures restaurées à l’ouverture de l’Atelier, avant toute modification', () => {

@@ -2,7 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
 import * as D from '../../data/acte2/moteur';
-import { appliquerAction } from '../../data/acte2/procedures';
+import {
+  aboutitPourUsagers,
+  appliquerAction,
+  procedureAboutit,
+} from '../../data/acte2/procedures';
 import { estSauvegardeValide, normaliserSauvegarde } from '../../data/save';
 import { PRESETS, sauvegardePreset } from '../../data/presets';
 import { BALANCE2 } from '../../constants/balanceActe2';
@@ -262,4 +266,61 @@ test('un usager qui atteint la pièce de service en boucle est renvoyé chez lui
     x(s).stats.delivresService.identite > 9,
     `${x(s).stats.delivresService.identite}`,
   );
+});
+
+test('impatience : chaque seconde d’attente, une part des usagers renonce et quitte la ville', () => {
+  let s = avecProcedures(base2(), { identite: [{ type: 'visa' }] });
+  s = avec2(s, {
+    population: 100,
+    usagers: { ...x(s).usagers, identite: [100] },
+  });
+  const r = D.tick2(s, 1, 1000).s;
+  const partis = 100 * (1 - Math.exp(-BALANCE2.impatience));
+  proche(x(r).usagers.identite[0], 100 - partis);
+  proche(x(r).abandons, partis);
+  proche(x(r).stats.abandonsProc.identite, partis);
+  // La Carte d'identité aboutit : la ville continue de se peupler.
+  proche(
+    x(r).population,
+    100 - partis + (BALANCE2.populationMax - 100) * BALANCE2.installationRate,
+  );
+});
+
+test('quand plus aucune démarche n’aboutit, personne ne s’installe et la ville se vide', () => {
+  const s0 = avecProcedures(
+    avecNotes(base2(), ['atelier', 'pieceService']),
+    BOUCLE,
+  );
+  // Aucun guichet : rien ne franchit d'étape pendant cette seconde.
+  const s = avec2(s0, { population: 1000, guichets: 0 });
+  assert.equal(aboutitPourUsagers(x(s), ['identite', 'domicile']), false);
+  const r = D.tick2(s, 1, 1000).s;
+  const nouvelles = 1000 * (1 - Math.exp(-BALANCE2.demandeRate));
+  proche(
+    x(r).population,
+    1000 - (1000 - nouvelles) * (1 - Math.exp(-BALANCE2.exode)),
+  );
+});
+
+test('une procédure demandée aboutit tant qu’aucune de ses pièces ne ramène à elle', () => {
+  const s = avecNotes(base2(), ['atelier', 'pieceService', 'troisieme']);
+  const ouvertes: ProcId[] = ['identite', 'domicile', 'hebergement'];
+  const simple = avecProcedures(s, { identite: [PS('domicile')] });
+  assert.equal(
+    procedureAboutit(x(simple).procedures, ouvertes, 'identite'),
+    true,
+  );
+  assert.equal(aboutitPourUsagers(x(simple), ouvertes), true);
+  const boucle = avecProcedures(s, BOUCLE);
+  assert.equal(
+    procedureAboutit(x(boucle).procedures, ouvertes, 'identite'),
+    false,
+  );
+  assert.equal(aboutitPourUsagers(x(boucle), ouvertes), false);
+  // Une boucle entre deux procédures que personne ne demande : la carte aboutit toujours.
+  const ailleurs = avecProcedures(s, {
+    domicile: [PS('hebergement')],
+    hebergement: [PS('domicile')],
+  });
+  assert.equal(aboutitPourUsagers(x(ailleurs), ouvertes), true);
 });

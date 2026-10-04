@@ -9,7 +9,7 @@ import type {
   EtatActe2,
   ProcId,
 } from '../../types/acte2';
-import { BALANCE2 } from '../../constants/balanceActe2';
+import { BALANCE2, PROCS_DEMANDEES } from '../../constants/balanceActe2';
 
 /** Procédures exigées par `p` (étapes « Pièce délivrée par nos services »). */
 export function exigences(
@@ -61,6 +61,31 @@ export function procsEnBoucle(
   ouvertes: ProcId[],
 ): ProcId[] {
   return ouvertes.filter((p) => mene(procedures, ouvertes, p, p));
+}
+
+/**
+ * Vrai si la procédure `p` peut mener un dossier d'usager jusqu'à la délivrance : aucune de ses pièces de
+ * service n'exige une procédure qui y ramène (sinon l'usager est renvoyé chez lui en chemin).
+ */
+export function procedureAboutit(
+  procedures: Record<ProcId, Etape[]>,
+  ouvertes: ProcId[],
+  p: ProcId,
+): boolean {
+  return procedures[p].every(
+    (e) =>
+      e.type !== 'pieceService' ||
+      e.exige === undefined ||
+      !ouvertes.includes(e.exige) ||
+      !estBoucle(procedures, ouvertes, p, e.exige),
+  );
+}
+
+/** Vrai si une procédure que les usagers demandent peut encore leur délivrer son document. */
+export function aboutitPourUsagers(x: EtatActe2, ouvertes: ProcId[]): boolean {
+  return PROCS_DEMANDEES.some(
+    (p) => ouvertes.includes(p) && procedureAboutit(x.procedures, ouvertes, p),
+  );
 }
 
 const exigenceValide = (

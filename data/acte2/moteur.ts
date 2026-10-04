@@ -28,7 +28,7 @@ import {
 } from '../../constants/balanceActe2';
 import { multiplicateurAnciennete, partRejetee, rangGrade } from '../engine';
 import { NOTES2, NOTES2_PAR_ID, dematPct } from './notes2';
-import { appliquerAction, estBoucle } from './procedures';
+import { aboutitPourUsagers, appliquerAction, estBoucle } from './procedures';
 import {
   aJurisprudence,
   conditionsNote,
@@ -505,22 +505,52 @@ export function tick2(
   if (!x0) return { s: s0, ev: evVide() };
   const m = getModifiers2(s0, maintenant);
 
-  // Nouvelles demandes des usagers inactifs, seulement dans les procédures qu'ils demandent (specs/011).
+  // Impatience (specs/011) : une part des usagers qui attendent renonce et quitte la ville.
   const usagers = copieStocks(x0.usagers);
-  const inactifs = Math.max(0, x0.population - sommeStocks(usagers));
+  const fImpatience = 1 - Math.exp(-BALANCE2.impatience * dt);
+  const abandonsProc = { ...x0.stats.abandonsProc };
+  let impatients = 0;
+  for (const p of PROCS) {
+    usagers[p] = usagers[p].map((v) => {
+      const ab = v * fImpatience;
+      abandonsProc[p] += ab;
+      impatients += ab;
+      return v - ab;
+    });
+  }
+
+  // Nouvelles demandes des usagers inactifs, seulement dans les procédures qu'ils demandent (specs/011).
+  const inactifs = Math.max(
+    0,
+    x0.population - impatients - sommeStocks(usagers),
+  );
   const nouvelles = inactifs * (1 - Math.exp(-BALANCE2.demandeRate * dt));
   const demandees = PROCS_DEMANDEES.filter((p) => m.procsOuvertes.includes(p));
   for (const p of demandees) usagers[p][0] += nouvelles / demandees.length;
-  const population =
-    x0.population +
-    Math.max(0, BALANCE2.populationMax - x0.population) *
+
+  // La ville se peuple tant que le service délivre aux usagers ; sinon, elle se vide (specs/011).
+  const servie = aboutitPourUsagers(x0, m.procsOuvertes);
+  const installes = servie
+    ? Math.max(0, BALANCE2.populationMax - x0.population) *
       BALANCE2.installationRate *
-      dt;
+      dt
+    : 0;
+  const partis = servie
+    ? 0
+    : (inactifs - nouvelles) * (1 - Math.exp(-BALANCE2.exode * dt));
+  const population = x0.population - impatients + installes - partis;
 
   // Les services vieillissent pendant le jeu comme pendant une absence (simulée, plafonnée).
   const x: EtatActe2 = restaurerMemoire(
     s0,
-    { ...x0, usagers, population, duree: x0.duree + dt },
+    {
+      ...x0,
+      usagers,
+      population,
+      abandons: x0.abandons + impatients,
+      duree: x0.duree + dt,
+      stats: { ...x0.stats, abandonsProc },
+    },
     m,
   );
   const avant: GameState = {
