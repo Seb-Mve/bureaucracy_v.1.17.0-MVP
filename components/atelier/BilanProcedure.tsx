@@ -1,29 +1,34 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import type { ProcAtelier } from '@/context/GameStateContext';
+import type { LigneProduction, ProcAtelier } from '@/context/GameStateContext';
 import Colors, { Charte, Espace, Fonts, Typo } from '@/constants/Colors';
-import { formatEntier } from '@/utils/formatters';
 import Panneau from '@/components/charte/Panneau';
 import { Effets } from '@/components/atelier/Elements';
 
 /**
- * En-tête d'une procédure de l'Atelier : dossiers en cours, usagers perdus dans la procédure et bilan d'un
- * dossier qui la franchit en entier (symbole + mot, la couleur ne fait que doubler l'information).
+ * En-tête d'une procédure de l'Atelier : ses demandes et ses documents délivrés (relevé « Production du
+ * service »), puis le bilan d'un dossier qui la franchit en entier (symbole + mot, la couleur ne fait que
+ * doubler l'information).
  */
-export default function BilanProcedure({ proc }: { proc: ProcAtelier }) {
-  const enCours = `${formatEntier(proc.enCours)} dossier${proc.enCours > 1 ? 's' : ''} en cours`;
-  const abandons = `${formatEntier(proc.abandons)} abandon${proc.abandons > 1 ? 's' : ''}`;
+export default function BilanProcedure({
+  proc,
+  ligne,
+}: {
+  proc: ProcAtelier;
+  ligne: LigneProduction | undefined;
+}) {
+  const compteurs = ligne
+    ? `${ligne.demandesTexte} · ${ligne.delivresTexte}`
+    : '';
   return (
     <Panneau contenuStyle={styles.carte} rayon={Charte.rayonPetit}>
       <View
         accessible
-        accessibilityLabel={`${proc.nom} : ${enCours}, ${abandons}. Par dossier : ${proc.bilan
+        accessibilityLabel={`${proc.nom} : ${compteurs}. Par dossier : ${proc.bilan
           .map((e) => e.texte)
           .join(', ')}.`}
       >
-        <Text style={styles.compteurs}>
-          {enCours} · {abandons}
-        </Text>
+        <Text style={styles.compteurs}>{compteurs}</Text>
         <View style={styles.ligne}>
           <Text style={styles.libelle}>Par dossier</Text>
           <Effets effets={proc.bilan} />

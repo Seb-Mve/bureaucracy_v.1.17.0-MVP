@@ -32,7 +32,7 @@ const ORDRE_ETAPES: EtapeType[] = [
 export type SensEffet = 'plus' | 'moins' | 'neutre';
 
 export interface EffetAffiche {
-  /** Symbole et mot : « ++ conformité », « + € », « +++ délai », « − patience ». */
+  /** Symbole et mot : « ++ conformité », « + € », « +++ délai », « − patience ». */
   texte: string;
   sens: SensEffet;
 }
@@ -46,8 +46,8 @@ export function effetsEtape(type: EtapeType): EffetAffiche[] {
   return [
     { texte: `${'+'.repeat(e.conf)} conformité`, sens: 'plus' },
     e.dotation > 0
-      ? { texte: `${'+'.repeat(e.dotation)} €`, sens: 'plus' }
-      : { texte: '0 €', sens: 'neutre' },
+      ? { texte: `${'+'.repeat(e.dotation)}\u00a0€`, sens: 'plus' }
+      : { texte: '0\u00a0€', sens: 'neutre' },
     { texte: `${'+'.repeat(cransDelai(e.delai))} délai`, sens: 'neutre' },
     { texte: `${'−'.repeat(e.patience)} patience`, sens: 'moins' },
   ];
@@ -67,10 +67,6 @@ export interface EtapeAtelier {
 export interface ProcAtelier {
   id: ProcId;
   nom: string;
-  /** Dossiers en cours dans la procédure (usagers et sans usager). */
-  enCours: number;
-  /** Usagers perdus dans la procédure (patience et rejet). */
-  abandons: number;
   /** Bilan d'un dossier sur la procédure entière : « +4,48 € », « −4 patience », « 13 s de délai ». */
   bilan: EffetAffiche[];
   etapes: EtapeAtelier[];
@@ -172,12 +168,6 @@ export function vueAtelier(
       return {
         id: p,
         nom: noms[p],
-        enCours: Math.floor(
-          x.usagers[p].reduce((a, v) => a + v, 0) +
-            x.boucles[p].reduce((a, v) => a + v, 0) +
-            x.suites[p].reduce((a, v) => a + v, 0),
-        ),
-        abandons: Math.floor(x.stats.abandonsProc[p]),
         bilan: bilanProcedure(x, p, m),
         pleine: x.procedures[p].length >= BALANCE2.etapesMax,
         exigeables: ouvertes

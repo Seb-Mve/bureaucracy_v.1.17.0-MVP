@@ -45,17 +45,17 @@ function avecProcedures(
 test('effets d’une fiche : un symbole et un mot', () => {
   assert.deepEqual(
     A.effetsEtape('visa').map((e) => e.texte),
-    ['++ conformité', '+ €', '++ délai', '− patience'],
+    ['++ conformité', '+\u00a0€', '++ délai', '− patience'],
   );
   assert.deepEqual(A.effetsEtape('reflexion'), [
     { texte: '+ conformité', sens: 'plus' },
-    { texte: '0 €', sens: 'neutre' },
+    { texte: '0\u00a0€', sens: 'neutre' },
     { texte: '+++ délai', sens: 'neutre' },
     { texte: '−− patience', sens: 'moins' },
   ]);
   assert.deepEqual(
     A.effetsEtape('commission').map((e) => e.texte),
-    ['+++ conformité', '++ €', '+++ délai', '−− patience'],
+    ['+++ conformité', '++\u00a0€', '+++ délai', '−− patience'],
   );
 });
 
@@ -148,7 +148,7 @@ test('Atelier : une procédure de huit étapes est pleine', () => {
   assert.equal((A.vueAtelier(s, 0) as A.VueAtelier).procedures[0].pleine, true);
 });
 
-test('Atelier : dossiers en cours, abandons et bilan d’un dossier sur la procédure', () => {
+test('Atelier : bilan d’un dossier sur la procédure', () => {
   const b = avecNotes({ ...base2(), tampons: 0 }, ['atelier']);
   const s = avec2(b, {
     procedures: { ...x(b).procedures, identite: [{ type: 'piece' }, { type: 'visa' }, { type: 'commission' }] },
@@ -157,8 +157,6 @@ test('Atelier : dossiers en cours, abandons et bilan d’un dossier sur la proc�
     stats: { ...x(b).stats, abandonsProc: { identite: 7.9, domicile: 0, hebergement: 0, vie: 0 } },
   });
   const p = (A.vueAtelier(s, 0) as A.VueAtelier).procedures[0];
-  assert.equal(p.enCours, 10);
-  assert.equal(p.abandons, 7);
   // Grade de départ, ×1 : 1 + 1 + 2 dotations ; 1 + 1 + 2 patience ; 3 + 4 + 15 s.
   const euros = 4 * BALANCE2.dotation;
   assert.deepEqual(
