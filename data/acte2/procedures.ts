@@ -85,6 +85,7 @@ export function appliquerAction(
   const etapes = [...x.procedures[a.p]];
   const u = [...x.usagers[a.p]];
   const b = [...x.boucles[a.p]];
+  const c = [...x.suites[a.p]];
   switch (a.type) {
     case 'ajouter': {
       if (!disponibles.includes(a.etape) || etapes.length >= BALANCE2.etapesMax)
@@ -97,6 +98,7 @@ export function appliquerAction(
       }
       u.push(0);
       b.push(0);
+      c.push(0);
       break;
     }
     case 'retirer': {
@@ -104,9 +106,11 @@ export function appliquerAction(
       etapes.splice(a.k, 1);
       const [ru] = u.splice(a.k, 1);
       const [rb] = b.splice(a.k, 1);
+      const [rc] = c.splice(a.k, 1);
       const cible = Math.min(a.k, etapes.length - 1);
       u[cible] += ru;
       b[cible] += rb;
+      c[cible] += rc;
       break;
     }
     case 'deplacer': {
@@ -133,6 +137,7 @@ export function appliquerAction(
     procedures: { ...x.procedures, [a.p]: etapes },
     usagers: { ...x.usagers, [a.p]: u },
     boucles: { ...x.boucles, [a.p]: b },
+    suites: { ...x.suites, [a.p]: c },
     premiereModif: x.premiereModif ?? a.p,
   };
 }

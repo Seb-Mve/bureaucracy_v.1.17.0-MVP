@@ -67,6 +67,10 @@ export interface StatsActe2 {
   abandonsDemarche: number;
   /** Usagers perdus (patience ou rejet) dans chaque procédure. */
   abandonsProc: Record<ProcId, number>;
+  /** Documents délivrés à des usagers, par procédure. */
+  delivresUsagers: Record<ProcId, number>;
+  /** Documents délivrés pour les dossiers du service (pièces de service, dossiers sans usager), par procédure. */
+  delivresService: Record<ProcId, number>;
   taps: number;
 }
 
@@ -78,8 +82,13 @@ export interface EtatActe2 {
   procedures: Record<ProcId, Etape[]>;
   /** Dossiers d'usagers en cours. */
   usagers: Stocks;
-  /** Dossiers en boucle, sans usager. */
+  /** Dossiers en boucle, sans usager : chacun dépose sa demande liée à chaque pièce de service. */
   boucles: Stocks;
+  /**
+   * Dossiers sans usager qui ont déposé leur demande liée et poursuivent leur procédure jusqu'à la délivrance
+   * (ils ne déposent plus rien ; rejetés, ils reprennent en tête de leur procédure).
+   */
+  suites: Stocks;
   population: number;
   abandons: number;
   conformitePoints: number;

@@ -7,7 +7,7 @@ import type { EtatActe2 } from '../types/acte2';
 import { PROCS } from '../types/acte2';
 import type { Reformes } from '../types/reforme';
 import { reformesInitiales } from './jurisprudence';
-import { abandonsProcNuls } from './acte2/moteur';
+import { abandonsProcNuls, parProcNul, stocksPour } from './acte2/moteur';
 
 export const CLE_SAUVEGARDE = 'bureaucracy_acte1_v1';
 
@@ -58,6 +58,21 @@ export function estSauvegardeValide(x: unknown): x is GameState {
   );
 }
 
+/** Les dossiers qui poursuivent leur procédure (specs/011) : un compteur par étape, sinon à recréer. */
+function suitesValides(x: Partial<EtatActe2> & EtatActe2): boolean {
+  const st = x.suites;
+  return (
+    typeof st === 'object' &&
+    st !== null &&
+    PROCS.every(
+      (p) =>
+        Array.isArray(st[p]) &&
+        st[p].length === x.procedures[p].length &&
+        st[p].every(estNombre),
+    )
+  );
+}
+
 /** Les champs de la Réforme qui comptent (les autres sont complétés par normaliserSauvegarde). */
 function reformesValides(x: unknown): boolean {
   if (typeof x !== 'object' || x === null) return false;
@@ -71,7 +86,8 @@ function reformesValides(x: unknown): boolean {
  * place à l'acte I une partie antérieure à l'acte II (sans `acte`), complète `reformes` (aucune Réforme)
  * et, à l'acte II, l'âge des services (`duree`, depuis `debut`), la Mémoire des services, la fiche de poste
  * du chef de service (refermée, aucune ligne lue : la pastille d'Options invite à la lire), le Service des
- * achats (en service) et les abandons par procédure (inconnus : zéro).
+ * achats (en service), les abandons par procédure (inconnus : zéro) et, depuis specs/011, les dossiers qui
+ * poursuivent leur procédure (aucun) et les documents délivrés (zéro).
  */
 export function normaliserSauvegarde(s: GameState): GameState {
   const { circulairesVues: _, ...reste } = s as GameState & { circulairesVues?: unknown };
@@ -89,7 +105,13 @@ export function normaliserSauvegarde(s: GameState): GameState {
         ficheVue: x.ficheVue ?? true,
         ficheLues: Array.isArray(x.ficheLues) ? x.ficheLues : [],
         achatsActifs: x.achatsActifs ?? true,
-        stats: { ...x.stats, abandonsProc: x.stats.abandonsProc ?? abandonsProcNuls() },
+        suites: suitesValides(x) ? x.suites : stocksPour(x.procedures),
+        stats: {
+          ...x.stats,
+          abandonsProc: x.stats.abandonsProc ?? abandonsProcNuls(),
+          delivresUsagers: x.stats.delivresUsagers ?? parProcNul(),
+          delivresService: x.stats.delivresService ?? parProcNul(),
+        },
       }
     : null;
   return { ...avecActe, acte2, reformes };

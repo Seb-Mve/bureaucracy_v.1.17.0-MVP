@@ -66,6 +66,9 @@ export function abandonsProcNuls(): Record<ProcId, number> {
   return { identite: 0, domicile: 0, hebergement: 0, vie: 0 };
 }
 
+/** Compteur par procédure à zéro (documents délivrés). */
+export const parProcNul = (): Record<ProcId, number> => abandonsProcNuls();
+
 /** État de la Direction à l'entrée dans l'acte : le guichet 3 et la procédure du S.I.C. */
 export function etatInitialActe2(maintenant: number): EtatActe2 {
   const procedures = copieProcedures(PROCEDURES_INITIALES);
@@ -79,6 +82,7 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
     procedures,
     usagers,
     boucles: stocksPour(procedures),
+    suites: stocksPour(procedures),
     population: BALANCE2.populationInitiale,
     abandons: 0,
     conformitePoints: 0,
@@ -102,6 +106,8 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
       visasTampons: 0,
       abandonsDemarche: 0,
       abandonsProc: abandonsProcNuls(),
+      delivresUsagers: parProcNul(),
+      delivresService: parProcNul(),
       taps: 0,
     },
   };
@@ -589,6 +595,7 @@ export function restaurerMemoire(
     procedures,
     usagers: ranger(x.usagers),
     boucles: ranger(x.boucles),
+    suites: ranger(x.suites),
     memoireRestauree: true,
   };
 }
