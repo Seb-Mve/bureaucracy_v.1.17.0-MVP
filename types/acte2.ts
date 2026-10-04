@@ -25,6 +25,7 @@ export type Note2Id =
   | 'atelier'
   | 'signature'
   | 'exemplaires'
+  | 'achats'
   | 'chefBureau'
   | 'pieceService'
   | 'reflexion'
@@ -123,6 +124,8 @@ export interface Modifiers2 {
   dematVisible: boolean;
   reformeVisible: boolean;
   tableauVisible: boolean;
+  /** Service des achats débloqué (note « Marché public de fournitures »). */
+  achatsVisible: boolean;
   /** Jurisprudence « Droit acquis » : la première étape de chaque procédure ne coûte aucune patience. */
   droitAcquis: boolean;
 }
@@ -139,6 +142,10 @@ export interface Events2 {
   franchies: number;
   visas: number;
   budget: number;
+  /** Formulaires consommés par les étapes franchies. */
+  formulaires: number;
+  /** Euros dépensés par le Service des achats. */
+  achats: number;
   rupture: boolean;
   aucunVisa: boolean;
 }

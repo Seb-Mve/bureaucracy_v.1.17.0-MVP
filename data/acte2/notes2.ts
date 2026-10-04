@@ -101,8 +101,21 @@ export const NOTES2: NoteDef2[] = [
     },
   },
   {
-    id: 'chefBureau',
+    id: 'achats',
     numero: 6,
+    titre: 'Marché public de fournitures',
+    texte: 'Un marché public de fournitures a été attribué au service des achats. Les ramettes seront commandées au prix du marché, qui est celui du marché.',
+    effet: 'Débloque le Service des achats : les ramettes sont commandées sur le budget quand le stock baisse.',
+    cout: 3000,
+    instruction: 120,
+    visible: si((x) => achetee(x, 'exemplaires') && x.stats.franchies >= 18000),
+    appliquer: (m) => {
+      m.achatsVisible = true;
+    },
+  },
+  {
+    id: 'chefBureau',
+    numero: 7,
     titre: 'Chef de bureau',
     texte: 'Un chef de bureau vise ce que l’instructeur a visé, pour le cas où.',
     effet: 'Débloque le Chef de bureau.',
@@ -115,7 +128,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'pieceService',
-    numero: 7,
+    numero: 8,
     titre: 'Pièce délivrée par nos services',
     texte: 'Rappel : un justificatif délivré par nos services fait foi pour toute démarche, y compris celle qui l’a délivré.',
     effet: 'Débloque l’étape Pièce délivrée par nos services.',
@@ -128,7 +141,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'reflexion',
-    numero: 8,
+    numero: 9,
     titre: 'Délai de réflexion',
     texte: 'Un délai de réflexion protège l’usager contre toute décision hâtive, y compris la sienne.',
     effet: 'Débloque l’étape Délai de réflexion.',
@@ -141,7 +154,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'troisieme',
-    numero: 9,
+    numero: 10,
     titre: 'Troisième guichet thématique',
     texte: 'Une démarche est créée pour attester que l’usager est hébergé. Par lui-même, le cas échéant.',
     effet: 'Ouvre la procédure Attestation d’hébergement.',
@@ -154,7 +167,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'reforme',
-    numero: 10,
+    numero: 11,
     titre: 'Réforme de l’action publique',
     texte: 'Une réforme peut être engagée à tout moment. Elle réorganisera l’ensemble des services sans en modifier le fonctionnement.',
     effet: 'Débloque la Réforme (Options).',
@@ -167,7 +180,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'demat',
-    numero: 11,
+    numero: 12,
     titre: 'Plan de dématérialisation',
     texte: 'Le S.I.C. engage la dématérialisation des démarches. Une démarche dématérialisée ne nécessite plus d’usager. Votre taux de dématérialisation sera désormais publié.',
     effet: 'Révèle le Taux de dématérialisation.',
@@ -180,7 +193,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'rejetElargi',
-    numero: 12,
+    numero: 13,
     titre: 'Rejet élargi',
     texte: 'Le taux de rejet maximal est relevé. Il ne s’applique, rappelons-le, qu’aux dossiers incomplets, c’est-à-dire à tous.',
     effet: 'Taux de rejet jusqu’à 80 %.',
@@ -193,7 +206,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'commission',
-    numero: 13,
+    numero: 14,
     titre: 'Commission ad hoc',
     texte: 'Une commission examinera les dossiers dès que son règlement intérieur aura été examiné par une commission.',
     effet: 'Débloque l’étape Commission.',
@@ -206,7 +219,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'sousDirecteur',
-    numero: 14,
+    numero: 15,
     titre: 'Sous-directeur',
     texte: 'Le sous-directeur ne vise rien lui-même. Il délègue, ce qui va beaucoup plus vite.',
     effet: 'Débloque le Sous-directeur.',
@@ -219,7 +232,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'quatrieme',
-    numero: 15,
+    numero: 16,
     titre: 'Quatrième guichet thématique',
     texte: 'Pour toute démarche, l’usager doit désormais prouver qu’il est en vie. La preuve est valable trois mois, sauf décès.',
     effet: 'Ouvre la procédure Certificat de vie.',
@@ -232,7 +245,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'tableau',
-    numero: 16,
+    numero: 17,
     titre: 'Tableau de bord',
     texte: 'Un tableau de bord est mis à votre disposition. Il mesure ce qui a été jugé mesurable.',
     effet: 'Affiche les abandons de démarche et le taux de satisfaction.',
@@ -245,7 +258,7 @@ export const NOTES2: NoteDef2[] = [
   },
   {
     id: 'promotion',
-    numero: 17,
+    numero: 18,
     titre: 'Promotion',
     texte: 'Vos résultats ont été jugés exemplaires. Votre service sera rattaché au ministère. Vous aussi.',
     effet: 'Termine l’acte II.',

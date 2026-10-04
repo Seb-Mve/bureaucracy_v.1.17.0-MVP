@@ -25,8 +25,11 @@ export const BALANCE2 = {
   visasInitiaux: 12,
   budgetInitial: 0,
   formulairesInitiaux: 300,
-  /** Dotation de base par étape franchie (€), multipliée par celle de l'étape. */
-  dotation: 1,
+  /**
+   * Dotation de base par étape franchie (€), multipliée par celle de l'étape. Relevée avec le prix de la
+   * ramette d'acte II (specs/010) : la recette nette d'une étape reste celle d'avant, les fournitures pèsent.
+   */
+  dotation: 1.6,
   /** Prime de rejet : part de la dotation versée en plus pour un dossier rejeté. */
   primeRejet: 0.2,
   confParRejet: 1,
@@ -49,6 +52,15 @@ export const BALANCE2 = {
   conformiteParPoint: 120,
   /** Délai du filet de sécurité après la note « Pièce délivrée par nos services » (min). */
   filetMinutes: 15,
+  /**
+   * Prix d'une ramette (BALANCE.ramette formulaires) à l'acte II : les fournitures pèsent 30 à 40 % des
+   * recettes en ×1 (l'acte I garde BALANCE.prixRamette).
+   */
+  prixRamette: 80,
+  /** Service des achats : il commande quand le stock couvre moins de ces secondes de capacité. */
+  achatsSecondes: 30,
+  /** Débits de l'en-tête (€/s, formulaires/s) : constante de lissage (s). */
+  lissageDebits: 3,
 } as const;
 
 export interface EtapeDef {

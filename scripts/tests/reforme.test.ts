@@ -271,9 +271,9 @@ test('Vide juridique : formulaires −25 % aux deux actes', () => {
   );
   const s2 = {
     ...avecJurisprudence(D.entrerActe2(s1, 0), ['videJuridique']),
-    budget: 60,
+    budget: BALANCE2.prixRamette * 0.75 * 10,
   };
-  proche(D.prixRamette2(s2), BALANCE.prixRamette * 0.75);
+  proche(D.prixRamette2(s2), BALANCE2.prixRamette * 0.75);
   assert.equal(
     D.acheterRamettes2(s2, 100).formulaires,
     BALANCE2.formulairesInitiaux + 10 * BALANCE.ramette,

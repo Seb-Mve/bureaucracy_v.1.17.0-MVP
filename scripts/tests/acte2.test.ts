@@ -309,10 +309,10 @@ test('début d’acte : seule la Carte d’identité est ouverte, l’Atelier es
   assert.equal(m.rejetMax, 0.5);
 });
 
-test('le catalogue compte 17 notes numérotées de 1 à 17', () => {
+test('le catalogue compte 18 notes numérotées de 1 à 18', () => {
   assert.deepEqual(
     NOTES2.map((n) => n.numero),
-    Array.from({ length: 17 }, (_, i) => i + 1),
+    Array.from({ length: 18 }, (_, i) => i + 1),
   );
 });
 
@@ -386,7 +386,7 @@ test('un tap accorde un visa : dotation, tampon, Conformité', () => {
   const r = D.tamponner2(s0, 0);
   assert.equal(r.ev.visas, 1);
   proche(x(r.s).usagers.identite[0], 4);
-  proche(r.s.budget - s0.budget, 1);
+  proche(r.s.budget - s0.budget, BALANCE2.dotation);
   proche(x(r.s).conformitePoints, 2 * BALANCE2.conformiteParPoint);
   proche(r.s.tampons, s0.tampons + 1);
 });
@@ -408,7 +408,10 @@ test('rejet d’un usager : il perd patience et peut abandonner', () => {
   // 4 % abandonnent au visa ; le reste est rejeté (tirage) ; un tiers des rejetés abandonne.
   proche(x(r.s).abandons, 0.04 + 0.96 / 3);
   proche(x(r.s).usagers.identite[0], 4 + 0.96 - 0.96 / 3);
-  proche(r.s.budget - s0.budget, 1 + 0.96 * BALANCE2.primeRejet);
+  proche(
+    r.s.budget - s0.budget,
+    BALANCE2.dotation * (1 + 0.96 * BALANCE2.primeRejet),
+  );
   proche(x(D.tamponner2(s0, 0, jamais).s).abandons, 0.04);
 });
 
@@ -436,7 +439,8 @@ test('Exemplaires ×3 : trois formulaires par étape, dotation ×2,1', () => {
   const s0 = avec2(auVisa(base2(), 5, 0), { exemplaires: 3 });
   const r = D.tamponner2(s0, 0);
   proche(s0.formulaires - r.s.formulaires, 3);
-  proche(r.s.budget - s0.budget, 2.1);
+  proche(r.ev.formulaires, 3);
+  proche(r.s.budget - s0.budget, 2.1 * BALANCE2.dotation);
 });
 
 test('rupture d’imprimés : aucun visa sans formulaires', () => {
@@ -571,13 +575,22 @@ test('Atelier fermé : aucune modification de procédure', () => {
   );
 });
 
-test('ramettes au prix de l’acte I, réquisition d’urgence sans budget', () => {
-  const s = D.acheterRamettes2({ ...base2(), budget: 20, formulaires: 0 }, 5);
+test('ramettes au prix de l’acte II, réquisition d’urgence sans budget', () => {
+  const budget = 2.5 * BALANCE2.prixRamette;
+  const s = D.acheterRamettes2({ ...base2(), budget, formulaires: 0 }, 5);
   assert.equal(s.formulaires, 2 * BALANCE.ramette);
-  proche(s.budget, 20 - 2 * BALANCE.prixRamette);
+  proche(s.budget, budget - 2 * BALANCE2.prixRamette);
+  assert.ok(
+    BALANCE2.prixRamette > BALANCE.prixRamette,
+    'l’acte I garde son prix',
+  );
   const vide = { ...base2(), budget: 0, formulaires: 0 };
   assert.equal(D.requisitionUrgence2(vide).formulaires, BALANCE.ramette);
-  assert.equal(D.requisitionUrgence2({ ...vide, budget: 100 }).formulaires, 0);
+  assert.equal(
+    D.requisitionUrgence2({ ...vide, budget: BALANCE2.prixRamette })
+      .formulaires,
+    0,
+  );
 });
 
 test('hors-ligne : la simulation s’arrête au plafond', () => {

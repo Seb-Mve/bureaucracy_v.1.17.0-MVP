@@ -152,6 +152,7 @@ export function getModifiers2(s: GameState, maintenant: number): Modifiers2 {
     dematVisible: false,
     reformeVisible: false,
     tableauVisible: false,
+    achatsVisible: false,
     droitAcquis: aJurisprudence(s, 'droitAcquis'),
   };
   const x = s.acte2;
@@ -290,6 +291,8 @@ const evVide = (): Events2 => ({
   franchies: 0,
   visas: 0,
   budget: 0,
+  formulaires: 0,
+  achats: 0,
   rupture: false,
   aucunVisa: false,
 });
@@ -337,6 +340,7 @@ function franchir(
   let population = x0.population;
   let abandons = x0.abandons;
   let abandonsDemarche = x0.stats.abandonsDemarche;
+  const abandonsProc = { ...x0.stats.abandonsProc };
   let premiereBoucle = x0.premiereBoucle;
 
   for (const l of lots) {
@@ -363,6 +367,7 @@ function franchir(
           Math.min(1, def.patience * BALANCE2.abandonParPoint * ex.patience);
     population -= ab;
     abandons += ab;
+    abandonsProc[l.p] += ab;
     let u = u0 - ab;
     let b = b0;
 
@@ -403,12 +408,14 @@ function franchir(
     const abRejet = rejU * BALANCE2.abandonRejet;
     population -= abRejet;
     abandons += abRejet;
+    abandonsProc[l.p] += abRejet;
     usagers[l.p][0] += rejU - abRejet;
     boucles[l.p][0] += rejB;
   }
 
   ev.franchies = franchies;
   ev.budget = budget;
+  ev.formulaires = franchies * x0.exemplaires;
   const x: EtatActe2 = {
     ...x0,
     usagers: nettoyer(usagers),
@@ -423,6 +430,7 @@ function franchir(
       franchies: x0.stats.franchies + franchies,
       franchiesBoucle: x0.stats.franchiesBoucle + franchiesBoucle,
       abandonsDemarche,
+      abandonsProc,
     },
   };
   return {
@@ -470,7 +478,7 @@ export function tick2(
     { ...x0, usagers, population, duree: x0.duree + dt },
     m,
   );
-  const s: GameState = {
+  const avant: GameState = {
     ...s0,
     acte2: x,
     derniereMaj: maintenant,
@@ -478,6 +486,9 @@ export function tick2(
       ? { ...s0.stats, tempsDeJeu: s0.stats.tempsDeJeu + dt }
       : s0.stats,
   };
+  // Service des achats : les ramettes arrivent avant que les étapes ne les consomment (absences comprises).
+  const commande = commandeAchats(avant, m);
+  const s = commande.s;
 
   // Dossiers prêts à franchir leur étape (délai moyen de l'étape écoulé).
   const guichet: Lot[] = [];
@@ -503,7 +514,44 @@ export function tick2(
     ...guichet.map((l) => ({ ...l, u: l.u * rG, b: l.b * rG })),
     ...visa.map((l) => ({ ...l, u: l.u * rV, b: l.b * rV })),
   ];
-  return franchir(s, lots, enJeu ? m : { ...m, rejetMax: 0 }, maintenant);
+  const r = franchir(s, lots, enJeu ? m : { ...m, rejetMax: 0 }, maintenant);
+  return { s: r.s, ev: { ...r.ev, achats: commande.cout } };
+}
+
+/**
+ * Service des achats : quand le stock de formulaires couvre moins de `BALANCE2.achatsSecondes` secondes
+ * de capacité (guichets, agents et trois taps par seconde), il commande des ramettes sur le budget.
+ */
+export function commandeAchats(
+  s: GameState,
+  m: Modifiers2,
+): { s: GameState; cout: number } {
+  const x = s.acte2;
+  if (!x || !m.achatsVisible || !x.achatsActifs) return { s, cout: 0 };
+  const besoin =
+    (vitesseGuichets(x) + vitesseVisas(x) + 3 * m.tapPower) *
+    x.exemplaires *
+    BALANCE2.achatsSecondes;
+  if (s.formulaires >= besoin) return { s, cout: 0 };
+  const prix = prixRamette2(s);
+  const nb = Math.min(
+    Math.ceil((besoin - s.formulaires) / BALANCE.ramette),
+    Math.floor(s.budget / prix),
+  );
+  if (nb <= 0) return { s, cout: 0 };
+  return { s: acheterRamettes2(s, nb), cout: nb * prix };
+}
+
+/** Interrupteur du Service des achats (sans effet avant sa note). */
+export function reglerAchats(
+  s: GameState,
+  actifs: boolean,
+  maintenant: number,
+): GameState {
+  const x = s.acte2;
+  if (!x || x.achatsActifs === actifs) return s;
+  if (!getModifiers2(s, maintenant).achatsVisible) return s;
+  return { ...s, acte2: { ...x, achatsActifs: actifs } };
 }
 
 /**
@@ -664,10 +712,10 @@ export function acheterAgent2(
   };
 }
 
-/** Prix d'une ramette à l'acte II : celui de l'acte I, Vide juridique compris. */
+/** Prix d'une ramette à l'acte II (plus cher qu'à l'acte I), Vide juridique compris. */
 export function prixRamette2(s: GameState): number {
   return (
-    Math.round(BALANCE.prixRamette * prixFormulairesJurisprudence(s) * 100) /
+    Math.round(BALANCE2.prixRamette * prixFormulairesJurisprudence(s) * 100) /
     100
   );
 }
