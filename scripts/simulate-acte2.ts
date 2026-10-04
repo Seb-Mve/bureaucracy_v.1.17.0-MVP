@@ -23,6 +23,7 @@ registerHooks({
 });
 
 const D = await import('../data/acte2/moteur.ts');
+const { valeurDocument } = await import('../data/acte2/production.ts');
 const { BALANCE } = await import('../constants/balance.ts');
 const R = await import('../data/reforme.ts');
 const { finActeIRobot, robotActe1, robotActe2, robotReforme } = await import('./robots.ts');
@@ -40,12 +41,32 @@ const partFournitures = (s: GameState): number =>
   (100 * (s.stats.formulairesAchetes / BALANCE.ramette) * D.prixRamette2(s)) /
   Math.max(1, s.stats.budgetGagne);
 
+/** Documents délivrés depuis l'entrée dans l'acte : aux usagers, et pour les dossiers du service. */
+function delivres(s: GameState): { usagers: number; service: number } {
+  const x = s.acte2!;
+  const somme = (r: Record<string, number>) => Object.values(r).reduce((a, v) => a + v, 0);
+  return { usagers: somme(x.stats.delivresUsagers), service: somme(x.stats.delivresService) };
+}
+
+/** Ce que l'on mesure 10 minutes après la première boucle (critère de la spec 011, § 10). */
+interface ApresBoucle {
+  usagers: number;
+  usagersMax: number;
+  /** Documents délivrés pendant ces 10 minutes. */
+  delivresUsagers: number;
+  delivresService: number;
+}
+
 interface Partie {
   jalons: Record<string, number>;
   fin: number | null;
   s: GameState;
   /** Part des fournitures dans les recettes tant que tout se fait en ×1 (avant le curseur Exemplaires). */
   partX1: number | null;
+  /** Mesures 10 min après la première boucle (null : pas de boucle, ou partie trop courte). */
+  apresBoucle: ApresBoucle | null;
+  /** L'état à l'ouverture de l'Atelier (première partie), pour comparer un joueur prudent et un agressif. */
+  atelier: { s: GameState; t: number } | null;
 }
 
 /** Joue depuis l'entrée dans l'acte II ; réforme une fois à `reformeA` % de dématérialisation (null : jamais). */
@@ -57,6 +78,10 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
   };
   const tour = () => (s.reformes.nombre > 0 ? ' (après la Réforme)' : '');
   let partX1: number | null = null;
+  let usagersMax = 0;
+  let apresBoucle: ApresBoucle | null = null;
+  let atelier: { s: GameState; t: number } | null = null;
+  let aLaBoucle: { usagers: number; service: number } | null = null;
   for (let t = 1; t <= minutesMax * 60; t++) {
     const now = t * 1000;
     if (s.acte === 1) {
@@ -70,8 +95,26 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
     // Le temps de compréhension de l'indice ne compte qu'à la première partie : ensuite, le joueur sait.
     if (partX1 === null && s.reformes.nombre === 0 && D.getModifiers2(s, now).exemplairesVisible)
       partX1 = partFournitures(s);
+    if (atelier === null && D.getModifiers2(s, now).atelierVisible) atelier = { s, t };
     s = robotActe2(s, now, taps, s.reformes.nombre === 0 ? decouverte : 0);
     const x = s.acte2!;
+    const enCours = D.usagersAvecDemarche(x);
+    if (s.reformes.nombre === 0) usagersMax = Math.max(usagersMax, enCours);
+    if (s.reformes.nombre === 0 && x.premiereBoucle !== null) {
+      if (aLaBoucle === null) aLaBoucle = delivres(s);
+      else if (apresBoucle === null && now >= x.premiereBoucle + 600_000) {
+        const d = delivres(s);
+        apresBoucle = {
+          usagers: enCours,
+          usagersMax,
+          delivresUsagers: d.usagers - aLaBoucle.usagers,
+          delivresService: d.service - aLaBoucle.service,
+        };
+      }
+      const d = delivres(s);
+      if (d.service > d.usagers) marquer('plus de documents délivrés au service qu’aux usagers', t);
+    }
+
     for (const id of Object.keys(x.notes)) marquer(`note ${id}${tour()}`, t);
     if (x.agents.instructeur > 0) marquer(`premier agent${tour()}`, t);
     if (x.agents.chefBureau > 0) marquer(`premier chef de bureau${tour()}`, t);
@@ -87,15 +130,33 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
     }
     if (x.acteTermine) {
       marquer('fin de l’acte II', t);
-      return { jalons, fin: t, s, partX1 };
+      return { jalons, fin: t, s, partX1, apresBoucle, atelier };
     }
     if (journal && t % 600 === 0) {
       console.log(
-        `${mn(t).padStart(9)} | budget ${Math.round(s.budget).toString().padStart(9)} € | guichets ${x.guichets} | agents ${x.agents.instructeur}/${x.agents.chefBureau}/${x.agents.sousDirecteur} | boucle ${Math.round(D.dossiersEnBoucle(x))} | rendement ${D.rendementDemat(s, x).toFixed(2)} | démat ${D.dematerialisation(x).toFixed(1)} %`,
+        `${mn(t).padStart(9)} | budget ${Math.round(s.budget).toString().padStart(9)} € | guichets ${x.guichets} | agents ${x.agents.instructeur}/${x.agents.chefBureau}/${x.agents.sousDirecteur} | usagers ${Math.round(enCours).toString().padStart(4)} | sans usager ${Math.round(D.dossiersDuService(x)).toString().padStart(5)} | délivrés ${Math.round(delivres(s).usagers)} / ${Math.round(delivres(s).service)} | démat ${D.dematerialisation(x).toFixed(1)} %`,
       );
     }
   }
-  return { jalons, fin: null, s, partX1 };
+  return { jalons, fin: null, s, partX1, apresBoucle, atelier };
+}
+
+/**
+ * Avant la boucle : 10 minutes depuis l'ouverture de l'Atelier, en gardant la Carte d'identité telle quelle
+ * (prudent) ou en ajoutant toutes les étapes permises (agressif). Valeur d'une carte et abandons.
+ */
+function comparerAtelier(depart: { s: GameState; t: number }): void {
+  for (const [nom, compose] of [['prudent', false], ['agressif', true]] as const) {
+    let s = depart.s;
+    const ab0 = s.acte2!.stats.abandonsProc.identite;
+    for (let t = depart.t; t < depart.t + 600; t++) s = robotActe2(s, t * 1000, taps, 0, compose);
+    const now = (depart.t + 600) * 1000;
+    const x = s.acte2!;
+    const valeur = valeurDocument(x, 'identite', D.getModifiers2(s, now));
+    console.log(
+      `  ${nom.padEnd(8)} : ${x.procedures.identite.length} étapes, ${valeur.toFixed(2)} € la carte, ${Math.round(x.stats.abandonsProc.identite - ab0)} abandons en 10 min`,
+    );
+  }
 }
 
 if (mode === 'balayage') {
@@ -121,5 +182,16 @@ if (mode === 'balayage') {
       `  fournitures : ${p.partX1 === null ? '—' : p.partX1.toFixed(1)} % des recettes en ×1, ${partFournitures(p.s).toFixed(1)} % sur l’acte`,
     );
     console.log(`  procédures : ${Object.entries(fin.procedures).map(([q, e]) => `${q} [${e.map((v) => v.type).join(', ')}]`).join(' · ')}`);
+  }
+  const a = p.apresBoucle;
+  if (a) {
+    const part = (100 * a.usagers) / Math.max(1, a.usagersMax);
+    console.log(
+      `  10 min après la première boucle : ${Math.round(a.usagers)} usagers en cours (${part.toFixed(1)} % du maximum, ${Math.round(a.usagersMax)}) · en 10 min, ${Math.round(a.delivresService)} documents délivrés au service, ${Math.round(a.delivresUsagers)} aux usagers · ${part < 25 && a.delivresService > a.delivresUsagers ? 'critère tenu' : 'critère NON tenu'}`,
+    );
+  }
+  if (p.atelier) {
+    console.log('  avant la boucle, 10 min depuis l’ouverture de l’Atelier :');
+    comparerAtelier(p.atelier);
   }
 }

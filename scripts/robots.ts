@@ -164,6 +164,7 @@ export function robotActe2(
   now: number,
   taps: number,
   decouverte = 0,
+  compose = true,
 ): GameState {
   let s = s0;
   for (let i = 0; i < taps; i++) s = D.tamponner2(s, now).s;
@@ -174,7 +175,7 @@ export function robotActe2(
   if (m.exemplairesVisible) s = D.reglerExemplaires(s, 2, now);
   for (const id of D.notesVisibles2(s))
     if (D.peutAcheterNote2(s, id)) s = D.acheterNote2(s, id, now);
-  s = composer(s, now, decouverte);
+  if (compose) s = composer(s, now, decouverte);
   m = D.getModifiers2(s, now);
 
   // Formulaires : garder 20 s de consommation, tant que le Service des achats ne s'en charge pas.
@@ -199,7 +200,7 @@ export function robotActe2(
   for (;;) {
     const y = s.acte2!;
     const visas = D.visasEnAttente(y);
-    const total = D.usagersEnCours(y) + D.dossiersEnBoucle(y);
+    const total = D.usagersEnCours(y) + D.dossiersDuService(y);
     const partVisas = total > 0 ? visas / total : 0.5;
     const options = [
       {

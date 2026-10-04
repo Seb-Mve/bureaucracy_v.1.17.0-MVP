@@ -53,8 +53,11 @@ export const BALANCE2 = {
   /** Le guichet 3 de l'acte I, compressé en unité. */
   guichetsInitiaux: 1,
   etapesMax: 8,
-  /** Points de dématérialisation correspondant à 100 %. */
-  demaCible: 55_000,
+  /**
+   * Points de dématérialisation correspondant à 100 %. Relevé de 55 000 avec specs/011 : les dossiers qui
+   * poursuivent leur procédure après leur pièce de service comptent aussi (fin de l'acte du robot vers 192 min).
+   */
+  demaCible: 68_000,
   /**
    * Points de Conformité par point d'effet d'étape (et par rejet). À l'acte II, la Conformité ne sert
    * qu'à la Réforme : ce facteur fait peser l'acte II plus lourd que l'acte I dans les trombones.
