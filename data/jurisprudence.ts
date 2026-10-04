@@ -82,7 +82,7 @@ const OBJETS = [
   'de la modernisation publique',
   'des parcours usagers',
 ];
-const NOMS_PROCEDURES: Record<ProcId, string[]> = {
+export const NOMS_PROCEDURES: Record<ProcId, string[]> = {
   identite: [
     'Démarche d’identification citoyenne',
     'Parcours d’attestation d’identité',

@@ -16,6 +16,7 @@ import { BALANCE2, ETAPES, EXEMPLAIRES } from '../../constants/balanceActe2';
 import { formatEntier, formatEuros } from '../../utils/formatters';
 import { getModifiers2 } from './moteur';
 import { estBoucle, mene } from './procedures';
+import { valeurDocument } from './production';
 import { acte2 } from './vues';
 
 /** Ordre du catalogue de l'Atelier. */
@@ -125,13 +126,11 @@ export function bilanProcedure(
   m: Modifiers2,
 ): EffetAffiche[] {
   const ex = EXEMPLAIRES[x.exemplaires];
-  const dot = BALANCE2.dotation * m.dotationMult * ex.dotation;
-  let euros = 0;
+  const euros = valeurDocument(x, p, m);
   let patience = 0;
   let delai = 0;
   x.procedures[p].forEach((e, k) => {
     const def = ETAPES[e.type];
-    euros += dot * def.dotation;
     if (!(m.droitAcquis && k === 0)) patience += def.patience * ex.patience;
     delai += def.delai;
   });
