@@ -5,7 +5,7 @@
 import type { GameState, Lettre } from '../../types/game';
 import type { EtatActe2 } from '../../types/acte2';
 import type { LettreDef } from '../courrier';
-import { BALANCE2, PROC_NOMS } from '../../constants/balanceActe2';
+import { BALANCE2 } from '../../constants/balanceActe2';
 import { formatEntier, formatMontant } from '../../utils/formatters';
 import { dematPct } from './notes2';
 
@@ -48,16 +48,18 @@ export const LETTRES_ACTE2: LettreDef[] = [
   {
     id: 'a2-filet2',
     objet: 'Constat de non-sollicitation (relance)',
-    corps: () =>
-      `La procédure « ${PROC_NOMS.identite} » pourrait exiger une pièce délivrée par la procédure « ${PROC_NOMS.domicile} ». L’inverse serait également fondé.\n\nLe S.I.C. ne donne pas d’instruction. Il constate.`,
+    corps: (s) => {
+      const noms = s.reformes.denomination.procedures;
+      return `La procédure « ${noms.identite} » pourrait exiger une pièce délivrée par la procédure « ${noms.domicile} ». L’inverse serait également fondé.\n\nLe S.I.C. ne donne pas d’instruction. Il constate.`;
+    },
     declencheur: (s, t) => filet(s.acte2, t, 2),
   },
   {
     id: 'a2-demission',
     objet: 'Votre demande n° 000001',
     corps: (s) => {
-      const p = s.acte2?.premiereModif;
-      return `Votre demande de démission demeure incomplète.\n\nPièce manquante : justificatif de conformité à la procédure « ${p ? PROC_NOMS[p] : PROC_NOMS.identite} ».`;
+      const p = s.acte2?.premiereModif ?? 'identite';
+      return `Votre demande de démission demeure incomplète.\n\nPièce manquante : justificatif de conformité à la procédure « ${s.reformes.denomination.procedures[p]} ».`;
     },
     declencheur: (s) =>
       s.demission.deposeeLe !== null &&

@@ -1,7 +1,7 @@
 /**
  * Imprime la ligne JavaScript qui charge une sauvegarde de vérification de l'acte II dans le navigateur.
  * Usage : node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/resoudre-ts.ts scripts/save-acte2.ts <préréglage>
- * Préréglages : finActeI, debut, atelier, boucle, demat, fin (voir scripts/presets-acte2.ts).
+ * Préréglages : finActeI, debut, atelier, boucle, demat, fin, reforme, cerfa2 (voir scripts/presets-acte2.ts).
  */
 import { CLE_SAUVEGARDE } from '../data/save';
 import { PRESETS, sauvegardeActe2 } from './presets-acte2';

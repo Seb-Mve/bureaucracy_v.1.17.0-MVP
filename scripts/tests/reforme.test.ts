@@ -7,9 +7,12 @@ import { nouvellesLettres } from '../../data/courrier';
 import { estSauvegardeValide, normaliserSauvegarde } from '../../data/save';
 import { BALANCE } from '../../constants/balance';
 import { BALANCE2, REFORME } from '../../constants/balanceActe2';
-import { NOTES_PAR_ID } from '../../data/notes';
+import { NOTES as NOTES_ACTE1, NOTES_PAR_ID } from '../../data/notes';
 import { NOTES2_PAR_ID } from '../../data/acte2/notes2';
 import type { JurisprudenceId } from '../../types/reforme';
+import * as V from '../../data/acte2/vues';
+import { vueAtelier } from '../../data/acte2/vueAtelier';
+import { sauvegardeActe2 } from '../presets-acte2';
 import { PROCS, type EtatActe2, type Note2Id } from '../../types/acte2';
 import type { GameState } from '../../types/game';
 
@@ -381,4 +384,51 @@ test('déjà-vu administratif : une note déjà instruite a son délai ÷ 4 et s
     cout: Math.round(NOTES2_PAR_ID.atelier.cout / REFORME.dejaVuCout),
     instruction: NOTES2_PAR_ID.atelier.instruction / REFORME.dejaVuDelai,
   });
+});
+
+test('vues : les noms tirés à la Réforme remplacent ceux de la Direction et des procédures', () => {
+  const s1 = R.reformer(avantReforme(), 0, () => 0.99);
+  const s2 = D.entrerActe2(E.signerCerfa(s1, 'Camille', 0), 0);
+  const noms = s2.reformes.denomination;
+  const d = V.vueDirection(s2, 0)!;
+  assert.equal(d.nomService, noms.direction);
+  assert.equal(d.parapheur?.procNom, noms.procedures.identite);
+  const atelier = vueAtelier(avecNotes2(s2, ['atelier']), 0)!;
+  assert.deepEqual(atelier.procedures.map((p) => p.nom), [noms.procedures.identite, noms.procedures.domicile]);
+});
+
+test('vues : le dossier administratif montre trombones et Jurisprudence après la première Réforme', () => {
+  const avant = avantReforme();
+  const v0 = R.vueReforme(avant, 0);
+  assert.equal(v0.trombones, null);
+  assert.equal(v0.jurisprudence, null);
+  assert.equal(v0.possible, true);
+  assert.equal(v0.gain, R.trombonesReforme(avant));
+  assert.equal(v0.cerfaSuivant, '00001*02');
+  const apres = R.reformer(avant, 0, zero);
+  const v1 = R.vueReforme(apres, 0);
+  assert.equal(v1.trombones, apres.reformes.trombones);
+  assert.equal(v1.possible, false);
+  assert.equal(v1.jurisprudence?.length, 6);
+  assert.equal(v1.jurisprudence?.every((j) => !j.acquise), true);
+});
+
+test('vues : une note déjà instruite le dit, les guichets offerts ne comptent pas dans le prix', () => {
+  const s2 = { ...D.entrerActe2(E.signerCerfa(R.reformer(avantReforme(), 0, zero), 'Camille', 0), 0), budget: 0 };
+  const note = V.notesAffichees2(s2, 0).find((n) => n.id === 'prise')!;
+  assert.equal(note.dejaInstruite, true);
+  const anterieur = avecJurisprudence(avec2(s2, { guichets: REFORME.guichetsAnteriorite }), ['anteriorite']);
+  assert.equal(V.vueService2(avecNotes2(anterieur, ['prise']), 0)?.guichet.cout, D.coutGuichet(1));
+});
+
+test('préréglages de la Réforme : Réforme possible, puis Cerfa n° 00001*02 et trombones à dépenser', () => {
+  const t = 1_000_000_000;
+  const avant = sauvegardeActe2('reforme', t);
+  assert.equal(R.peutReformer(avant, t), true);
+  assert.ok(R.trombonesReforme(avant) >= R.coutJurisprudence('memoire') + R.coutJurisprudence('anteriorite'));
+  const apres = sauvegardeActe2('cerfa2', t);
+  assert.equal(apres.cerfa.signe, false);
+  assert.equal(R.numeroCerfa(apres), '00001*02');
+  assert.equal(apres.reformes.trombones, R.trombonesReforme(avant));
+  assert.equal(apres.reformes.notesInstruites.length, NOTES_ACTE1.length);
 });

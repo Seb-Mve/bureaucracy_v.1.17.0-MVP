@@ -10,7 +10,7 @@ import {
   type EtapeType,
   type ProcId,
 } from '../../types/acte2';
-import { BALANCE2, ETAPES, PROC_NOMS } from '../../constants/balanceActe2';
+import { BALANCE2, ETAPES } from '../../constants/balanceActe2';
 import { getModifiers2 } from './moteur';
 import { estBoucle, mene } from './procedures';
 import { acte2 } from './vues';
@@ -110,6 +110,8 @@ export function vueAtelier(
   const m = getModifiers2(s, maintenant);
   if (!m.atelierVisible) return null;
   const ouvertes = PROCS.filter((p) => m.procsOuvertes.includes(p));
+  // Les noms changent à chaque Réforme (« rien d'autre ne change »).
+  const noms = s.reformes.denomination.procedures;
   return {
     etapesMax: BALANCE2.etapesMax,
     catalogue: ORDRE_ETAPES.filter((t) => m.etapesDisponibles.includes(t)).map(
@@ -124,13 +126,13 @@ export function vueAtelier(
       const boucle = boucleDe(x.procedures, ouvertes, p);
       return {
         id: p,
-        nom: PROC_NOMS[p],
+        nom: noms[p],
         pleine: x.procedures[p].length >= BALANCE2.etapesMax,
         exigeables: ouvertes
           .filter((q) => q !== p)
-          .map((q) => ({ id: q, nom: PROC_NOMS[q] })),
+          .map((q) => ({ id: q, nom: noms[q] })),
         boucle,
-        boucleNoms: boucle.map((q) => PROC_NOMS[q]),
+        boucleNoms: boucle.map((q) => noms[q]),
         etapes: x.procedures[p].map((e) => {
           const exige =
             e.type === 'pieceService' && e.exige !== undefined ? e.exige : null;
@@ -139,7 +141,7 @@ export function vueAtelier(
             nom: ETAPES[e.type].nom,
             effets: effetsEtape(e.type),
             exige,
-            exigeNom: exige ? PROC_NOMS[exige] : null,
+            exigeNom: exige ? noms[exige] : null,
             boucle:
               exige !== null &&
               ouvertes.includes(exige) &&

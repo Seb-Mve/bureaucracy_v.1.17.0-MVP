@@ -167,7 +167,7 @@ test('préréglages de vérification : sauvegardes valides, à l’acte voulu', 
   for (const p of PRESETS) {
     const s = sauvegardeActe2(p, t);
     assert.equal(estSauvegardeValide(s), true, p);
-    assert.equal(s.acte, p === 'finActeI' ? 1 : 2, p);
+    assert.equal(s.acte, p === 'finActeI' || p === 'cerfa2' ? 1 : 2, p);
   }
   const boucle = sauvegardeActe2('boucle', t);
   assert.deepEqual(procsEnBoucle(x(boucle).procedures, ['identite', 'domicile']), ['identite', 'domicile']);

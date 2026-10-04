@@ -12,12 +12,14 @@ import type {
   Note2Id,
   ProcId,
 } from '../../types/acte2';
-import { AGENTS2, PROC_NOMS } from '../../constants/balanceActe2';
+import { AGENTS2 } from '../../constants/balanceActe2';
 import {
+  conditionsNote2,
   coutAgent2,
   coutGuichet,
   dematerialisation,
   getModifiers2,
+  guichetsOfferts,
   notesVisibles2,
   usagersEnCours,
   visasEnAttente,
@@ -25,6 +27,7 @@ import {
   vitesseVisas,
 } from './moteur';
 import { NOTES2_PAR_ID } from './notes2';
+import { dejaInstruite2 } from '../jurisprudence';
 
 /** Plafond d'un achat « Max » (collègues, guichets, agents), par sécurité. */
 export const ACHAT_MAX = 500;
@@ -74,6 +77,8 @@ export interface EtapeChaine {
 }
 
 export interface VueDirection {
+  /** Nom du service du chef (« La Direction », puis un autre à chaque Réforme). */
+  nomService: string;
   visas: number;
   usagers: number;
   guichets: number;
@@ -92,6 +97,8 @@ export interface VueDirection {
   appel: number | null;
   recrutementVisible: boolean;
   atelierVisible: boolean;
+  /** Note n° 10 en vigueur : la Réforme peut être engagée (Options). */
+  reformeVisible: boolean;
   visasAccordes: number;
   abandons: number;
   /** Tableau de bord (note n° 16), null avant. */
@@ -131,6 +138,7 @@ export function vueDirection(
   const p: ProcId = tete?.p ?? 'identite';
   const usagers = Math.floor(usagersEnCours(x));
   return {
+    nomService: s.reformes.denomination.direction,
     visas: Math.floor(visasEnAttente(x)),
     usagers,
     guichets: x.guichets,
@@ -144,7 +152,7 @@ export function vueDirection(
       ? {
           numero,
           proc: tete.p,
-          procNom: PROC_NOMS[tete.p],
+          procNom: s.reformes.denomination.procedures[tete.p],
           sansUsager: tete.b > tete.u,
         }
       : null,
@@ -161,6 +169,7 @@ export function vueDirection(
     appel: usagers >= 1 ? numero - 1 : null,
     recrutementVisible: m.recrutementVisible,
     atelierVisible: m.atelierVisible,
+    reformeVisible: m.reformeVisible,
     visasAccordes: Math.floor(x.stats.visasTampons),
     abandons: Math.floor(x.abandons),
     tableau: m.tableauVisible
@@ -230,7 +239,7 @@ export function vueService2(
       nom: 'Guichet',
       description: DESCRIPTION_GUICHET,
       possedes: x.guichets,
-      ...lot(coutGuichet, x.guichets, s.budget),
+      ...lot((n) => coutGuichet(n, guichetsOfferts(s)), x.guichets, s.budget),
     },
     agents: AGENTS2.filter((a) => m.agentsDisponibles.includes(a.id)).map(
       (a) => ({
@@ -265,6 +274,8 @@ export interface NoteVue2 {
   /** Secondes restantes d'instruction. */
   resteSec: number;
   nouvelle: boolean;
+  /** Déjà-vu administratif : achetée lors d'une partie précédente (délai et coût réduits). */
+  dejaInstruite: boolean;
 }
 
 /** Notes de l'acte II visibles, avec leur statut (même carte qu'à l'acte I). */
@@ -273,8 +284,9 @@ export function notesAffichees2(s: GameState, maintenant: number): NoteVue2[] {
   if (!x) return [];
   return notesVisibles2(s).map((id) => {
     const def = NOTES2_PAR_ID[id];
+    const { cout, instruction } = conditionsNote2(s, id);
     const st = x.notes[id];
-    let statut: StatutNote2 = s.budget >= def.cout ? 'disponible' : 'tropCher';
+    let statut: StatutNote2 = s.budget >= cout ? 'disponible' : 'tropCher';
     let resteSec = 0;
     if (st) {
       resteSec = Math.max(0, Math.ceil((st.effective - maintenant) / 1000));
@@ -286,11 +298,12 @@ export function notesAffichees2(s: GameState, maintenant: number): NoteVue2[] {
       titre: def.titre,
       texte: def.texte,
       effet: def.effet,
-      cout: def.cout,
-      instruction: def.instruction,
+      cout,
+      instruction,
       statut,
       resteSec,
       nouvelle: !x.notesVues.includes(id),
+      dejaInstruite: dejaInstruite2(s, id),
     };
   });
 }

@@ -6,7 +6,7 @@ import type { GameState, Lettre, NoteId } from '../types/game';
 import type { Note2Id, ProcId } from '../types/acte2';
 import { PROCS } from '../types/acte2';
 import type { JurisprudenceId } from '../types/reforme';
-import { JURISPRUDENCE, REFORME } from '../constants/balanceActe2';
+import { JURISPRUDENCE, REFORME, type JurisprudenceDef } from '../constants/balanceActe2';
 import { etatInitial } from './engine';
 import { copieProcedures, getModifiers2 } from './acte2/moteur';
 import { tirerDenomination } from './jurisprudence';
@@ -162,5 +162,42 @@ export function lettreReforme(s: GameState, maintenant: number): Lettre | null {
     corps: `Dans le cadre de la réforme de l’action publique, vos services sont réorganisés sans modification de leur fonctionnement.\n\nLa Direction devient : ${d.direction}.\n\nVos procédures deviennent :\n${procedures}\n\nVotre réembauche (Cerfa n° ${numeroCerfa(s)}) a été enregistrée. Le Cerfa n° 00001*01 demeure l’original.`,
     recue: maintenant,
     lue: false,
+  };
+}
+
+export interface JurisprudenceAffichee extends JurisprudenceDef {
+  acquise: boolean;
+  achetable: boolean;
+}
+
+/** Dossier administratif : trombones, Réforme possible et Jurisprudence. */
+export interface VueReforme {
+  /** Trombones disponibles ; null avant la première Réforme (ils n'apparaissent qu'après). */
+  trombones: number | null;
+  /** La Réforme peut être engagée (acte II, note « Réforme de l'action publique » en vigueur). */
+  possible: boolean;
+  /** Trombones qu'elle rapporterait maintenant. */
+  gain: number;
+  /** Numéro du Cerfa qui sera redemandé après la Réforme. */
+  cerfaSuivant: string;
+  /** Bonus de Jurisprudence ; null avant la première Réforme. */
+  jurisprudence: JurisprudenceAffichee[] | null;
+}
+
+export function vueReforme(s: GameState, maintenant: number): VueReforme {
+  const r = s.reformes;
+  const apres = r.nombre > 0;
+  return {
+    trombones: apres ? r.trombones : null,
+    possible: peutReformer(s, maintenant),
+    gain: trombonesReforme(s),
+    cerfaSuivant: `00001*${String(r.nombre + 2).padStart(2, '0')}`,
+    jurisprudence: apres
+      ? JURISPRUDENCE.map((j) => ({
+          ...j,
+          acquise: r.jurisprudence.includes(j.id),
+          achetable: peutAcheterJurisprudence(s, j.id),
+        }))
+      : null,
   };
 }
