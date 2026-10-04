@@ -185,3 +185,45 @@ test('préréglages de vérification : sauvegardes valides, à l’acte voulu', 
     'fin preset should only have a2-rapport',
   );
 });
+
+test('tableau de circulation : dossiers en attente à chaque étape, et qui la traite', () => {
+  const d = V.vueDirection(base2(), 0) as V.VueDirection;
+  assert.deepEqual(
+    d.etapes.map((e) => [e.nom, e.attente, e.traitePar, e.allumee, e.encombree]),
+    [
+      ['Pièce', BALANCE2.fileInitiale, 'guichets', false, true],
+      ['Visa', BALANCE2.visasInitiaux, 'visa', true, false],
+    ],
+  );
+});
+
+test('tableau de circulation : dossiers sans usager compris ; aucune fiche encombrée sans dossier', () => {
+  const b = base2();
+  const s = avec2(b, {
+    usagers: { ...x(b).usagers, identite: [3, 2] },
+    boucles: { ...x(b).boucles, identite: [0, 9.6] },
+  });
+  const e = (V.vueDirection(s, 0) as V.VueDirection).etapes;
+  assert.deepEqual(e.map((f) => [f.attente, f.encombree]), [
+    [3, false],
+    [11, true],
+  ]);
+  const vide = avec2(b, { usagers: { ...x(b).usagers, identite: [0, 0] } });
+  assert.ok((V.vueDirection(vide, 0) as V.VueDirection).etapes.every((f) => !f.encombree));
+  const egal = avec2(b, { usagers: { ...x(b).usagers, identite: [4, 4] } });
+  assert.deepEqual(
+    (V.vueDirection(egal, 0) as V.VueDirection).etapes.map((f) => f.encombree),
+    [true, false],
+  );
+});
+
+test('Service : interrupteur du Service des achats après sa note', () => {
+  const s = avecNotes(base2(), ['prise']);
+  assert.equal((V.vueService2(s, 0) as V.VueService2).achats, null);
+  const a = avecNotes(s, ['achats']);
+  assert.deepEqual((V.vueService2(a, 0) as V.VueService2).achats, { actifs: true });
+  assert.deepEqual((V.vueService2(D.reglerAchats(a, false, 0), 0) as V.VueService2).achats, {
+    actifs: false,
+  });
+  assert.equal((V.vueDirection(a, 0) as V.VueDirection).achatsVisible, true);
+});

@@ -8,9 +8,12 @@ import {
   PROCS,
   type Etape,
   type EtapeType,
+  type EtatActe2,
+  type Modifiers2,
   type ProcId,
 } from '../../types/acte2';
-import { BALANCE2, ETAPES } from '../../constants/balanceActe2';
+import { BALANCE2, ETAPES, EXEMPLAIRES } from '../../constants/balanceActe2';
+import { formatEntier, formatEuros } from '../../utils/formatters';
 import { getModifiers2 } from './moteur';
 import { estBoucle, mene } from './procedures';
 import { acte2 } from './vues';
@@ -63,6 +66,12 @@ export interface EtapeAtelier {
 export interface ProcAtelier {
   id: ProcId;
   nom: string;
+  /** Dossiers en cours dans la procédure (usagers et sans usager). */
+  enCours: number;
+  /** Usagers perdus dans la procédure (patience et rejet). */
+  abandons: number;
+  /** Bilan d'un dossier sur la procédure entière : « +4,48 € », « −4 patience », « 13 s de délai ». */
+  bilan: EffetAffiche[];
   etapes: EtapeAtelier[];
   /** Plus de place pour une étape (BALANCE2.etapesMax). */
   pleine: boolean;
@@ -78,6 +87,8 @@ export interface ChoixEtape {
   nom: string;
   description: string;
   effets: EffetAffiche[];
+  /** Faux : « En attente de réglementation » (aucune note n'est citée), non sélectionnable. */
+  disponible: boolean;
 }
 
 export interface VueAtelier {
@@ -100,7 +111,42 @@ export function boucleDe(
   );
 }
 
-/** Atelier : procédures ouvertes et catalogue des étapes débloquées. Null tant que l'Atelier est fermé. */
+/** Patience à une décimale au plus (« 4 », « 4,5 »). */
+const unDecimal = (v: number): string =>
+  (Math.round(v * 10) / 10).toLocaleString('fr-FR');
+
+/**
+ * Bilan d'un dossier qui franchit toute la procédure `p` : dotation (grade, Jurisprudence et Exemplaires
+ * compris, sans la prime de rejet), patience coûtée (Droit acquis compris) et délai cumulé des étapes.
+ */
+export function bilanProcedure(
+  x: EtatActe2,
+  p: ProcId,
+  m: Modifiers2,
+): EffetAffiche[] {
+  const ex = EXEMPLAIRES[x.exemplaires];
+  const dot = BALANCE2.dotation * m.dotationMult * ex.dotation;
+  let euros = 0;
+  let patience = 0;
+  let delai = 0;
+  x.procedures[p].forEach((e, k) => {
+    const def = ETAPES[e.type];
+    euros += dot * def.dotation;
+    if (!(m.droitAcquis && k === 0)) patience += def.patience * ex.patience;
+    delai += def.delai;
+  });
+  return [
+    euros > 0
+      ? { texte: `+${formatEuros(euros)} €`, sens: 'plus' }
+      : { texte: '0 €', sens: 'neutre' },
+    patience > 0
+      ? { texte: `−${unDecimal(patience)} patience`, sens: 'moins' }
+      : { texte: '0 patience', sens: 'neutre' },
+    { texte: `${formatEntier(delai)} s de délai`, sens: 'neutre' },
+  ];
+}
+
+/** Atelier : procédures ouvertes, leur bilan, et le catalogue de toutes les étapes. Null tant que l'Atelier est fermé. */
 export function vueAtelier(
   s: GameState,
   maintenant: number,
@@ -114,19 +160,25 @@ export function vueAtelier(
   const noms = s.reformes.denomination.procedures;
   return {
     etapesMax: BALANCE2.etapesMax,
-    catalogue: ORDRE_ETAPES.filter((t) => m.etapesDisponibles.includes(t)).map(
-      (t) => ({
-        type: t,
-        nom: ETAPES[t].nom,
-        description: ETAPES[t].description,
-        effets: effetsEtape(t),
-      }),
-    ),
+    // Toutes les étapes ; celles qu'aucune note n'a encore réglementées sont grisées.
+    catalogue: ORDRE_ETAPES.map((t) => ({
+      type: t,
+      nom: ETAPES[t].nom,
+      description: ETAPES[t].description,
+      effets: effetsEtape(t),
+      disponible: m.etapesDisponibles.includes(t),
+    })),
     procedures: ouvertes.map((p) => {
       const boucle = boucleDe(x.procedures, ouvertes, p);
       return {
         id: p,
         nom: noms[p],
+        enCours: Math.floor(
+          x.usagers[p].reduce((a, v) => a + v, 0) +
+            x.boucles[p].reduce((a, v) => a + v, 0),
+        ),
+        abandons: Math.floor(x.stats.abandonsProc[p]),
+        bilan: bilanProcedure(x, p, m),
         pleine: x.procedures[p].length >= BALANCE2.etapesMax,
         exigeables: ouvertes
           .filter((q) => q !== p)

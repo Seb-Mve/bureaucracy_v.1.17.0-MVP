@@ -67,13 +67,21 @@ export interface ParapheurAffiche {
   sansUsager: boolean;
 }
 
-/** Une fiche de la chaîne affichée dans la bulle ; un visa en attente « s'allume ». */
+/**
+ * Une fiche du tableau de circulation (bulle) : les dossiers qui attendent à cette étape et qui la traite.
+ * Un visa en attente « s'allume » ; la fiche la plus encombrée est marquée.
+ */
 export interface EtapeChaine {
   type: EtapeType;
   nom: string;
-  /** Dossiers qui attendent ce visa (0 hors visa). */
+  /** Dossiers (usagers et sans usager) qui attendent à cette étape. */
   attente: number;
+  /** Qui franchit l'étape : les guichets, ou le chef de service et ses agents (visa). */
+  traitePar: 'guichets' | 'visa';
+  /** Visa avec au moins un dossier en attente. */
   allumee: boolean;
+  /** L'étape où attendent le plus de dossiers (au moins un ; la première en cas d'égalité). */
+  encombree: boolean;
 }
 
 export interface VueDirection {
@@ -97,11 +105,13 @@ export interface VueDirection {
   appel: number | null;
   recrutementVisible: boolean;
   atelierVisible: boolean;
-  /** Note n° 10 en vigueur : la Réforme peut être engagée (Options). */
+  /** Service des achats débloqué (note « Marché public de fournitures »). */
+  achatsVisible: boolean;
+  /** Note n° 11 en vigueur : la Réforme peut être engagée (Options). */
   reformeVisible: boolean;
   visasAccordes: number;
   abandons: number;
-  /** Tableau de bord (note n° 16), null avant. */
+  /** Tableau de bord (note n° 17), null avant. */
   tableau: { abandonsDemarche: number } | null;
   acteTermine: boolean;
   finActeVue: boolean;
@@ -117,6 +127,23 @@ function visasDe(x: EtatActe2, p: ProcId): { u: number; b: number } {
     b += x.boucles[p][k];
   });
   return { u, b };
+}
+
+/** Tableau de circulation d'une procédure : dossiers en attente à chaque étape, et qui la traite. */
+export function tableauCirculation(x: EtatActe2, p: ProcId): EtapeChaine[] {
+  const attentes = x.procedures[p].map((_, k) =>
+    Math.floor(x.usagers[p][k] + x.boucles[p][k]),
+  );
+  const max = Math.max(...attentes);
+  const rangMax = max >= 1 ? attentes.indexOf(max) : -1;
+  return x.procedures[p].map((e, k) => ({
+    type: e.type,
+    nom: NOMS_COURTS[e.type],
+    attente: attentes[k],
+    traitePar: e.type === 'visa' ? 'visa' : 'guichets',
+    allumee: e.type === 'visa' && attentes[k] >= 1,
+    encombree: k === rangMax,
+  }));
 }
 
 /** Écran Direction : ressources, parapheur à viser, scène et curseurs. Null hors de l'acte II. */
@@ -156,19 +183,11 @@ export function vueDirection(
           sansUsager: tete.b > tete.u,
         }
       : null,
-    etapes: x.procedures[p].map((e, k) => {
-      const attente =
-        e.type === 'visa' ? Math.floor(x.usagers[p][k] + x.boucles[p][k]) : 0;
-      return {
-        type: e.type,
-        nom: NOMS_COURTS[e.type],
-        attente,
-        allumee: attente >= 1,
-      };
-    }),
+    etapes: tableauCirculation(x, p),
     appel: usagers >= 1 ? numero - 1 : null,
     recrutementVisible: m.recrutementVisible,
     atelierVisible: m.atelierVisible,
+    achatsVisible: m.achatsVisible,
     reformeVisible: m.reformeVisible,
     visasAccordes: Math.floor(x.stats.visasTampons),
     abandons: Math.floor(x.abandons),
@@ -203,6 +222,8 @@ export interface VueService2 {
   agents: UniteAffichee<Agent2Id>[];
   etapesParSeconde: number;
   visasParSeconde: number;
+  /** Service des achats (null avant sa note) : son interrupteur. */
+  achats: { actifs: boolean } | null;
 }
 
 /** Prix d'un achat, de dix achats et du plus grand lot que le budget permet. */
@@ -252,6 +273,7 @@ export function vueService2(
     ),
     etapesParSeconde: vitesseGuichets(x),
     visasParSeconde: vitesseVisas(x),
+    achats: m.achatsVisible ? { actifs: x.achatsActifs } : null,
   };
 }
 

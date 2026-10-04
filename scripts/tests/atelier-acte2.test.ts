@@ -67,15 +67,22 @@ test('Atelier fermé, ou acte I : pas de vue', () => {
   );
 });
 
-test('Atelier : procédures ouvertes et catalogue des étapes débloquées', () => {
+test('Atelier : procédures ouvertes, catalogue complet, étapes non réglementées grisées', () => {
   const a = A.vueAtelier(avecNotes(base2(), ['atelier']), 0) as A.VueAtelier;
   assert.deepEqual(
     a.procedures.map((p) => p.id),
     ['identite', 'domicile'],
   );
   assert.deepEqual(
-    a.catalogue.map((c) => c.type),
-    ['piece', 'visa'],
+    a.catalogue.map((c) => [c.type, c.disponible]),
+    [
+      ['piece', true],
+      ['visa', true],
+      ['signature', false],
+      ['pieceService', false],
+      ['reflexion', false],
+      ['commission', false],
+    ],
   );
   assert.equal(a.etapesMax, BALANCE2.etapesMax);
   const id = a.procedures[0];
@@ -139,4 +146,37 @@ test('Atelier : une procédure de huit étapes est pleine', () => {
   const huit = Array.from({ length: BALANCE2.etapesMax }, () => P('piece'));
   const s = avecProcedures(avecNotes(base2(), ['atelier']), { identite: huit });
   assert.equal((A.vueAtelier(s, 0) as A.VueAtelier).procedures[0].pleine, true);
+});
+
+test('Atelier : dossiers en cours, abandons et bilan d’un dossier sur la procédure', () => {
+  const b = avecNotes({ ...base2(), tampons: 0 }, ['atelier']);
+  const s = avec2(b, {
+    procedures: { ...x(b).procedures, identite: [{ type: 'piece' }, { type: 'visa' }, { type: 'commission' }] },
+    usagers: { ...x(b).usagers, identite: [4, 2.5, 1] },
+    boucles: { ...x(b).boucles, identite: [0, 3, 0] },
+    stats: { ...x(b).stats, abandonsProc: { identite: 7.9, domicile: 0, hebergement: 0, vie: 0 } },
+  });
+  const p = (A.vueAtelier(s, 0) as A.VueAtelier).procedures[0];
+  assert.equal(p.enCours, 10);
+  assert.equal(p.abandons, 7);
+  // Grade de départ, ×1 : 1 + 1 + 2 dotations ; 1 + 1 + 2 patience ; 3 + 4 + 15 s.
+  const euros = 4 * BALANCE2.dotation;
+  assert.deepEqual(
+    p.bilan.map((e) => e.texte),
+    [`+${euros.toFixed(2).replace('.', ',')} €`, '−4 patience', '22 s de délai'],
+  );
+  assert.deepEqual(p.bilan.map((e) => e.sens), ['plus', 'moins', 'neutre']);
+  // ×2 : dotation ×1,6, patience ×1,5.
+  const deux = (A.vueAtelier(avec2(s, { exemplaires: 2 }), 0) as A.VueAtelier).procedures[0];
+  assert.equal(deux.bilan[1].texte, '−6 patience');
+  // Une Réflexion seule : ni euro ni dotation.
+  const r = avec2(b, {
+    procedures: { ...x(b).procedures, domicile: [{ type: 'reflexion' }] },
+    usagers: { ...x(b).usagers, domicile: [0] },
+    boucles: { ...x(b).boucles, domicile: [0] },
+  });
+  assert.deepEqual(
+    (A.vueAtelier(r, 0) as A.VueAtelier).procedures[1].bilan.map((e) => e.texte),
+    ['0 €', '−2 patience', '15 s de délai'],
+  );
 });
