@@ -26,6 +26,7 @@ import Colors, {
 } from '@/constants/Colors';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 import { Effets, IconeEtape } from '@/components/atelier/Elements';
+import ChoixVerrouille from '@/components/atelier/ChoixVerrouille';
 
 /** Ce que demande la feuille : une étape à ajouter, ou la procédure qu'exige une pièce de service. */
 export type ModeFeuille =
@@ -79,7 +80,10 @@ function Choix({ libelle, detail, choisi, onPress, icone, pied }: ChoixProps) {
   );
 }
 
-/** Feuille qui monte du bas (comme le courrier) : catalogue des étapes débloquées, puis le document exigé. */
+/**
+ * Feuille qui monte du bas (comme le courrier) : catalogue de toutes les étapes (celles qu'aucune note n'a
+ * encore réglementées sont grisées), puis le document exigé.
+ */
 export default function FeuilleEtape({
   mode,
   atelier,
@@ -170,23 +174,30 @@ export default function FeuilleEtape({
                 accessibilityRole="radiogroup"
                 accessibilityLabel="Étape"
               >
-                {atelier.catalogue.map((c) => (
-                  <React.Fragment key={c.type}>
-                    <Choix
-                      libelle={c.nom}
-                      detail={c.description}
-                      choisi={etape === c.type}
-                      onPress={() => setEtape(c.type)}
-                      icone={<IconeEtape type={c.type} />}
-                      pied={<Effets effets={c.effets} />}
-                    />
-                    {/* Le document exigé se choisit juste sous la pièce de service, sans défiler. */}
-                    {c.type === 'pieceService' && avecExige && documentExige}
-                  </React.Fragment>
-                ))}
+                {atelier.catalogue.map((c) =>
+                  c.disponible ? (
+                    <React.Fragment key={c.type}>
+                      <Choix
+                        libelle={c.nom}
+                        detail={c.description}
+                        choisi={etape === c.type}
+                        onPress={() => setEtape(c.type)}
+                        icone={<IconeEtape type={c.type} />}
+                        pied={<Effets effets={c.effets} />}
+                      />
+                      {/* Le document exigé se choisit juste sous la pièce de service, sans défiler. */}
+                      {c.type === 'pieceService' && avecExige && documentExige}
+                    </React.Fragment>
+                  ) : (
+                    <ChoixVerrouille key={c.type} choix={c} />
+                  ),
+                )}
               </View>
             )}
             {mode?.type === 'exiger' && documentExige}
+          </ScrollView>
+          {/* Le bouton reste sous la liste, hors du défilement : toujours atteignable sur petit écran. */}
+          <View style={styles.pied}>
             <BoutonPoussoir
               libelle={
                 mode?.type === 'exiger'
@@ -200,7 +211,7 @@ export default function FeuilleEtape({
               desactive={!valide}
               onPress={valider}
             />
-          </ScrollView>
+          </View>
         </SafeAreaView>
       </View>
     </Modal>
@@ -253,6 +264,14 @@ const styles = StyleSheet.create({
   corps: {
     padding: Espace.l,
     gap: Espace.m,
+  },
+  pied: {
+    paddingHorizontal: Espace.l,
+    paddingTop: Espace.m,
+    paddingBottom: Espace.l,
+    borderTopWidth: Charte.traitFin,
+    borderTopColor: Colors.anthracite,
+    backgroundColor: Colors.carton,
   },
   groupe: {
     gap: Espace.s,

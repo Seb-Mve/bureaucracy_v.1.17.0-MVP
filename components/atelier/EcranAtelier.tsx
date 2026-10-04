@@ -16,13 +16,14 @@ import Hud from '@/components/Hud';
 import Panneau from '@/components/charte/Panneau';
 import SelecteurProcedure from '@/components/atelier/SelecteurProcedure';
 import FicheEtape from '@/components/atelier/FicheEtape';
+import BilanProcedure from '@/components/atelier/BilanProcedure';
 import FeuilleEtape, {
   type ModeFeuille,
 } from '@/components/atelier/FeuilleEtape';
 import { Trombone, TromboneFerme } from '@/components/atelier/Elements';
 
 /**
- * Atelier des procédures (acte II) : une procédure par écran, ses étapes en fiches reliées par des trombones.
+ * Atelier des procédures (acte II) : une procédure par écran, son bilan, ses étapes en fiches reliées par des trombones.
  * Une modification s'applique aussitôt. Quand des procédures s'exigent mutuellement, une carte neutre les relie
  * par un trombone fermé ; rien ne la nomme « boucle ».
  */
@@ -54,6 +55,7 @@ export default function EcranAtelier() {
           choisie={proc.id}
           onChoisir={setChoisie}
         />
+        <BilanProcedure proc={proc} />
         <View>
           {proc.etapes.map((e, k) => (
             <View key={`${proc.id}-${k}-${e.type}-${e.exige ?? ''}`}>
