@@ -40,6 +40,18 @@ export type Note2Id =
 
 export type Exemplaires = 1 | 2 | 3;
 
+/** Lignes de la fiche de poste du chef de service, dans l'ordre de la fiche. */
+export type LigneFiche2Id =
+  | 'circulation'
+  | 'guichets'
+  | 'dotation'
+  | 'evaluation'
+  | 'agents'
+  | 'atelier'
+  | 'exemplaires'
+  | 'achats'
+  | 'pieceService';
+
 /** Dossiers par procédure et par rang d'étape (même longueur que la procédure). */
 export type Stocks = Record<ProcId, number[]>;
 
@@ -52,6 +64,8 @@ export interface StatsActe2 {
   visasTampons: number;
   /** Usagers renvoyés chez eux parce que leur dossier est parti en boucle. */
   abandonsDemarche: number;
+  /** Usagers perdus (patience ou rejet) dans chaque procédure. */
+  abandonsProc: Record<ProcId, number>;
   taps: number;
 }
 
@@ -84,6 +98,12 @@ export interface EtatActe2 {
   duree: number;
   /** Mémoire des services : les procédures d'avant la Réforme ont été restaurées. */
   memoireRestauree: boolean;
+  /** La fiche de poste du chef de service est refermée (false : elle s'affiche). */
+  ficheVue: boolean;
+  /** Lignes de la fiche de poste lues à sa dernière fermeture (les autres font la pastille d'Options). */
+  ficheLues: LigneFiche2Id[];
+  /** Interrupteur du Service des achats (note « Marché public de fournitures »). */
+  achatsActifs: boolean;
   stats: StatsActe2;
 }
 

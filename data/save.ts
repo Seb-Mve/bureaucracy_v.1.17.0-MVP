@@ -7,6 +7,7 @@ import type { EtatActe2 } from '../types/acte2';
 import { PROCS } from '../types/acte2';
 import type { Reformes } from '../types/reforme';
 import { reformesInitiales } from './jurisprudence';
+import { abandonsProcNuls } from './acte2/moteur';
 
 export const CLE_SAUVEGARDE = 'bureaucracy_acte1_v1';
 
@@ -68,7 +69,9 @@ function reformesValides(x: unknown): boolean {
  * Met à niveau une sauvegarde plus ancienne : retire les champs qui n'existent plus (`circulairesVues`),
  * complète `seuilRenfort` (ancien seuil fixe de 8 tampons, pour ne pas cacher une note déjà vue),
  * place à l'acte I une partie antérieure à l'acte II (sans `acte`), complète `reformes` (aucune Réforme)
- * et, à l'acte II, l'âge des services (`duree`, depuis `debut`) et la Mémoire des services.
+ * et, à l'acte II, l'âge des services (`duree`, depuis `debut`), la Mémoire des services, la fiche de poste
+ * du chef de service (refermée, aucune ligne lue : la pastille d'Options invite à la lire), le Service des
+ * achats (en service) et les abandons par procédure (inconnus : zéro).
  */
 export function normaliserSauvegarde(s: GameState): GameState {
   const { circulairesVues: _, ...reste } = s as GameState & { circulairesVues?: unknown };
@@ -83,6 +86,10 @@ export function normaliserSauvegarde(s: GameState): GameState {
         ...x,
         duree: estNombre(x.duree) ? x.duree : Math.max(0, (avecActe.derniereMaj - x.debut) / 1000),
         memoireRestauree: x.memoireRestauree ?? false,
+        ficheVue: x.ficheVue ?? true,
+        ficheLues: Array.isArray(x.ficheLues) ? x.ficheLues : [],
+        achatsActifs: x.achatsActifs ?? true,
+        stats: { ...x.stats, abandonsProc: x.stats.abandonsProc ?? abandonsProcNuls() },
       }
     : null;
   return { ...avecActe, acte2, reformes };

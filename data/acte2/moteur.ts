@@ -61,6 +61,11 @@ export function sommeStocks(st: Stocks): number {
   return t;
 }
 
+/** Abandons par procédure, à zéro. */
+export function abandonsProcNuls(): Record<ProcId, number> {
+  return { identite: 0, domicile: 0, hebergement: 0, vie: 0 };
+}
+
 /** État de la Direction à l'entrée dans l'acte : le guichet 3 et la procédure du S.I.C. */
 export function etatInitialActe2(maintenant: number): EtatActe2 {
   const procedures = copieProcedures(PROCEDURES_INITIALES);
@@ -88,11 +93,15 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
     finActeVue: false,
     duree: 0,
     memoireRestauree: false,
+    ficheVue: false,
+    ficheLues: [],
+    achatsActifs: true,
     stats: {
       franchies: 0,
       franchiesBoucle: 0,
       visasTampons: 0,
       abandonsDemarche: 0,
+      abandonsProc: abandonsProcNuls(),
       taps: 0,
     },
   };
