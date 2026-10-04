@@ -12,7 +12,7 @@ import { NOTES2_PAR_ID } from '../../data/acte2/notes2';
 import type { JurisprudenceId } from '../../types/reforme';
 import * as V from '../../data/acte2/vues';
 import { vueAtelier } from '../../data/acte2/vueAtelier';
-import { sauvegardeActe2 } from '../presets-acte2';
+import { sauvegardePreset } from '../../data/presets';
 import { PROCS, type EtatActe2, type Note2Id } from '../../types/acte2';
 import type { GameState } from '../../types/game';
 
@@ -423,10 +423,10 @@ test('vues : une note déjà instruite le dit, les guichets offerts ne comptent 
 
 test('préréglages de la Réforme : Réforme possible, puis Cerfa n° 00001*02 et trombones à dépenser', () => {
   const t = 1_000_000_000;
-  const avant = sauvegardeActe2('reforme', t);
+  const avant = sauvegardePreset('reforme', t);
   assert.equal(R.peutReformer(avant, t), true);
   assert.ok(R.trombonesReforme(avant) >= R.coutJurisprudence('memoire') + R.coutJurisprudence('anteriorite'));
-  const apres = sauvegardeActe2('cerfa2', t);
+  const apres = sauvegardePreset('cerfa2', t);
   assert.equal(apres.cerfa.signe, false);
   assert.equal(R.numeroCerfa(apres), '00001*02');
   assert.equal(apres.reformes.trombones, R.trombonesReforme(avant));

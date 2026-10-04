@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import type { AgentId, GameState, Lettre, Modifiers, NoteId } from '@/types/game';
 import type { ActionAtelier, Agent2Id, Exemplaires, Note2Id } from '@/types/acte2';
 import type { JurisprudenceId } from '@/types/reforme';
@@ -17,6 +18,7 @@ import * as V from '@/data/acte2/vues';
 import * as A from '@/data/acte2/vueAtelier';
 import { lettreAbsence2 } from '@/data/acte2/courrier2';
 import * as R from '@/data/reforme';
+import { PRESETS_INFO, sauvegardePreset, type Preset, type PresetInfo } from '@/data/presets';
 import { Encres, type Encre } from '@/constants/Colors';
 
 export type { UsagerAffiche };
@@ -26,6 +28,13 @@ export type { ChoixEtape, EffetAffiche, EtapeAtelier, ProcAtelier, VueAtelier } 
 export type { Encre };
 export type { JurisprudenceId } from '@/types/reforme';
 export type { JurisprudenceAffichee, VueReforme } from '@/data/reforme';
+export type { Preset, PresetInfo } from '@/data/presets';
+
+/** Raccourcis de test (écran /test, ?test) : en développement et sur les aperçus Netlify, jamais en production. */
+// Module chargé seulement hors développement : la variable d'environnement y est remplacée au build.
+const RACCOURCIS_ACTIFS: boolean =
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  __DEV__ || (require('@/constants/raccourcis') as typeof import('@/constants/raccourcis')).RACCOURCIS_BUILD;
 
 const INTERVALLE = 100;
 /** Au-delà de cet écart entre deux ticks, on considère une absence (onglet en veille). */
@@ -154,6 +163,11 @@ interface GameContextType {
   marquerFinActeVue: () => void;
   marquerFichePoste: (vue: boolean) => void;
   nouvellePartie: () => void;
+  /** Raccourcis de test disponibles (développement, aperçus Netlify). */
+  raccourcisActifs: boolean;
+  raccourcis: PresetInfo[];
+  /** Remplace la partie par une sauvegarde de test, l'enregistre et revient au premier onglet. */
+  chargerRaccourci: (id: Preset) => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -500,6 +514,21 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     appliquer(E.etatInitial(Date.now()));
   }, [appliquer]);
 
+  const chargerRaccourci = useCallback(
+    (id: Preset) => {
+      if (!RACCOURCIS_ACTIFS) return;
+      const s = sauvegardePreset(id, Date.now());
+      satureRef.current = false;
+      setVerdict(null);
+      setAbandonsFile(0);
+      abandonsEnCours.current = 0;
+      appliquer(s);
+      AsyncStorage.setItem(CLE_SAUVEGARDE, JSON.stringify(s)).catch(() => undefined);
+      router.replace('/');
+    },
+    [appliquer],
+  );
+
   const maintenant = etat.derniereMaj;
   const mods = useMemo(() => E.getModifiers(etat, maintenant), [etat, maintenant]);
 
@@ -638,13 +667,16 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       marquerFinActeVue,
       marquerFichePoste,
       nouvellePartie,
+      raccourcisActifs: RACCOURCIS_ACTIFS,
+      raccourcis: PRESETS_INFO,
+      chargerRaccourci,
     }),
     [
       pret, etat, mods, maintenant, vitesse, notes, agents, verdict, abandonsFile, sature, demanderRequisition, grade, tamponner,
       acheterAgent, acheterRamettes, reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa,
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste,
       nouvellePartie, rupture, rejet, prixRamette, direction, service2, atelier, acheterGuichet, acheterAgent2,
-      reglerExemplaires, modifierProcedure, entrerDirection, reforme, reformer, acheterJurisprudence,
+      reglerExemplaires, modifierProcedure, entrerDirection, reforme, reformer, acheterJurisprudence, chargerRaccourci,
     ],
   );
 

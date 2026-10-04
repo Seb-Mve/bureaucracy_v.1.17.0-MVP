@@ -7,3 +7,11 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Raccourcis de test (écran /test, « ?test ») : aperçus de branche et de demande de fusion seulement,
+# jamais en production.
+[context.deploy-preview.environment]
+  EXPO_PUBLIC_RACCOURCIS = "1"
+
+[context.branch-deploy.environment]
+  EXPO_PUBLIC_RACCOURCIS = "1"

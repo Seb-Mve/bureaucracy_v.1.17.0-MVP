@@ -24,9 +24,11 @@ npm run lint                             # Run ESLint via expo lint
 npm test                                 # Unit tests of data/ and of the pixel-art scene engine (node:test, scripts/tests/*.test.ts)
 node scripts/simulate-acte1.ts [taps/s] [minutes]   # Balance simulator: bot player, prints milestones
 node scripts/simulate-acte2.ts [taps/s] [minutes] [réformeÀ % | balayage] [découverte min]   # Act II simulator, Réforme and Act I replay included (robots: scripts/robots.ts)
-node --import ./scripts/resoudre-ts.ts scripts/save-acte2.ts <preset>   # Prints the localStorage line that loads a test save (finActeI, debut, atelier, boucle, demat, fin, reforme, cerfa2)
+node --import ./scripts/resoudre-ts.ts scripts/save-acte2.ts <preset>   # Prints the localStorage line that loads a test save (presets of data/presets.ts: acte1Debut, acte1Milieu, finActeI, debut, atelier, boucle, demat, fin, reforme, cerfa2)
 node scripts/bundle-scene-pixel.ts <out.js> [--acte 2]   # Browser bundle of the pixel scenes for DESIGN/ mockups (no dependency)
 ```
+
+**Raccourcis de test (in-app):** add `?test` to any URL (or open `/test`) to get the « Raccourcis de test » screen (`app/test.tsx`): one card per preset of `data/presets.ts` (`PRESETS_INFO`), a confirmation, then `chargerRaccourci` replaces the game, saves at once and goes back to the first tab. Enabled when `raccourcisActifs` (`__DEV__ || EXPO_PUBLIC_RACCOURCIS === '1'`); `netlify.toml` sets `EXPO_PUBLIC_RACCOURCIS = "1"` for deploy previews and branch deploys only, never production (there `/test` redirects to `/`).
 
 Pure data-layer logic is covered by `npm test` (Node's built-in test runner, no dependency). Balance changes must be checked with the simulator (target: bot finishes Act I in ~60–75 min, i.e. ~85–100 min for a human).
 
@@ -57,6 +59,7 @@ Components must never import from `data/`. Everything goes through `useGameState
 - **Head of the queue:** the usager in the bubble (`teteDeFile(s)[0]`, patience drawn per usager number from the real queue mix) is the one whose dossier the next tap processes first (`E.tamponner(…, premier)`), so « Troisième fois… » then a rejection is an abandon. Abandons show in the scene: the usager drops their dossier (it lies on the floor 2.5 s), leaves fast with a red exit arrow (`MoteurScene.abandon`, `Verdict.abandon`, `abandonsFile` for collègue abandons, at most 2/s).
 - **Tap feedback:** a tap shows no floating numbers. It reads in the scene (arm, impact star, ink, shake) and in the counters, which react to `verdict.id` through `components/charte/ValeurAnimee`. TAMPONNER fires on press-in, one stamp per press (`BoutonPoussoir` `immediat`, no auto-repeat), and the space bar stamps on the web (the only keyboard shortcut).
 - **Acts:** the game loop, the offline catch-up and every action dispatch on `s.acte`: Act I runs `data/engine.ts`, Act II runs `data/acte2/moteur.ts` (`tick2`, `tamponner2`, `simulerAbsence2` + `lettreAbsence2`); Act I code never runs on an Act II state, and Act I fields kept in the save are never shown at Act II. Screens read Act II through `direction`, `service2` and `atelier` (pure views: `data/acte2/vues.ts`, `data/acte2/vueAtelier.ts`; null at Act I) and the act's ink `encre` (`Encres` in `constants/Colors.ts`: orange, then blue). `FinActeModal` calls `entrerDirection`.
+- **Raccourcis de test:** `chargerRaccourci(id)` (only when `raccourcisActifs`), `raccourcis` (titles and details of the presets).
 - **Réforme:** `reformer` (Options → Formulaire R-01) resets to the Cerfa screen (`cerfaNumero`), `acheterJurisprudence` spends trombones (final, no undo); `reforme` is the Options view (trombones and Jurisprudence appear only after the first Réforme). Components live in `components/reforme/`.
 
 ### PreferencesContext (`context/PreferencesContext.tsx`)
@@ -82,6 +85,7 @@ Vibrations and reduced animations, stored under their own AsyncStorage key (`bur
 | `data/acte2/vueAtelier.ts` | Atelier view: step effects (symbol + word), loops, catalogue |
 | `data/jurisprudence.ts` | What survives a Réforme: initial `reformes`, Jurisprudence effects, déjà-vu, drawn service names (imported by both engines) |
 | `data/reforme.ts` | The Réforme: trombones, `reformer`, Cerfa number, its letter, Jurisprudence purchase, Options view |
+| `data/presets.ts` | Test saves built with the engines (`sauvegardePreset`, `PRESETS`, `PRESETS_INFO`), from Act I to after the Réforme: `/test` screen, `scripts/save-acte2.ts`, tests |
 | `utils/formatters.ts` | `formatEntier` (counts) and `formatEuros` (money): full digits up to 99 999, then « 124 k », « 4,47 M »; `formatPourcent`; `formatNumberFrench` (rates) |
 
 ### Economy model (aggregate, no per-usager objects)

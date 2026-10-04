@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs, useGlobalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Building2, ScrollText, Settings, UserPlus, Wrench } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
@@ -16,12 +16,27 @@ import FichePoste from '@/components/FichePoste';
 const HAUTEUR_ONGLETS = 58;
 
 export default function TabLayout() {
-  const { pret, etat, mods, notes, notesNonVues, agents, demandeLimitante, direction, service2, rupture, encre } =
-    useGameState();
+  const {
+    pret,
+    etat,
+    mods,
+    notes,
+    notesNonVues,
+    agents,
+    demandeLimitante,
+    direction,
+    service2,
+    rupture,
+    encre,
+    raccourcisActifs,
+  } = useGameState();
+  // « ?test » sur n'importe quelle adresse ouvre les raccourcis de test (développement, aperçus Netlify).
+  const { test } = useGlobalSearchParams<{ test?: string }>();
   // La barre d'onglets s'arrête au-dessus de la barre d'accueil de l'iPhone (marge du bas réelle, web compris).
   const { bottom } = useSafeAreaInsets();
 
   if (!pret) return null;
+  if (raccourcisActifs && test !== undefined) return <Redirect href="/test" />;
   if (!etat.cerfa.signe) return <CerfaEcran />;
 
   const recrutementVisible = direction ? direction.recrutementVisible : mods.recrutementVisible;

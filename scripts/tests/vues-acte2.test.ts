@@ -5,7 +5,7 @@ import * as D from '../../data/acte2/moteur';
 import * as V from '../../data/acte2/vues';
 import { procsEnBoucle } from '../../data/acte2/procedures';
 import { estSauvegardeValide } from '../../data/save';
-import { PRESETS, sauvegardeActe2 } from '../presets-acte2';
+import { PRESETS, sauvegardePreset } from '../../data/presets';
 import { vueAtelier } from '../../data/acte2/vueAtelier';
 import { nouvellesLettres } from '../../data/courrier';
 import { BALANCE2 } from '../../constants/balanceActe2';
@@ -165,22 +165,22 @@ test('identifiants de notes : ceux de l’acte II sont reconnus', () => {
 test('préréglages de vérification : sauvegardes valides, à l’acte voulu', () => {
   const t = 1_000_000_000;
   for (const p of PRESETS) {
-    const s = sauvegardeActe2(p, t);
+    const s = sauvegardePreset(p, t);
     assert.equal(estSauvegardeValide(s), true, p);
-    assert.equal(s.acte, p === 'finActeI' || p === 'cerfa2' ? 1 : 2, p);
+    assert.equal(s.acte, ['acte1Debut', 'acte1Milieu', 'finActeI', 'cerfa2'].includes(p) ? 1 : 2, p);
   }
-  const boucle = sauvegardeActe2('boucle', t);
+  const boucle = sauvegardePreset('boucle', t);
   assert.deepEqual(procsEnBoucle(x(boucle).procedures, ['identite', 'domicile']), ['identite', 'domicile']);
-  assert.equal(V.vueDirection(sauvegardeActe2('fin', t), t)?.demat, 100);
-  assert.notEqual(vueAtelier(sauvegardeActe2('atelier', t), t), null);
-  assert.equal(sauvegardeActe2('finActeI', t).acteTermine, true);
+  assert.equal(V.vueDirection(sauvegardePreset('fin', t), t)?.demat, 100);
+  assert.notEqual(vueAtelier(sauvegardePreset('atelier', t), t), null);
+  assert.equal(sauvegardePreset('finActeI', t).acteTermine, true);
   assert.deepEqual(
-    nouvellesLettres(sauvegardeActe2('debut', t), t).map((l) => l.id),
+    nouvellesLettres(sauvegardePreset('debut', t), t).map((l) => l.id),
     ['a2-prise'],
     'debut preset should only have a2-prise',
   );
   assert.deepEqual(
-    nouvellesLettres(sauvegardeActe2('fin', t), t).map((l) => l.id),
+    nouvellesLettres(sauvegardePreset('fin', t), t).map((l) => l.id),
     ['a2-rapport'],
     'fin preset should only have a2-rapport',
   );
