@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Colors, { Charte } from '@/constants/Colors';
 import ScenePixelDirection from '@/components/scene/ScenePixelDirection';
+import { useGameState } from '@/context/GameStateContext';
 import { usePreferences } from '@/context/PreferencesContext';
 
 /**
@@ -17,6 +18,7 @@ import { usePreferences } from '@/context/PreferencesContext';
 export default function SceneDirection() {
   const secousse = useSharedValue(0);
   const { reduireMouvement } = usePreferences();
+  const { direction } = useGameState();
 
   const surImpact = useCallback(() => {
     if (reduireMouvement) return;
@@ -36,7 +38,7 @@ export default function SceneDirection() {
 
   return (
     <Animated.View style={[styles.cadre, style]}>
-      <ScenePixelDirection onImpact={surImpact} />
+      <ScenePixelDirection nomService={direction?.nomService ?? 'La Direction'} onImpact={surImpact} />
     </Animated.View>
   );
 }

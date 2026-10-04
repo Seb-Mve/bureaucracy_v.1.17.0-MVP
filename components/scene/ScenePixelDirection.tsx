@@ -15,6 +15,8 @@ import { useMoteurDirection } from '@/components/scene/pixel/useMoteurDirection'
 import type { Toile } from '@/components/scene/pixel/toile';
 
 interface Props {
+  /** Nom du service du chef, pour l’accessibilité. */
+  nomService: string;
   onImpact?: () => void;
 }
 
@@ -24,7 +26,7 @@ const NET = { filter: FilterMode.Nearest, mipmap: MipmapMode.None };
 const RESERVE = 3;
 
 /** Scène de la Direction en pixel art (téléphone : rendu Skia). */
-export default function ScenePixelDirection({ onImpact }: Props) {
+export default function ScenePixelDirection({ nomService, onImpact }: Props) {
   const image = useSharedValue<SkImage | null>(null);
   const anciennes = useRef<SkImage[]>([]);
 
@@ -56,7 +58,7 @@ export default function ScenePixelDirection({ onImpact }: Props) {
       style={StyleSheet.absoluteFill}
       onLayout={surLayout}
       accessible
-      accessibilityLabel="La Direction : le chef de service vise les parapheurs ; derrière la vitre, la salle d’attente"
+      accessibilityLabel={`${nomService} : le chef de service vise les parapheurs ; derrière la vitre, la salle d’attente`}
     >
       <Canvas style={StyleSheet.absoluteFill}>
         <Image
