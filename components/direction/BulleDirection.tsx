@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Paperclip, Stamp } from 'lucide-react-native';
+import { Landmark, Paperclip, Stamp } from 'lucide-react-native';
 import { useGameState } from '@/context/GameStateContext';
 import Colors, {
   Charte,
@@ -16,8 +16,10 @@ const numeroParapheur = (n: number): string =>
   n < 1000 ? n.toString().padStart(3, '0') : formatEntier(n);
 
 /**
- * Bulle de l'écran Direction, au-dessus de la scène : le parapheur que le prochain coup vise, et sa procédure
- * en fiches reliées par des trombones (les visas en attente s'allument : fond d'encre et tampon).
+ * Bulle de l'écran Direction, au-dessus de la scène : le parapheur que le prochain coup vise, et le tableau de
+ * circulation de sa procédure, en fiches reliées par des trombones. Chaque fiche porte qui la traite (guichet ou
+ * tampon) et les dossiers qui y attendent ; les visas en attente s'allument (fond d'encre) ; la plus encombrée a
+ * un bord épais (jamais la seule couleur).
  */
 export default function BulleDirection({
   compact = false,
@@ -40,8 +42,13 @@ export default function BulleDirection({
       : 'Visa du chef de service';
   }
   const chaine = etapes
-    .map((e) =>
-      e.allumee ? `${e.nom}, ${formatEntier(e.attente)} en attente` : e.nom,
+    .map(
+      (e) =>
+        `${e.nom}, ${formatEntier(e.attente)} en attente, ${
+          e.traitePar === 'visa'
+            ? 'visée par vous et vos agents'
+            : 'traitée par les guichets'
+        }${e.encombree ? ', la plus encombrée' : ''}`,
     )
     .join(' ; ');
 
@@ -68,10 +75,15 @@ export default function BulleDirection({
                 <View
                   style={[
                     styles.fiche,
+                    e.encombree && styles.ficheEncombree,
                     e.allumee && { backgroundColor: encre.face },
                   ]}
                 >
-                  {e.allumee && <Stamp size={12} color={Colors.anthracite} />}
+                  {e.traitePar === 'visa' ? (
+                    <Stamp size={12} color={Colors.anthracite} />
+                  ) : (
+                    <Landmark size={12} color={Colors.anthracite} />
+                  )}
                   <Text
                     style={[
                       styles.ficheTexte,
@@ -80,6 +92,15 @@ export default function BulleDirection({
                     numberOfLines={1}
                   >
                     {e.nom}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.ficheNombre,
+                      e.encombree && styles.ficheNombreEncombre,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {formatEntier(e.attente)}
                   </Text>
                 </View>
               </React.Fragment>
@@ -138,7 +159,7 @@ const styles = StyleSheet.create({
   fiche: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: Espace.xs,
     borderWidth: 1.5,
     borderColor: Colors.anthracite,
     borderRadius: Charte.rayonMini,
@@ -153,6 +174,19 @@ const styles = StyleSheet.create({
   },
   ficheAllumee: {
     fontFamily: Fonts.texteGras,
+  },
+  /** La fiche la plus encombrée : bord épais, en plus du chiffre. */
+  ficheEncombree: {
+    borderWidth: Charte.trait,
+  },
+  ficheNombre: {
+    fontFamily: Fonts.chiffresRegular,
+    fontSize: Typo.micro,
+    lineHeight: Interligne.micro,
+    color: Colors.anthracite,
+  },
+  ficheNombreEncombre: {
+    fontFamily: Fonts.chiffres,
   },
   pointe: {
     position: 'absolute',
