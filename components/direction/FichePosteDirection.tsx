@@ -90,7 +90,7 @@ export default function FichePosteDirection() {
                       key={l.id}
                       style={styles.mission}
                       accessible
-                      accessibilityLabel={`${i + 1}. ${l.titre}. ${l.texte}${l.nouvelle && !fiche2.premiere ? ' Nouveau.' : ''}`}
+                      accessibilityLabel={`${i + 1}. ${/[.…!?]$/.test(l.titre) ? l.titre : `${l.titre}.`} ${l.texte}${l.nouvelle && !fiche2.premiere ? ' Nouveau.' : ''}`}
                     >
                       <View
                         style={[styles.pastille, { backgroundColor: fond }]}

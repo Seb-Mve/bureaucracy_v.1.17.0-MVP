@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     minWidth: 44,
     paddingHorizontal: Espace.m,
-    borderWidth: Charte.traitFin,
+    borderWidth: Charte.trait,
     borderStyle: 'dashed',
     borderColor: Colors.crayon,
     borderRadius: Charte.rayonPetit,
@@ -87,7 +87,6 @@ const styles = StyleSheet.create({
   /** En service : trait plein et épais, comme un tampon apposé. */
   interrupteurActif: {
     borderStyle: 'solid',
-    borderWidth: Charte.trait,
     borderColor: Colors.anthracite,
   },
   etat: {
