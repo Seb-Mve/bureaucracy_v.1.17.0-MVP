@@ -42,6 +42,11 @@ export const BALANCE2 = {
   etapesMax: 8,
   /** Points de dématérialisation correspondant à 100 %. */
   demaCible: 140_000,
+  /**
+   * Points de Conformité par point d'effet d'étape (et par rejet). À l'acte II, la Conformité ne sert
+   * qu'à la Réforme : ce facteur fait peser l'acte II plus lourd que l'acte I dans les trombones.
+   */
+  conformiteParPoint: 120,
   /** Délai du filet de sécurité après la note « Pièce délivrée par nos services » (min). */
   filetMinutes: 15,
 } as const;

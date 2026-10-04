@@ -387,7 +387,7 @@ test('un tap accorde un visa : dotation, tampon, Conformité', () => {
   assert.equal(r.ev.visas, 1);
   proche(x(r.s).usagers.identite[0], 4);
   proche(r.s.budget - s0.budget, 1);
-  proche(x(r.s).conformitePoints, 2);
+  proche(x(r.s).conformitePoints, 2 * BALANCE2.conformiteParPoint);
   proche(r.s.tampons, s0.tampons + 1);
 });
 

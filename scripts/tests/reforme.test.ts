@@ -49,3 +49,46 @@ test('sauvegardes antérieures à la Réforme : reformes complétées, âge des 
     false,
   );
 });
+
+test('sclérose : le rendement de la dématérialisation baisse avec l’âge des services', () => {
+  const s = D.entrerActe2(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0);
+  proche(D.rendementDemat(s, x(s)), 1);
+  proche(D.rendementDemat(s, { ...x(s), duree: REFORME.scleroseS }), 0.5);
+  const obtenus = { ...s, reformes: { ...s.reformes, trombonesObtenus: 10 } };
+  proche(
+    D.rendementDemat(obtenus, x(s)),
+    1 + 10 * REFORME.jurisprudenceConstante,
+  );
+  proche(x(D.tick2(s, 2.5, 2500).s).duree, 2.5);
+});
+
+test('un usager qui entre dans une boucle n’y laisse qu’un seul dossier, même rejeté', () => {
+  let s = avecNotes2(
+    D.entrerActe2(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0),
+    ['atelier', 'pieceService'],
+  );
+  // Population entière garée dans la procédure fermée : aucune demande, aucune installation.
+  s = avec2(s, {
+    guichets: 100,
+    tauxRejet: 0.5,
+    population: BALANCE2.populationMax,
+    procedures: {
+      ...x(s).procedures,
+      identite: [
+        { type: 'piece' },
+        { type: 'pieceService', exige: 'domicile' },
+      ],
+      domicile: [{ type: 'pieceService', exige: 'identite' }],
+    },
+    usagers: {
+      ...x(s).usagers,
+      identite: [0, 10],
+      domicile: [0],
+      vie: [BALANCE2.populationMax],
+    },
+    boucles: { ...x(s).boucles, identite: [0, 0], domicile: [0] },
+  });
+  for (let i = 1; i <= 6000; i++) s = D.tick2(s, 0.1, i * 100).s;
+  proche(D.dossiersEnBoucle(x(s)), 10 * (1 - BALANCE2.abandonParPoint));
+  proche(x(s).stats.abandonsDemarche, 10 * (1 - BALANCE2.abandonParPoint));
+});

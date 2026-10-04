@@ -23,6 +23,7 @@ import {
   ETAPES,
   EXEMPLAIRES,
   PROCEDURES_INITIALES,
+  REFORME,
 } from '../../constants/balanceActe2';
 import { multiplicateurAnciennete, partRejetee, rangGrade } from '../engine';
 import { NOTES2, NOTES2_PAR_ID, dematPct } from './notes2';
@@ -238,6 +239,18 @@ export function vitesseVisas(x: EtatActe2): number {
   return v;
 }
 
+/**
+ * Points de dématérialisation par étape franchie en boucle. Le mur : la sclérose des services, qui
+ * vieillissent depuis l'entrée dans l'acte (la Réforme les rajeunit). La jurisprudence constante :
+ * chaque trombone obtenu, dépensé ou non, accélère la dématérialisation des parties suivantes.
+ */
+export function rendementDemat(s: GameState, x: EtatActe2): number {
+  return (
+    (1 + REFORME.jurisprudenceConstante * s.reformes.trombonesObtenus) /
+    (1 + x.duree / REFORME.scleroseS)
+  );
+}
+
 /** Dossiers d'une étape qui la franchissent : `u` d'usagers, `b` en boucle. */
 interface Lot {
   p: ProcId;
@@ -334,7 +347,8 @@ function franchir(
         abandonsDemarche += u;
         boucles[e.exige][0] += b + u;
         if (b + u > 0 && premiereBoucle === null) premiereBoucle = maintenant;
-        b = u;
+        // Le dossier part dans la procédure exigée : il ne poursuit pas la sienne (un seul dossier par usager).
+        b = 0;
         u = 0;
       } else {
         usagers[e.exige][0] += u;
@@ -370,8 +384,8 @@ function franchir(
     boucles: nettoyer(boucles),
     population: Math.max(0, population),
     abandons,
-    conformitePoints: x0.conformitePoints + conf,
-    demaPoints: x0.demaPoints + franchiesBoucle,
+    conformitePoints: x0.conformitePoints + conf * BALANCE2.conformiteParPoint,
+    demaPoints: x0.demaPoints + franchiesBoucle * rendementDemat(s, x0),
     premiereBoucle,
     stats: {
       ...x0.stats,
@@ -419,7 +433,8 @@ export function tick2(
       BALANCE2.installationRate *
       dt;
 
-  const x: EtatActe2 = { ...x0, usagers, population };
+  // Les services vieillissent pendant le jeu comme pendant une absence (simulée, plafonnée).
+  const x: EtatActe2 = { ...x0, usagers, population, duree: x0.duree + dt };
   const s: GameState = {
     ...s0,
     acte2: x,
