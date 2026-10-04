@@ -82,7 +82,7 @@ export default function ReglementInterieur() {
         accessibilityLabel="Règlement intérieur"
       >
         <Text style={styles.reference}>
-          {direction ? 'La Direction' : 'Guichet 3'} · {affiches.length} articles en vigueur
+          {direction ? direction.nomService : 'Guichet 3'} · {affiches.length} articles en vigueur
         </Text>
         {ouvert ? <ChevronDown size={18} color={Colors.anthracite} /> : <ChevronRight size={18} color={Colors.anthracite} />}
       </Pressable>

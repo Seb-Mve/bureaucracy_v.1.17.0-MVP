@@ -71,7 +71,8 @@ const CarteNote = memo(function CarteNote({
       <Text style={styles.texte}>{note.texte}</Text>
       <Text style={styles.effet}>
         Effet : {note.effet}
-        {note.instruction > 0 && !signee ? ` Délai d’instruction : ${duree(note.instruction)}.` : ''}
+        {note.instruction > 0 && !signee ? ` Délai d’instruction : ${duree(Math.ceil(note.instruction))}.` : ''}
+        {note.dejaInstruite && !signee ? ' Dossier déjà instruit, procédure simplifiée.' : ''}
       </Text>
       <View style={styles.pied}>{action}</View>
     </Panneau>

@@ -69,6 +69,13 @@ export function articlesDirection(
         'Chaque étape exige un, deux ou trois exemplaires : plus de dotation, plus de formulaires, moins de patience.',
     });
   }
+  if (d.reformeVisible) {
+    articles.push({
+      titre: 'La Réforme',
+      texte:
+        'Une réforme réorganise l’ensemble des services sans en modifier le fonctionnement. Elle reprend au guichet 3 ; les tampons apposés, les trombones et la Jurisprudence sont conservés.',
+    });
+  }
   if (d.demat !== null) {
     articles.push({
       titre: 'Dématérialisation',

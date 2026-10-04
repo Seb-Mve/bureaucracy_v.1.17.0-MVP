@@ -16,8 +16,9 @@ const CASES = [
 export default function CerfaEcran() {
   // « BUREAUCRACY++ » tient sur une ligne : une marche de moins sur les écrans étroits.
   const etroit = useWindowDimensions().width < 360;
-  const { signerCerfa } = useGameState();
-  const [prenom, setPrenom] = useState('');
+  // Après une Réforme, le Cerfa est redemandé sous un nouveau numéro ; le prénom est déjà connu.
+  const { signerCerfa, cerfaNumero, etat } = useGameState();
+  const [prenom, setPrenom] = useState(etat.cerfa.prenom);
   const [cases, setCases] = useState([false, false]);
   const [bienvenue, setBienvenue] = useState(false);
 
@@ -37,7 +38,7 @@ export default function CerfaEcran() {
             BUREAUCRACY++
           </Text>
           <Panneau contenuStyle={styles.formulaire} rayon={Charte.rayonPetit}>
-            <Text style={styles.cerfa}>Cerfa n° 00001*01</Text>
+            <Text style={styles.cerfa}>Cerfa n° {cerfaNumero}</Text>
             <Text style={styles.titre}>Demande d’emploi d’agent administratif</Text>
             <Text style={styles.consigne}>À remplir en lettres capitales, à l’encre noire ou assimilée.</Text>
 

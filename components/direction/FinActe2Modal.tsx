@@ -18,6 +18,8 @@ export default function FinActe2Modal() {
   const visible =
     direction !== null && direction.acteTermine && !direction.finActeVue;
   useFermetureEchap(visible, marquerFinActeVue);
+  // Le nom du service change à chaque Réforme.
+  const nom = direction?.nomService ?? 'La Direction';
 
   return (
     <Modal
@@ -37,13 +39,9 @@ export default function FinActe2Modal() {
           style={styles.colonne}
         >
           <Panneau contenuStyle={styles.carte} rayon={Charte.rayon}>
-            <Text style={styles.sur}>
-              La Direction — rattachée au ministère
-            </Text>
+            <Text style={styles.sur}>{nom} — rattachement au ministère</Text>
             <Text style={styles.citation}>
-              {
-                '« La Direction devient une unité du ministère. Vous êtes nommé·e ministre. »'
-              }
+              {`«\u00a0${nom} devient une unité du ministère. Vous êtes nommé·e ministre.\u00a0»`}
             </Text>
             <Text style={styles.bilan}>
               {formatEntier(etat.tampons)} tampons apposés ·{' '}
@@ -51,7 +49,7 @@ export default function FinActe2Modal() {
             </Text>
             <Text style={styles.fin}>FIN DE L’ACTE II</Text>
             <Text style={styles.suite}>
-              La Direction reste ouverte : vos tampons continuent de compter.
+              Le service reste ouvert : vos tampons continuent de compter.
             </Text>
             <BoutonPoussoir
               libelle="RETOURNER À LA DIRECTION"
