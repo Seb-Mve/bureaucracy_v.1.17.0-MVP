@@ -21,7 +21,7 @@ import {
   getModifiers2,
   guichetsOfferts,
   notesVisibles2,
-  usagersEnCours,
+  usagersAvecDemarche,
   visasEnAttente,
   vitesseGuichets,
   vitesseVisas,
@@ -88,6 +88,7 @@ export interface VueDirection {
   /** Nom du service du chef (« La Direction », puis un autre à chaque Réforme). */
   nomService: string;
   visas: number;
+  /** Usagers qui ont une démarche en cours (colonne Usagers de l'en-tête, salle de la scène). */
   usagers: number;
   guichets: number;
   /** Taux de dématérialisation (%), null tant que sa note n'est pas en vigueur. */
@@ -163,7 +164,7 @@ export function vueDirection(
       tete = { p, ...v };
   }
   const p: ProcId = tete?.p ?? 'identite';
-  const usagers = Math.floor(usagersEnCours(x));
+  const usagers = Math.floor(usagersAvecDemarche(x));
   return {
     nomService: s.reformes.denomination.direction,
     visas: Math.floor(visasEnAttente(x)),

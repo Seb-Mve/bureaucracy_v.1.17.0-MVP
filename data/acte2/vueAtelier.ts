@@ -136,8 +136,8 @@ export function bilanProcedure(
   });
   return [
     euros > 0
-      ? { texte: `+${formatEuros(euros)} €`, sens: 'plus' }
-      : { texte: '0 €', sens: 'neutre' },
+      ? { texte: `+${formatEuros(euros)}\u00a0€`, sens: 'plus' }
+      : { texte: '0\u00a0€', sens: 'neutre' },
     patience > 0
       ? { texte: `−${unDecimal(patience)} patience`, sens: 'moins' }
       : { texte: '0 patience', sens: 'neutre' },

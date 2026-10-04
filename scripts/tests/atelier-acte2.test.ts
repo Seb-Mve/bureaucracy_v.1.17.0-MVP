@@ -163,7 +163,7 @@ test('Atelier : dossiers en cours, abandons et bilan d’un dossier sur la proc�
   const euros = 4 * BALANCE2.dotation;
   assert.deepEqual(
     p.bilan.map((e) => e.texte),
-    [`+${euros.toFixed(2).replace('.', ',')} €`, '−4 patience', '22 s de délai'],
+    [`+${euros.toFixed(2).replace('.', ',')}\u00a0€`, '−4 patience', '22 s de délai'],
   );
   assert.deepEqual(p.bilan.map((e) => e.sens), ['plus', 'moins', 'neutre']);
   // ×2 : dotation ×1,6, patience ×1,5.
@@ -177,6 +177,6 @@ test('Atelier : dossiers en cours, abandons et bilan d’un dossier sur la proc�
   });
   assert.deepEqual(
     (A.vueAtelier(r, 0) as A.VueAtelier).procedures[1].bilan.map((e) => e.texte),
-    ['0 €', '−2 patience', '15 s de délai'],
+    ['0\u00a0€', '−2 patience', '15 s de délai'],
   );
 });

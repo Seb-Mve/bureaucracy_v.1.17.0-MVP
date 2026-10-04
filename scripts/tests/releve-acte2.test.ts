@@ -50,7 +50,7 @@ test('relevé « Production du service » : demandes, délivrés, valeur d’une
   // Pièce + Visa au grade de départ, ×1.
   assert.deepEqual(carte.valeur, [
     {
-      texte: `+${formatEuros(2 * BALANCE2.dotation)} € la carte`,
+      texte: `+${formatEuros(2 * BALANCE2.dotation)}\u00a0€ la carte`,
       sens: 'plus',
     },
     { texte: '1 abandon', sens: 'moins' },

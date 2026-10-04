@@ -94,8 +94,9 @@ function debitAffiche(valeur: number, unite: string, uniteLue: string) {
 
 /**
  * Tableau des ressources, à plat sous l'en-tête. Acte I : budget, formulaires, dossiers en attente et, une fois
- * révélée, Conformité. Acte II : budget, formulaires (chacun avec son débit signé), visas et, après sa note,
- * Taux de dématérialisation.
+ * révélée, Conformité. Acte II : budget, formulaires (chacun avec son débit signé), usagers qui ont une démarche
+ * en cours et, après sa note, Taux de dématérialisation (le nombre de visas en attente est sur la fiche Visa de
+ * la bulle).
  */
 export default function Hud() {
   const { etat, mods, conformite, verdict, enAttente, prixRamette, rupture, direction, encre, debits } =
@@ -138,8 +139,8 @@ export default function Hud() {
         />
         {direction ? (
           <Colonne
-            label="Visas"
-            valeur={formatEntier(direction.visas)}
+            label="Usagers"
+            valeur={formatEntier(direction.usagers)}
             compact={compact}
             etroit={etroit}
             declencheur={verdict?.id}

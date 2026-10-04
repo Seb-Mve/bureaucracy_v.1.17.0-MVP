@@ -227,3 +227,12 @@ test('Service : interrupteur du Service des achats après sa note', () => {
   });
   assert.equal((V.vueDirection(a, 0) as V.VueDirection).achatsVisible, true);
 });
+
+test('en-tête : les usagers qui ont une démarche en cours, pas les dossiers liés ni ceux du service', () => {
+  const b = avecNotes(base2(), ['atelier']);
+  const s = avec2(b, {
+    usagers: { ...x(b).usagers, identite: [3, 2], domicile: [7] },
+    boucles: { ...x(b).boucles, identite: [10, 0] },
+  });
+  assert.equal(vue(s).usagers, 5);
+});

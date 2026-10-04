@@ -157,7 +157,7 @@ export function lignesProduction(
       valeur: demandee
         ? [
             {
-              texte: `+${formatEuros(valeurDocument(x, p, m))} € ${doc.article}`,
+              texte: `+${formatEuros(valeurDocument(x, p, m))}\u00a0€ ${doc.article}`,
               sens: 'plus',
             },
             { texte: compte(abandons, 'abandon', 'abandons'), sens: 'moins' },
