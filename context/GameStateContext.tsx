@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import type { AgentId, GameState, Lettre, Modifiers, NoteId } from '@/types/game';
 import type { ActionAtelier, Agent2Id, Exemplaires, Note2Id } from '@/types/acte2';
+import type { JurisprudenceId } from '@/types/reforme';
 import { AGENTS, BALANCE, GRADES, type AgentDef, type GradeDef } from '@/constants/balance';
 import * as E from '@/data/engine';
 import { NOTES_PAR_ID } from '@/data/notes';
@@ -15,6 +16,7 @@ import * as D from '@/data/acte2/moteur';
 import * as V from '@/data/acte2/vues';
 import * as A from '@/data/acte2/vueAtelier';
 import { lettreAbsence2 } from '@/data/acte2/courrier2';
+import * as R from '@/data/reforme';
 import { Encres, type Encre } from '@/constants/Colors';
 
 export type { UsagerAffiche };
@@ -22,6 +24,8 @@ export type { ActionAtelier, Agent2Id, EtapeType, Exemplaires, ProcId } from '@/
 export type { EtapeChaine, ParapheurAffiche, UniteAffichee, VueDirection, VueService2 } from '@/data/acte2/vues';
 export type { ChoixEtape, EffetAffiche, EtapeAtelier, ProcAtelier, VueAtelier } from '@/data/acte2/vueAtelier';
 export type { Encre };
+export type { JurisprudenceId } from '@/types/reforme';
+export type { JurisprudenceAffichee, VueReforme } from '@/data/reforme';
 
 const INTERVALLE = 100;
 /** Au-delà de cet écart entre deux ticks, on considère une absence (onglet en veille). */
@@ -49,6 +53,8 @@ export interface NoteAffichee {
   /** Secondes restantes d'instruction. */
   resteSec: number;
   nouvelle: boolean;
+  /** Déjà-vu administratif : note achetée lors d'une partie précédente (délai et coût réduits). */
+  dejaInstruite: boolean;
 }
 
 export interface AgentAffiche extends AgentDef {
@@ -115,6 +121,10 @@ interface GameContextType {
   service2: V.VueService2 | null;
   /** Atelier des procédures ; null tant qu'il est fermé (et à l'acte I). */
   atelier: A.VueAtelier | null;
+  /** Trombones, Réforme possible et Jurisprudence (dossier administratif). */
+  reforme: R.VueReforme;
+  /** Numéro du Cerfa d'embauche de la partie (00001*01, puis *02… après chaque Réforme). */
+  cerfaNumero: string;
   /** Une ramette gratuite quand la rupture bloquerait le guichet faute de budget. */
   demanderRequisition: () => void;
   /** Un coup de tampon : un dossier à l'acte I, un visa à l'acte II. */
@@ -133,6 +143,10 @@ interface GameContextType {
   modifierProcedure: (action: ActionAtelier) => void;
   /** Fin de l'acte I : prise de fonctions à la Direction. */
   entrerDirection: () => void;
+  /** La Réforme : retour au Cerfa puis au début de l'acte I (sans effet si elle n'est pas possible). */
+  reformer: () => void;
+  /** Achète un bonus de Jurisprudence avec les trombones (définitif). */
+  acheterJurisprudence: (id: JurisprudenceId) => void;
   marquerNotesVues: () => void;
   signerCerfa: (prenom: string) => void;
   deposerDemission: () => void;
@@ -452,6 +466,27 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     appliquer(D.entrerActe2({ ...s, finActeVue: true }, Date.now()));
   }, [appliquer, vibrerSi]);
 
+  const reformer = useCallback(() => {
+    const s = R.reformer(etatRef.current, Date.now());
+    if (s === etatRef.current) return;
+    satureRef.current = false;
+    setVerdict(null);
+    setAbandonsFile(0);
+    abandonsEnCours.current = 0;
+    vibrerSi('succes');
+    appliquer(s);
+  }, [appliquer, vibrerSi]);
+
+  const acheterJurisprudence = useCallback(
+    (id: JurisprudenceId) => {
+      const s = R.acheterJurisprudence(etatRef.current, id);
+      if (s === etatRef.current) return;
+      vibrerSi('moyen');
+      appliquer(s);
+    },
+    [appliquer, vibrerSi],
+  );
+
   const marquerFichePoste = useCallback(
     (vue: boolean) => appliquer({ ...etatRef.current, fichePosteVue: vue }),
     [appliquer],
@@ -474,15 +509,24 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         ? V.notesAffichees2(etat, maintenant)
         : E.notesVisibles(etat).map((id) => {
             const def = NOTES_PAR_ID[id];
+            const { cout, instruction } = E.conditionsNoteActe1(etat, id);
             const st = etat.notes[id];
-            let statut: StatutNote = etat.budget >= def.cout ? 'disponible' : 'tropCher';
+            let statut: StatutNote = etat.budget >= cout ? 'disponible' : 'tropCher';
             let resteSec = 0;
             if (st) {
               resteSec = Math.max(0, Math.ceil((st.effective - maintenant) / 1000));
               statut = resteSec > 0 ? 'instruction' : 'effective';
             }
             const { visible: _v, appliquer: _a, ...rest } = def;
-            return { ...rest, statut, resteSec, nouvelle: !etat.notesVues.includes(id) };
+            return {
+              ...rest,
+              cout,
+              instruction,
+              statut,
+              resteSec,
+              nouvelle: !etat.notesVues.includes(id),
+              dejaInstruite: etat.reformes.notesInstruites.includes(id),
+            };
           }),
     [etat, maintenant],
   );
@@ -534,7 +578,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
         : { taux: Math.min(etat.tauxRejet, mods.rejetMax), max: mods.rejetMax, visible: mods.rejetVisible },
     [direction, etat.tauxRejet, mods],
   );
-  const prixRamette = etat.acte === 2 ? BALANCE.prixRamette : E.prixRamette(mods);
+  const prixRamette = etat.acte === 2 ? D.prixRamette2(etat) : E.prixRamette(mods);
+  const reforme = useMemo(() => R.vueReforme(etat, maintenant), [etat, maintenant]);
   const rupture = direction ? direction.rupture : etat.formulaires < mods.pieces;
 
   const rang = E.rangGrade(etat.tampons);
@@ -571,6 +616,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       direction,
       service2,
       atelier,
+      reforme,
+      cerfaNumero: R.numeroCerfa(etat),
       demanderRequisition,
       tamponner,
       acheterAgent,
@@ -582,6 +629,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       reglerExemplaires,
       modifierProcedure,
       entrerDirection,
+      reformer,
+      acheterJurisprudence,
       marquerNotesVues,
       signerCerfa,
       deposerDemission,
@@ -595,7 +644,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       acheterAgent, acheterRamettes, reglerTauxRejet, acheterNote, marquerNotesVues, signerCerfa,
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste,
       nouvellePartie, rupture, rejet, prixRamette, direction, service2, atelier, acheterGuichet, acheterAgent2,
-      reglerExemplaires, modifierProcedure, entrerDirection,
+      reglerExemplaires, modifierProcedure, entrerDirection, reforme, reformer, acheterJurisprudence,
     ],
   );
 
