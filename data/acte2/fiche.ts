@@ -1,7 +1,7 @@
 /**
  * Fiche de poste du chef de service (acte II) : même format que celle du guichet 3. Elle s'ouvre à la prise
- * de fonctions, se relit depuis Options, et le S.I.C. la complète d'une ligne à chaque mécanique débloquée.
- * Aucune ligne ne nomme la boucle ni la dématérialisation.
+ * de fonctions, se relit depuis Options ; trois lignes d'orientation, puis les agents et le service des achats
+ * à leur note (specs/011 : aucune ligne n'explique un arbitrage). Rien ne nomme la boucle ni la dématérialisation.
  */
 import type { GameState } from '../../types/game';
 import type { EtatActe2, LigneFiche2Id, Note2Id } from '../../types/acte2';
@@ -26,21 +26,15 @@ const LIGNES: LigneDef[] = [
   {
     id: 'guichets',
     note: null,
-    titre: 'Les guichets traitent les pièces',
-    texte: 'Vous visez les parapheurs : chaque tap accorde un visa en attente.',
+    titre: 'Vous visez les parapheurs',
+    texte:
+      'Chaque tap accorde un visa en attente. Les guichets traitent le reste.',
   },
   {
     id: 'dotation',
     note: null,
-    titre: 'Chaque étape franchie rapporte une dotation',
-    texte:
-      'Et consomme des formulaires. Sans formulaires, plus aucune étape ne se franchit.',
-  },
-  {
-    id: 'evaluation',
-    note: null,
-    titre: 'Votre évaluation portera sur le volume traité',
-    texte: 'Le volume se compte en étapes franchies, quel que soit le dossier.',
+    titre: 'Chaque étape consomme des formulaires',
+    texte: 'Sans formulaires, plus aucune étape ne se franchit.',
   },
   {
     id: 'agents',
@@ -49,28 +43,10 @@ const LIGNES: LigneDef[] = [
     texte: 'Ils accordent les visas en attente, au rythme de leur ancienneté.',
   },
   {
-    id: 'atelier',
-    note: 'atelier',
-    titre: 'Vous complétez les procédures',
-    texte: 'Chaque étape ajoutée rapporte, mais use la patience des usagers.',
-  },
-  {
-    id: 'exemplaires',
-    note: 'exemplaires',
-    titre: 'Chaque exemplaire exigé multiplie la dotation…',
-    texte: '… et les formulaires.',
-  },
-  {
     id: 'achats',
     note: 'achats',
     titre: 'Les fournitures sont commandées par le service des achats',
     texte: 'Il prélève sur votre budget ce que le marché public exige.',
-  },
-  {
-    id: 'pieceService',
-    note: 'pieceService',
-    titre: 'Une procédure peut exiger une pièce délivrée par une autre',
-    texte: 'La pièce est délivrée par vos services, dans les formes.',
   },
 ];
 

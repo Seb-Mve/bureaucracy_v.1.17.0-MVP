@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
 import * as D from '../../data/acte2/moteur';
 import * as F from '../../data/acte2/fiche';
+import { normaliserSauvegarde } from '../../data/save';
 import type { GameState } from '../../types/game';
 import type { EtatActe2, Note2Id } from '../../types/acte2';
 
@@ -25,7 +26,7 @@ function avecNotes(s: GameState, ids: Note2Id[]): GameState {
   return avec2(s, { notes });
 }
 
-test('fiche de poste du chef de service : quatre lignes à la prise de fonctions, ouverte', () => {
+test('fiche de poste du chef de service : trois lignes à la prise de fonctions, ouverte', () => {
   const f = F.vueFiche2(base2(), 0) as F.VueFiche2;
   assert.equal(f.visible, true);
   assert.equal(f.premiere, true);
@@ -33,14 +34,22 @@ test('fiche de poste du chef de service : quatre lignes à la prise de fonctions
   assert.equal(f.nomService, 'La Direction');
   assert.deepEqual(
     f.lignes.map((l) => l.id),
-    ['circulation', 'guichets', 'dotation', 'evaluation'],
+    ['circulation', 'guichets', 'dotation'],
+  );
+  assert.deepEqual(
+    f.lignes.map((l) => l.titre),
+    [
+      'Les dossiers circulent d’étape en étape',
+      'Vous visez les parapheurs',
+      'Chaque étape consomme des formulaires',
+    ],
   );
   assert.equal(
     f.nonLues,
     0,
     'pas de pastille sur Options tant que la fiche est ouverte',
   );
-  assert.equal(f.lignes.filter((l) => l.nouvelle).length, 4);
+  assert.equal(f.lignes.filter((l) => l.nouvelle).length, 3);
   assert.equal(
     F.vueFiche2(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0),
     null,
@@ -74,30 +83,23 @@ test('fiche de poste : refermée, elle est lue ; une note en vigueur ajoute une 
     'pieceService',
   ]);
   const f = F.vueFiche2(s, 0) as F.VueFiche2;
+  // L'Atelier, les Exemplaires et la pièce de service n'ajoutent plus de ligne (specs/011).
   assert.deepEqual(
     f.lignes.map((l) => l.id),
-    [
-      'circulation',
-      'guichets',
-      'dotation',
-      'evaluation',
-      'agents',
-      'atelier',
-      'exemplaires',
-      'achats',
-      'pieceService',
-    ],
+    ['circulation', 'guichets', 'dotation', 'agents', 'achats'],
   );
-  assert.equal(f.nonLues, 5);
+  assert.equal(f.nonLues, 2);
   assert.deepEqual(
     f.lignes.filter((l) => l.nouvelle).map((l) => l.id),
-    ['agents', 'atelier', 'exemplaires', 'achats', 'pieceService'],
+    ['agents', 'achats'],
   );
   for (const l of f.lignes) {
     assert.ok(!/'/.test(l.titre + l.texte), `apostrophe droite : ${l.id}`);
     assert.ok(
-      !/boucle|dématérialis/i.test(l.titre + l.texte),
-      `la fiche nomme la boucle : ${l.id}`,
+      !/boucle|dématérialis|évaluation|atelier|exemplaire/i.test(
+        l.titre + l.texte,
+      ),
+      `la fiche explique un arbitrage ou nomme la boucle : ${l.id}`,
     );
   }
 });
@@ -110,4 +112,16 @@ test('fiche de poste : « Relire » la rouvre ; la refermer éteint la pastille'
   const relue = F.marquerFiche2(ouverte, true, 0);
   assert.equal(F.vueFiche2(relue, 0)?.visible, false);
   assert.equal(F.vueFiche2(relue, 0)?.nonLues, 0);
+});
+
+test('sauvegarde antérieure : les lignes retirées de la fiche sont oubliées', () => {
+  const s = F.marquerFiche2(base2(), true, 0);
+  const ancien = avec2(s, {
+    ficheLues: [
+      'circulation',
+      'evaluation',
+      'atelier',
+    ] as unknown as EtatActe2['ficheLues'],
+  });
+  assert.deepEqual(x(normaliserSauvegarde(ancien)).ficheLues, ['circulation']);
 });

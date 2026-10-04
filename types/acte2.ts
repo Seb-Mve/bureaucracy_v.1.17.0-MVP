@@ -41,17 +41,22 @@ export type Note2Id =
 
 export type Exemplaires = 1 | 2 | 3;
 
-/** Lignes de la fiche de poste du chef de service, dans l'ordre de la fiche. */
+/** Lignes de la fiche de poste du chef de service, dans l'ordre de la fiche (specs/011 : trois lignes d'orientation). */
 export type LigneFiche2Id =
   | 'circulation'
   | 'guichets'
   | 'dotation'
-  | 'evaluation'
   | 'agents'
-  | 'atelier'
-  | 'exemplaires'
-  | 'achats'
-  | 'pieceService';
+  | 'achats';
+
+/** Toutes les lignes de la fiche (une sauvegarde plus ancienne peut en citer d'autres, retirées depuis). */
+export const LIGNES_FICHE2: LigneFiche2Id[] = [
+  'circulation',
+  'guichets',
+  'dotation',
+  'agents',
+  'achats',
+];
 
 /** Dossiers par procédure et par rang d'étape (même longueur que la procédure). */
 export type Stocks = Record<ProcId, number[]>;

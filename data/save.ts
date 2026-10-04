@@ -4,7 +4,7 @@
  */
 import type { GameState } from '../types/game';
 import type { EtatActe2 } from '../types/acte2';
-import { PROCS } from '../types/acte2';
+import { LIGNES_FICHE2, PROCS } from '../types/acte2';
 import type { Reformes } from '../types/reforme';
 import { reformesInitiales } from './jurisprudence';
 import { abandonsProcNuls, parProcNul, stocksPour } from './acte2/moteur';
@@ -103,7 +103,10 @@ export function normaliserSauvegarde(s: GameState): GameState {
         duree: estNombre(x.duree) ? x.duree : Math.max(0, (avecActe.derniereMaj - x.debut) / 1000),
         memoireRestauree: x.memoireRestauree ?? false,
         ficheVue: x.ficheVue ?? true,
-        ficheLues: Array.isArray(x.ficheLues) ? x.ficheLues : [],
+        // Les lignes retirées de la fiche (specs/011) sont oubliées.
+        ficheLues: Array.isArray(x.ficheLues)
+          ? x.ficheLues.filter((id) => LIGNES_FICHE2.includes(id))
+          : [],
         achatsActifs: x.achatsActifs ?? true,
         suites: suitesValides(x) ? x.suites : stocksPour(x.procedures),
         stats: {

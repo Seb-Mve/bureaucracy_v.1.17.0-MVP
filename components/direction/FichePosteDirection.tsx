@@ -8,14 +8,11 @@ import {
   View,
 } from 'react-native';
 import {
-  ChartColumn,
-  Coins,
   Copy,
-  Landmark,
   Paperclip,
+  Stamp,
   Truck,
   UserRound,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react-native';
 import {
@@ -36,20 +33,16 @@ import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 /** Pictogramme et fond de chaque ligne de la fiche. */
 const ICONES: Record<LigneFiche2Id, { Icone: LucideIcon; fond: string }> = {
   circulation: { Icone: Paperclip, fond: Colors.pastelBleu },
-  guichets: { Icone: Landmark, fond: Colors.bleuFond },
-  dotation: { Icone: Coins, fond: Colors.pastelJaune },
-  evaluation: { Icone: ChartColumn, fond: Colors.pastelVert },
+  guichets: { Icone: Stamp, fond: Colors.bleuFond },
+  dotation: { Icone: Copy, fond: Colors.pastelJaune },
   agents: { Icone: UserRound, fond: Colors.pastelJaune },
-  atelier: { Icone: Wrench, fond: Colors.bleuFond },
-  exemplaires: { Icone: Copy, fond: Colors.pastelBleu },
   achats: { Icone: Truck, fond: Colors.pastelVert },
-  pieceService: { Icone: Landmark, fond: Colors.pastelBleu },
 };
 
 /**
  * Fiche de poste du chef de service (acte II), au format de celle du guichet 3 : elle s'ouvre à la prise de
- * fonctions, se relit depuis Options, et le S.I.C. la complète à chaque mécanique débloquée (une ligne ajoutée
- * porte « NOUVEAU » jusqu'à la relecture).
+ * fonctions, se relit depuis Options ; trois lignes d'orientation, puis les agents et le service des achats à
+ * leur note (une ligne ajoutée porte « NOUVEAU » jusqu'à la relecture).
  */
 export default function FichePosteDirection() {
   const { fiche2, marquerFichePoste, encre } = useGameState();
