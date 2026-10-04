@@ -505,9 +505,13 @@ export function tick2(
   if (!x0) return { s: s0, ev: evVide() };
   const m = getModifiers2(s0, maintenant);
 
-  // Impatience (specs/011) : une part des usagers qui attendent renonce et quitte la ville.
+  // La ville se peuple tant que le service délivre aux usagers ; sinon, elle se vide (specs/011).
+  const servie = aboutitPourUsagers(x0, m.procsOuvertes);
+
+  // Impatience (specs/011) : une fois que le service ne délivre plus aux usagers, une part de ceux qui attendent
+  // renonce et quitte la ville. Avant, seules les étapes (patience) et le rejet font abandonner.
   const usagers = copieStocks(x0.usagers);
-  const fImpatience = 1 - Math.exp(-BALANCE2.impatience * dt);
+  const fImpatience = servie ? 0 : 1 - Math.exp(-BALANCE2.impatience * dt);
   const abandonsProc = { ...x0.stats.abandonsProc };
   let impatients = 0;
   for (const p of PROCS) {
@@ -528,8 +532,6 @@ export function tick2(
   const demandees = PROCS_DEMANDEES.filter((p) => m.procsOuvertes.includes(p));
   for (const p of demandees) usagers[p][0] += nouvelles / demandees.length;
 
-  // La ville se peuple tant que le service délivre aux usagers ; sinon, elle se vide (specs/011).
-  const servie = aboutitPourUsagers(x0, m.procsOuvertes);
   const installes = servie
     ? Math.max(0, BALANCE2.populationMax - x0.population) *
       BALANCE2.installationRate *

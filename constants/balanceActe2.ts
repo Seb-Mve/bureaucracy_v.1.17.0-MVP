@@ -38,8 +38,9 @@ export const BALANCE2 = {
   /** Part des usagers rejetés qui abandonnent (un point de patience sur trois). */
   abandonRejet: 1 / 3,
   /**
-   * Impatience (specs/011) : part des dossiers d'usagers en cours dont l'usager renonce, chaque seconde d'attente
-   * (≈ 8 min de patience en moyenne). Il quitte la ville.
+   * Impatience (specs/011) : une fois qu'aucune procédure demandée n'aboutit plus pour les usagers, part des
+   * dossiers d'usagers en cours dont l'usager renonce, chaque seconde d'attente (≈ 8 min de patience en
+   * moyenne). Il quitte la ville. Avant, seuls les étapes (patience) et le rejet font abandonner.
    */
   impatience: 0.002,
   /**
@@ -55,7 +56,7 @@ export const BALANCE2 = {
   etapesMax: 8,
   /**
    * Points de dématérialisation correspondant à 100 %. Relevé de 55 000 avec specs/011 : les dossiers qui
-   * poursuivent leur procédure après leur pièce de service comptent aussi (fin de l'acte du robot vers 192 min).
+   * poursuivent leur procédure après leur pièce de service comptent aussi (fin de l'acte du robot vers 178 min à 2 taps/s).
    */
   demaCible: 68_000,
   /**

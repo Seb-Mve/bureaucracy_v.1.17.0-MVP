@@ -318,7 +318,7 @@ test('Droit acquis : la première étape de chaque procédure ne coûte aucune p
   );
   const sans = D.tick2(base, 1, 1000).s;
   const avec = D.tick2(avecJurisprudence(base, ['droitAcquis']), 1, 1000).s;
-  // La même impatience des deux côtés ; seule la Pièce (0,5 dossier franchi, 1 point) coûte de la patience sans.
+  // Aucune impatience (la carte est délivrée) ; seule la Pièce (0,5 dossier franchi, 1 point) coûte de la patience sans.
   proche(x(sans).abandons - x(avec).abandons, 0.5 * BALANCE2.abandonParPoint);
 });
 

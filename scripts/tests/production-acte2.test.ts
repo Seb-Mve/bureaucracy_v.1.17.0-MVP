@@ -268,21 +268,113 @@ test('un usager qui atteint la pièce de service en boucle est renvoyé chez lui
   );
 });
 
-test('impatience : chaque seconde d’attente, une part des usagers renonce et quitte la ville', () => {
+test('tant que la carte est délivrée aux usagers, personne ne s’impatiente en attendant', () => {
   let s = avecProcedures(base2(), { identite: [{ type: 'visa' }] });
   s = avec2(s, {
     population: 100,
     usagers: { ...x(s).usagers, identite: [100] },
   });
+  // Aucun agent : personne ne franchit le visa pendant cette seconde.
+  const r = D.tick2(s, 1, 1000).s;
+  proche(x(r).usagers.identite[0], 100);
+  assert.equal(x(r).abandons, 0);
+  assert.equal(x(r).stats.abandonsProc.identite, 0);
+  // La Carte d'identité aboutit : la ville continue de se peupler.
+  proche(
+    x(r).population,
+    100 + (BALANCE2.populationMax - 100) * BALANCE2.installationRate,
+  );
+});
+
+test('une fois la boucle formée, chaque seconde d’attente, une part des usagers renonce et quitte la ville', () => {
+  let s = avecProcedures(
+    avecNotes(base2(), ['atelier', 'pieceService']),
+    BOUCLE,
+  );
+  // Aucun guichet : rien ne franchit d'étape ; toute la population attend (aucune demande, aucun exode).
+  s = avec2(s, {
+    guichets: 0,
+    population: 100,
+    usagers: { ...x(s).usagers, identite: [100, 0, 0] },
+  });
+  assert.equal(aboutitPourUsagers(x(s), ['identite', 'domicile']), false);
   const r = D.tick2(s, 1, 1000).s;
   const partis = 100 * (1 - Math.exp(-BALANCE2.impatience));
   proche(x(r).usagers.identite[0], 100 - partis);
   proche(x(r).abandons, partis);
   proche(x(r).stats.abandonsProc.identite, partis);
-  // La Carte d'identité aboutit : la ville continue de se peupler.
+  proche(x(r).population, 100 - partis);
+});
+
+/**
+ * Dix minutes de prise de fonctions (préréglage `debut`) à deux taps par seconde, sans rejet, formulaires à
+ * volonté : la Carte d'identité est délivrée aux usagers tout du long. `equipe` : 20 guichets et 10 instructeurs,
+ * assez pour que les étapes ne fassent pas attendre (le débit suit alors la demande, non la capacité).
+ */
+function dixMinutesDebut(identite?: Etape[], equipe = false): EtatActe2 {
+  let s = sauvegardePreset('debut', 0);
+  s = { ...s, formulaires: 1e9 };
+  if (equipe)
+    s = avec2(s, {
+      guichets: 20,
+      agents: { ...x(s).agents, instructeur: 10 },
+    });
+  if (identite) {
+    s = avecProcedures(s, { identite });
+    s = avec2(s, {
+      usagers: {
+        ...x(s).usagers,
+        identite: identite.map((_, k) => (k === 0 ? BALANCE2.fileInitiale : 0)),
+      },
+    });
+  }
+  assert.equal(x(s).tauxRejet, 0);
+  for (let i = 1; i <= 6000; i++) {
+    s = D.tick2(s, 0.1, i * 100).s;
+    if (i % 5 === 0) s = D.tamponner2(s, i * 100, () => 0.5).s;
+  }
+  return x(s);
+}
+
+test('avant la boucle, les seuls abandons sont ceux que coûtent les étapes', () => {
+  const y = dixMinutesDebut();
+  assert.ok(y.premiereBoucle === null);
+  // Pièce et Visa coûtent chacune 1 point de patience en ×1 : chaque étape franchie par un usager en perd
+  // `abandonParPoint` ; avant la boucle, toutes les étapes franchies le sont par des usagers.
+  assert.ok(y.stats.franchies > 250, `${y.stats.franchies}`);
   proche(
-    x(r).population,
-    100 - partis + (BALANCE2.populationMax - 100) * BALANCE2.installationRate,
+    y.stats.abandonsProc.identite,
+    BALANCE2.abandonParPoint * y.stats.franchies,
+    1e-6,
+  );
+  proche(y.abandons, y.stats.abandonsProc.identite);
+  // Compliquer la carte fait abandonner davantage : chaque usager franchit quatre étapes au lieu de deux, et la
+  // Commission coûte deux points. À équipe égale, assez nombreuse pour que la capacité ne bride pas le débit.
+  const simple = dixMinutesDebut(undefined, true);
+  const complique = dixMinutesDebut(
+    [
+      { type: 'piece' },
+      { type: 'visa' },
+      { type: 'signature' },
+      { type: 'commission' },
+    ],
+    true,
+  );
+  proche(
+    simple.stats.abandonsProc.identite,
+    BALANCE2.abandonParPoint * simple.stats.franchies,
+    1e-6,
+  );
+  assert.ok(
+    complique.stats.abandonsProc.identite > simple.stats.abandonsProc.identite,
+    `${complique.stats.abandonsProc.identite} ≤ ${simple.stats.abandonsProc.identite}`,
+  );
+  // Par carte délivrée, l'écart est net : plus du double d'abandons.
+  const parCarte = (y: EtatActe2) =>
+    y.stats.abandonsProc.identite / y.stats.delivresUsagers.identite;
+  assert.ok(
+    parCarte(complique) > 2 * parCarte(simple),
+    `${parCarte(complique)} ≤ 2 × ${parCarte(simple)}`,
   );
 });
 
