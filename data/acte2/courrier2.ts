@@ -12,7 +12,7 @@ import { dematPct } from './notes2';
 const nom = (s: GameState): string => s.cerfa.prenom || 'Agent sans prénom';
 const minutes = (m: number) => m * 60 * 1000;
 
-/** Vrai si `n` délais de filet se sont écoulés depuis la note n° 7, sans aucune boucle. */
+/** Vrai si `n` délais de filet se sont écoulés depuis la note n° 8, sans aucune boucle. */
 function filet(x: EtatActe2 | null, maintenant: number, n: number): boolean {
   const note = x?.notes.pieceService;
   return (

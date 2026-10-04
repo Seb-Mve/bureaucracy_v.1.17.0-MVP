@@ -229,18 +229,19 @@ Textes définitifs à écrire à l'implémentation ; chaque note garde le format
 | 3 | Atelier des procédures | Ouvre l'onglet Atelier, la procédure Justificatif de domicile et l'étape Pièce justificative | 10 – 20 min |
 | 4 | Signature manuscrite | Étape Signature | Après n° 3 |
 | 5 | Exemplaires exigés | Curseur Exemplaires exigés | Après n° 3 |
-| 6 | Chef de bureau | Ouvre le Chef de bureau | 10 Instructeurs |
-| 7 | Pièce délivrée par nos services | Étape Pièce délivrée par nos services. Texte-indice : « Un justificatif délivré par nos services fait foi pour toute démarche, y compris celle qui l'a délivré. » | 25 – 35 min |
-| 8 | Délai de réflexion | Étape Délai de réflexion | Après n° 7 |
-| 9 | Troisième guichet thématique | Procédure Attestation d'hébergement | Après n° 7 |
-| 10 | Réforme de l'action publique | Débloque la Réforme | Premier dossier en boucle |
-| 11 | Plan de dématérialisation | Révèle le Taux de dématérialisation | Premier dossier en boucle + délai |
-| 12 | Rejet élargi | Taux de rejet max 80 % | Après n° 11 |
-| 13 | Commission ad hoc | Étape Commission | Après n° 11 |
-| 14 | Sous-directeur | Ouvre le Sous-directeur | 10 Chefs de bureau |
-| 15 | Quatrième guichet thématique | Procédure Certificat de vie | Après n° 13 |
-| 16 | Tableau de bord | Affiche les Abandons de démarche et le taux de satisfaction | 25 % de dématérialisation |
-| 17 | Promotion | Termine l'acte II | 100 % de dématérialisation |
+| 6 | Marché public de fournitures (specs/010) | Service des achats : ramettes commandées sur le budget quand le stock baisse (interrupteur dans Service) | Après n° 5 et 18 000 étapes franchies |
+| 7 | Chef de bureau | Ouvre le Chef de bureau | 10 Instructeurs |
+| 8 | Pièce délivrée par nos services | Étape Pièce délivrée par nos services. Texte-indice : « Un justificatif délivré par nos services fait foi pour toute démarche, y compris celle qui l'a délivré. » | 25 – 35 min |
+| 9 | Délai de réflexion | Étape Délai de réflexion | Après n° 8 |
+| 10 | Troisième guichet thématique | Procédure Attestation d'hébergement | Après n° 8 |
+| 11 | Réforme de l'action publique | Débloque la Réforme | Premier dossier en boucle |
+| 12 | Plan de dématérialisation | Révèle le Taux de dématérialisation | Premier dossier en boucle + délai |
+| 13 | Rejet élargi | Taux de rejet max 80 % | Après n° 12 |
+| 14 | Commission ad hoc | Étape Commission | Après n° 12 |
+| 15 | Sous-directeur | Ouvre le Sous-directeur | 10 Chefs de bureau |
+| 16 | Quatrième guichet thématique | Procédure Certificat de vie | Après n° 14 |
+| 17 | Tableau de bord | Affiche les Abandons de démarche et le taux de satisfaction | 25 % de dématérialisation |
+| 18 | Promotion | Termine l'acte II | 100 % de dématérialisation |
 
 ## Courrier du S.I.C. (acte II)
 
@@ -263,7 +264,7 @@ Fourchettes humaines, depuis le début de l'acte II, premier passage, une Réfor
 | Atelier débloqué | 10 – 20 min |
 | Étape « Pièce délivrée par nos services » | 25 – 35 min |
 | Premier dossier en boucle | 35 – 50 min |
-| Filet de sécurité (si pas de boucle) | 15 min après la note n° 7 |
+| Filet de sécurité (si pas de boucle) | 15 min après la note n° 8 |
 | Réforme débloquée | 40 – 55 min |
 | Première Réforme, replay de l'acte I compris | 60 – 90 min |
 | Fin de l'acte (100 %) | 105 – 135 min |
@@ -287,7 +288,7 @@ Avec une Réforme (2 taps/s, `balayage`) : rentable de 0 à 70 % de dématérial
 
 Le robot construit la boucle dès que l'étape est disponible. Avec 15 min de compréhension de la note n° 8 et une Réforme dès son déblocage (`node scripts/simulate-acte2.ts 2 300 0 15`) : Réforme débloquée à 41.4 min, acte I rejoué à 63.1 min, fin de l'acte à 130.7 min.
 
-Cible du robot pour 100 % sans Réforme : 150 – 200 min (mesuré : 190.2 à 196.0). L'ancienne cible du robot pour 50 % (60 – 85 min, plan 1) est remplacée par le mur approuvé au plan 3 (96.8 min à 2 taps/s). « Deux bonus à la première Réforme » se vérifie en trombones : la plus petite Réforme en rapporte 6 au moins, soit 3 + 3 (les deux bonus les moins chers), quoi que le robot choisisse d'acheter.
+Cible du robot pour 100 % sans Réforme : 150 – 200 min (mesuré : 190.2 à 196.0). L'ancienne cible du robot pour 50 % (60 – 85 min, plan 1) est remplacée par le mur approuvé au plan 3 (96.8 min à 2 taps/s ; les tirages étant aléatoires, une exécution s'écarte de quelques dixièmes de minute). « Deux bonus à la première Réforme » se vérifie en trombones : la plus petite Réforme en rapporte 6 au moins, soit 3 + 3 (les deux bonus les moins chers), quoi que le robot choisisse d'acheter.
 
 ## Interface
 

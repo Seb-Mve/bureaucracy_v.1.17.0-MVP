@@ -30,7 +30,7 @@ const { finActeIRobot, robotActe1, robotActe2, robotReforme } = await import('./
 const taps = Number(process.argv[2] ?? 2);
 const minutesMax = Number(process.argv[3] ?? 300);
 const mode = process.argv[4];
-/** Minutes qu'un humain met à comprendre la note n° 7 (première partie seulement). */
+/** Minutes qu'un humain met à comprendre la note n° 8 (première partie seulement). */
 const decouverte = Number(process.argv[5] ?? 0) * 60;
 
 const mn = (t: number) => `${(t / 60).toFixed(1)} min`;

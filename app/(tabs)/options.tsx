@@ -47,7 +47,7 @@ export default function OptionsScreen() {
         ...trombones,
         ['Visas accordés', formatEntier(direction.visasAccordes)],
         ['Usagers perdus (abandons)', formatEntier(direction.abandons)],
-        // Tableau de bord (note n° 16) : il mesure ce qui a été jugé mesurable.
+        // Tableau de bord (note n° 17) : il mesure ce qui a été jugé mesurable.
         ...(direction.tableau
           ? ([
               ['Abandons de démarche', formatEntier(direction.tableau.abandonsDemarche)],

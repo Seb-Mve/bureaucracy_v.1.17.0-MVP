@@ -34,7 +34,7 @@ const proche = (a: number, b: number, eps = 1e-6) =>
 /** Toujours le premier choix : tirages reproductibles. */
 const zero = () => 0;
 
-/** Acte II d'une partie de Camille, note n° 10 en vigueur : la Réforme est possible. */
+/** Acte II d'une partie de Camille, note n° 11 en vigueur : la Réforme est possible. */
 function avantReforme(): GameState {
   const fin = {
     ...E.signerCerfa(E.etatInitial(0), 'Camille', 1234),
@@ -164,7 +164,7 @@ test('la Réforme ramène au tout début de l’acte I ; survivent tampons, trom
   assert.deepEqual(s.reformes.procedures, x(s0).procedures);
 });
 
-test('la Réforme exige l’acte II et la note n° 10 en vigueur', () => {
+test('la Réforme exige l’acte II et la note n° 11 en vigueur', () => {
   const sansNote = avec2(avantReforme(), { notes: {} });
   assert.equal(R.reformer(sansNote, 0), sansNote);
   const acte1 = E.signerCerfa(E.etatInitial(0), 'Camille', 0);

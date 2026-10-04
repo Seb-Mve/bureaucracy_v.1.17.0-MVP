@@ -9,7 +9,7 @@ import Panneau from '@/components/charte/Panneau';
 import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 
 /**
- * Réforme (Options, acte II, après la note n° 10) : une carte qui ouvre le Formulaire R-01.
+ * Réforme (Options, acte II, après la note n° 11) : une carte qui ouvre le Formulaire R-01.
  * Tamponner le formulaire engage la Réforme : retour au Cerfa, puis au guichet 3.
  */
 export default function SectionReforme() {
