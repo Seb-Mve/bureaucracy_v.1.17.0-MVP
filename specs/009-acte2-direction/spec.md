@@ -224,14 +224,14 @@ Textes définitifs à écrire à l'implémentation ; chaque note garde le format
 
 | N° | Titre | Effet | Visible quand |
 |---|---|---|---|
-| 1 | Prise de fonctions | Ouvre le recrutement des Guichets | Début |
+| 1 | Réouverture du guichet 3 (specs/012) | Ouvre le recrutement des guichets | Plus rien à viser et une demande attend la vérification des pièces (dès l'entrée avec des guichets offerts) |
 | 2 | Agents d'instruction | Ouvre l'Instructeur | 5 Guichets |
-| 3 | Atelier des procédures | Ouvre l'onglet Atelier, la procédure Justificatif de domicile et l'étape Pièce justificative | 10 – 20 min |
+| 3 | Atelier des procédures | Ouvre l'onglet Atelier, la procédure Justificatif de domicile et l'étape Vérification des pièces | 10 – 20 min |
 | 4 | Signature manuscrite | Étape Signature | Après n° 3 |
 | 5 | Exemplaires exigés | Curseur Exemplaires exigés | Après n° 3 |
 | 6 | Marché public de fournitures (specs/010) | Service des achats : ramettes commandées sur le budget quand le stock baisse (interrupteur dans Service) | Après n° 5 et 18 000 étapes franchies |
 | 7 | Chef de bureau | Ouvre le Chef de bureau | 10 Instructeurs |
-| 8 | Pièce délivrée par nos services | Étape Pièce délivrée par nos services. Texte-indice : « Un justificatif délivré par nos services fait foi pour toute démarche, y compris celle qui l'a délivré. » | 25 – 35 min |
+| 8 | Justificatif délivré par nos services | Étape Justificatif exigé. Texte-indice : « Un justificatif délivré par nos services fait foi pour toute démarche, y compris celle qui l'a délivré. » | 25 – 35 min |
 | 9 | Délai de réflexion | Étape Délai de réflexion | Après n° 8 |
 | 10 | Troisième guichet thématique | Procédure Attestation d'hébergement | Après n° 8 |
 | 11 | Réforme de l'action publique | Débloque la Réforme | Premier dossier en boucle |
@@ -275,22 +275,25 @@ Sans Réforme, en minutes depuis l'entrée dans l'acte II :
 
 | Jalon | Robot 1 tap/s | Robot 2 taps/s | Robot 3 taps/s |
 |---|---|---|---|
-| Premier agent | 2.2 | 2.0 | 2.2 |
-| Atelier | 9.0 | 8.5 | 8.6 |
-| Marché public de fournitures (specs/010) | 17.2 | 16.0 | 15.2 |
-| Première boucle | 27.7 | 26.4 | 25.9 |
-| Dématérialisation 50 % | 85.8 | 83.2 | 82.2 |
-| Dématérialisation 100 % | 185.3 | 180.6 | 178.9 |
+| Premier guichet (specs/012) | 0.3 | 0.2 | 0.1 |
+| Premier agent | 3.0 | 2.8 | 2.8 |
+| Atelier | 9.6 | 9.2 | 8.9 |
+| Marché public de fournitures (specs/010) | 17.9 | 16.7 | 15.5 |
+| Première boucle | 28.6 | 27.3 | 25.6 |
+| Dématérialisation 50 % | 89.2 | 86.4 | 82.7 |
+| Dématérialisation 100 % | 193.5 | 188.7 | 182.0 |
+
+Depuis specs/012 (le début de l'acte) : aucun guichet à l'entrée, 20 demandes au Visa ; le robot vise les 20, approuve la note n° 1 dès qu'elle apparaît et achète son premier guichet aussitôt. Usagers en cours après la première boucle, à +0 / +2 / +4 / +6 / +10 min : 1 tap/s 609 / 520 / 406 / 298 / 143 (41,2 / 35,2 / 27,5 / 20,2 / 9,7 %) ; 2 taps/s 559 / 495 / 396 / 293 / 140 (48,1 / 42,6 / 34,1 / 25,2 / 12,1 %) ; 3 taps/s 534 / 481 / 389 / 289 / 139 (55,5 / 50,0 / 40,4 / 30,1 / 14,4 %). Critère de la spec 011 § 10 tenu (1 533 à 1 545 documents délivrés au service en 10 min, aucun aux usagers) ; en cumul, le service passe devant les usagers vers 53 – 55 min. `demaCible` inchangé.
 
 Depuis specs/011 (ce que le service délivre) : seule la Carte d'identité reçoit des demandes ; le dossier qui franchit une pièce de service poursuit sa procédure jusqu'à la délivrance ; une fois qu'aucune procédure demandée n'aboutit, les usagers qui attendent s'impatientent (0,2 %/s), la ville ne se repeuple plus et se vide progressivement (0,4 %/s des habitants sans démarche) ; avant, seuls les points de patience des étapes et le rejet font abandonner ; la cible de dématérialisation passe à 68 000 points. Usagers en cours après la première boucle (part de leur maximum), à +0 / +2 / +4 / +6 / +10 min : 1 tap/s 537 / 483 / 389 / 289 / 138 (38,8 / 34,9 / 28,1 / 20,9 / 10,0 %) ; 2 taps/s 486 / 459 / 379 / 283 / 135 (44,2 / 41,8 / 34,5 / 25,8 / 12,3 %) ; 3 taps/s 444 / 440 / 371 / 279 / 133 (53,7 / 53,2 / 44,8 / 33,7 / 16,1 %). Critère de la spec 011 § 10 tenu : 10 min après la première boucle, moins de 25 % du maximum et environ 1 550 documents délivrés au service contre aucun aux usagers ; en cumul, le service passe devant les usagers vers 53 – 54 min.
 
 Depuis specs/010 (lisibilité), la ramette d'acte II coûte 80 € et l'étape rapporte 1,60 € de base : les fournitures pèsent 35 % des recettes en ×1 (44 % en ×2, le choix du robot), et le robot laisse les fournitures au Service des achats dès sa note.
 
-Avec une Réforme (2 taps/s, `balayage`) : rentable de 0 à 80 % de dématérialisation (fin de l'acte entre 112.5 et 180.2 min contre 180.7) ; l'acte I est rejoué en 18 à 22 min ; la plus petite Réforme rapporte 6 trombones.
+Avec une Réforme (2 taps/s, `balayage`) : rentable de 0 à 80 % de dématérialisation (fin de l'acte entre 113.4 et 185.3 min contre 188.2) ; l'acte I est rejoué en 18 à 22 min ; la plus petite Réforme rapporte 6 trombones.
 
-Le robot construit la boucle dès que l'étape est disponible. Avec 15 min de compréhension de la note n° 8 et une Réforme dès son déblocage (`node scripts/simulate-acte2.ts 2 300 0 15`) : Réforme débloquée à 41.4 min, acte I rejoué à 63.2 min, fin de l'acte à 116.0 min.
+Le robot construit la boucle dès que l'étape est disponible. Avec 15 min de compréhension de la note n° 8 et une Réforme dès son déblocage (`node scripts/simulate-acte2.ts 2 300 0 15`) : Réforme débloquée à 42.1 min, acte I rejoué à 63.8 min, fin de l'acte à 119.6 min.
 
-Cible du robot pour 100 % sans Réforme : 150 – 200 min (mesuré : 178.9 à 185.3). L'ancienne cible du robot pour 50 % (60 – 85 min, plan 1) est remplacée par le mur approuvé au plan 3 (83.2 min à 2 taps/s ; les tirages étant aléatoires, une exécution s'écarte de quelques dixièmes de minute). « Deux bonus à la première Réforme » se vérifie en trombones : la plus petite Réforme en rapporte 6 au moins, soit 3 + 3 (les deux bonus les moins chers), quoi que le robot choisisse d'acheter.
+Cible du robot pour 100 % sans Réforme : 150 – 200 min (mesuré : 182.0 à 193.5). L'ancienne cible du robot pour 50 % (60 – 85 min, plan 1) est remplacée par le mur approuvé au plan 3 (86.4 min à 2 taps/s ; les tirages étant aléatoires, une exécution s'écarte de quelques dixièmes de minute). « Deux bonus à la première Réforme » se vérifie en trombones : la plus petite Réforme en rapporte 6 au moins, soit 3 + 3 (les deux bonus les moins chers), quoi que le robot choisisse d'acheter.
 
 ## Interface
 

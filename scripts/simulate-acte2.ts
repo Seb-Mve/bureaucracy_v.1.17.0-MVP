@@ -123,6 +123,7 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
     }
 
     for (const id of Object.keys(x.notes)) marquer(`note ${id}${tour()}`, t);
+    if (x.guichets > 0) marquer(`premier guichet${tour()}`, t);
     if (x.agents.instructeur > 0) marquer(`premier agent${tour()}`, t);
     if (x.agents.chefBureau > 0) marquer(`premier chef de bureau${tour()}`, t);
     if (D.getModifiers2(s, now).atelierVisible) marquer(`atelier${tour()}`, t);
