@@ -23,6 +23,8 @@ interface CarteUniteProps {
   fondIcone: string;
   /** Verbe des libellés d'accessibilité (« Recruter », « Acheter »). */
   verbe: string;
+  /** Acte II : unité tout juste débloquée, aucune encore achetée (pastille « NOUVEAU »). */
+  nouveau?: boolean;
   onAcheter: (nb: number) => void;
 }
 
@@ -39,6 +41,7 @@ const CarteUnite = memo(function CarteUnite({
   Icone,
   fondIcone,
   verbe,
+  nouveau = false,
   onAcheter,
 }: CarteUniteProps) {
   const { encre } = useGameState();
@@ -49,12 +52,19 @@ const CarteUnite = memo(function CarteUnite({
           <Icone size={18} color={Colors.anthracite} />
         </View>
         <View style={styles.infos}>
-          <Text style={styles.nom}>
-            {nom}{' '}
-            <Text style={[styles.possedes, { color: encre.texte }]}>
-              ×{possedes}
+          <View style={styles.ligneNom}>
+            <Text style={styles.nom}>
+              {nom}{' '}
+              <Text style={[styles.possedes, { color: encre.texte }]}>
+                ×{possedes}
+              </Text>
             </Text>
-          </Text>
+            {nouveau && (
+              <View style={[styles.nouveau, { backgroundColor: encre.face }]}>
+                <Text style={styles.nouveauTexte}>NOUVEAU</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.description}>{description}</Text>
         </View>
       </View>
@@ -134,5 +144,23 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.texte,
     fontSize: Typo.petit,
     color: Colors.crayon,
+  },
+  ligneNom: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Espace.s,
+  },
+  /** Même pastille que les notes nouvelles. */
+  nouveau: {
+    borderWidth: 1.5,
+    borderColor: Colors.anthracite,
+    borderRadius: Charte.rayonMini,
+    paddingHorizontal: Espace.s,
+  },
+  nouveauTexte: {
+    fontFamily: Fonts.texteGras,
+    fontSize: Typo.micro,
+    color: Colors.anthracite,
   },
 });

@@ -29,7 +29,8 @@ export default function ServiceDirection() {
         <Text style={styles.titre}>
           Guichets{' '}
           <Text style={styles.sousTitre}>
-            · {formatDebit(etapesParSeconde)} étapes/s au total
+            · {formatDebit(etapesParSeconde)}{' '}
+            {etapesParSeconde < 2 ? 'étape/s' : 'étapes/s'} au total
           </Text>
         </Text>
         <CarteUnite
@@ -37,6 +38,7 @@ export default function ServiceDirection() {
           Icone={Landmark}
           fondIcone={encre.fond}
           verbe="Acheter"
+          nouveau={guichet.possedes === 0}
           onAcheter={acheterGuichet}
         />
 
@@ -55,6 +57,7 @@ export default function ServiceDirection() {
             Icone={UserRound}
             fondIcone={Colors.pastelJaune}
             verbe="Recruter"
+            nouveau={a.possedes === 0}
             onAcheter={(nb) => acheterAgent2(a.id, nb)}
           />
         ))}

@@ -71,8 +71,8 @@ const Bloc = memo(function Bloc({
 });
 
 /**
- * Relevé « Production du service » (acte II) : ce que chaque procédure ouverte délivre. Sur l'écran Direction
- * (sous la bulle) et au pied de l'Atelier. Les documents remis à des usagers portent « → usagers » ; ceux
+ * Relevé « Production du service » (acte II) : ce que chaque procédure ouverte délivre, et au titre les habitants
+ * de la ville (« · 1 500 usagers en ville »). Sur l'écran Direction (sous la bulle) et au pied de l'Atelier. Les documents remis à des usagers portent « → usagers » ; ceux
  * délivrés pour les dossiers du service n'ont aucune destination. Sur l'écran Direction, en écran compact ou
  * dès trois procédures ouvertes, une ligne par procédure (la scène garde sa place) ; l'Atelier défile et
  * montre tout.
@@ -85,7 +85,7 @@ export default function ReleveProduction({
   /** Au pied de l'Atelier : sans retrait (l'écran a déjà ses marges), jamais condensé. */
   atelier?: boolean;
 }) {
-  const { production, verdict, encre } = useGameState();
+  const { production, direction, verdict, encre } = useGameState();
   if (!production || production.length === 0) return null;
   const condense = !atelier && (compact || production.length > 2);
   return (
@@ -94,7 +94,11 @@ export default function ReleveProduction({
         contenuStyle={[styles.carte, condense && styles.carteCompacte]}
         rayon={Charte.rayonPetit}
       >
-        {!condense && <Text style={styles.titre}>Production du service</Text>}
+        {/* Le titre porte les habitants de la ville (specs/012) : il reste, même condensé. */}
+        <Text style={styles.titre} numberOfLines={1}>
+          Production du service
+          {direction && <Text style={styles.ville}> · {direction.ville}</Text>}
+        </Text>
         {production.map((l, i) => (
           <Bloc
             key={l.id}
@@ -129,6 +133,10 @@ const styles = StyleSheet.create({
     fontSize: Typo.petit,
     lineHeight: Interligne.petit,
     color: Colors.crayon,
+  },
+  ville: {
+    fontFamily: Fonts.texte,
+    fontSize: Typo.micro,
   },
   bloc: {
     gap: 2,
