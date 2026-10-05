@@ -7,7 +7,7 @@ import { Effets } from '@/components/atelier/Elements';
 
 /**
  * En-tête d'une procédure de l'Atelier : ses demandes et ses documents délivrés (relevé « Production du
- * service »), puis le bilan d'un dossier qui la franchit en entier (symbole + mot, la couleur ne fait que
+ * service »), puis le bilan d'une demande qui la franchit en entier (symbole + mot, la couleur ne fait que
  * doubler l'information).
  */
 export default function BilanProcedure({
@@ -24,13 +24,13 @@ export default function BilanProcedure({
     <Panneau contenuStyle={styles.carte} rayon={Charte.rayonPetit}>
       <View
         accessible
-        accessibilityLabel={`${proc.nom} : ${compteurs}. Par dossier : ${proc.bilan
+        accessibilityLabel={`${proc.nom} : ${compteurs}. Par demande : ${proc.bilan
           .map((e) => e.texte)
           .join(', ')}.`}
       >
         <Text style={styles.compteurs}>{compteurs}</Text>
         <View style={styles.ligne}>
-          <Text style={styles.libelle}>Par dossier</Text>
+          <Text style={styles.libelle}>Par demande</Text>
           <Effets effets={proc.bilan} />
         </View>
       </View>

@@ -87,7 +87,7 @@ const FicheEtape = memo(function FicheEtape({
         <Pressable
           onPress={onExiger}
           accessibilityRole="button"
-          accessibilityLabel={`Pièce exigée : ${etape.exigeNom ?? 'aucune'}${etape.boucle ? '. Ces procédures s’exigent mutuellement' : ''}. Changer`}
+          accessibilityLabel={`Justificatif exigé : ${etape.exigeNom ?? 'aucun'}${etape.boucle ? '. Ces procédures s’exigent mutuellement' : ''}. Changer`}
           style={({ pressed }) => [
             styles.exige,
             { borderColor: encre.texte, backgroundColor: encre.fond },
@@ -99,7 +99,7 @@ const FicheEtape = memo(function FicheEtape({
             style={[styles.exigeTexte, { color: encre.texte }]}
             numberOfLines={1}
           >
-            exige : {etape.exigeNom ?? 'aucune pièce'}
+            exige : {etape.exigeNom ?? 'aucun justificatif'}
           </Text>
         </Pressable>
       )}

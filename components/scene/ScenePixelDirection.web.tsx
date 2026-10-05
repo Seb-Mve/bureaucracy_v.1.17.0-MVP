@@ -46,7 +46,7 @@ export default function ScenePixelDirection({ nomService, onImpact }: Props) {
       style={StyleSheet.absoluteFill}
       onLayout={surLayout}
       accessible
-      accessibilityLabel={`${nomService} : le chef de service vise les parapheurs ; derrière la vitre, la salle d’attente`}
+      accessibilityLabel={`${nomService} : le chef de service vise les demandes ; derrière la vitre, la salle d’attente`}
     >
       {React.createElement('canvas', {
         ref: canvas,

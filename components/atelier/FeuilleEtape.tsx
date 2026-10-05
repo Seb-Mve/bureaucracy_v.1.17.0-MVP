@@ -156,7 +156,7 @@ export default function FeuilleEtape({
         <SafeAreaView edges={['bottom']} style={styles.feuille}>
           <View style={styles.entete}>
             <Text style={styles.titre}>
-              {mode?.type === 'exiger' ? 'Pièce exigée' : 'Ajouter une étape'}
+              {mode?.type === 'exiger' ? 'Justificatif exigé' : 'Ajouter une étape'}
             </Text>
             <Pressable
               onPress={onFermer}
@@ -201,7 +201,7 @@ export default function FeuilleEtape({
             <BoutonPoussoir
               libelle={
                 mode?.type === 'exiger'
-                  ? 'EXIGER CETTE PIÈCE'
+                  ? 'EXIGER CE JUSTIFICATIF'
                   : 'AJOUTER L’ÉTAPE'
               }
               taille={Typo.titre}
