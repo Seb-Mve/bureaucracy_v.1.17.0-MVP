@@ -18,6 +18,7 @@ export type Preset =
   | 'acte1Milieu'
   | 'finActeI'
   | 'debut'
+  | 'visasEpuises'
   | 'atelier'
   | 'compliquer'
   | 'achats'
@@ -44,7 +45,16 @@ export const PRESETS_INFO: PresetInfo[] = [
     detail: '11 notes en vigueur, collègues et rejet, Conformité encore cachée',
   },
   { id: 'finActeI', titre: 'Acte I — fin', detail: 'Réaffectation approuvée, fenêtre de fin d’acte' },
-  { id: 'debut', titre: 'Acte II — prise de fonctions', detail: 'Entrée à la Direction' },
+  {
+    id: 'debut',
+    titre: 'Acte II — prise de fonctions',
+    detail: 'Entrée à la Direction, aucun guichet, 20 demandes à viser',
+  },
+  {
+    id: 'visasEpuises',
+    titre: 'Acte II — visas épuisés',
+    detail: 'À viser 0, demandes bloquées à la vérification des pièces, note n° 1 visible',
+  },
   { id: 'atelier', titre: 'Acte II — Atelier ouvert', detail: 'Atelier des procédures, 5 guichets' },
   {
     id: 'compliquer',
@@ -98,6 +108,7 @@ const NOTES_DEMAT: Note2Id[] = [
 ];
 const NOTES: Record<Exclude<Preset, 'acte1Debut' | 'acte1Milieu' | 'finActeI' | 'cerfa2'>, Note2Id[]> = {
   debut: [],
+  visasEpuises: [],
   atelier: NOTES_ATELIER,
   compliquer: [...NOTES_ATELIER, 'signature'],
   achats: NOTES_ACHATS,
@@ -256,6 +267,17 @@ function finActeI(t: number): GameState {
   return { ...s, lettresEnvoyees: nouvellesLettres(s, t).map((l) => l.id) };
 }
 
+/**
+ * Les 20 visas de l'arrivée accordés un par un, puis 5 s sans guichet : plus rien à viser, les nouvelles
+ * demandes attendent la vérification des pièces et la note « Réouverture du guichet 3 » est apparue.
+ */
+function epuiserVisas(s0: GameState, maintenant: number): GameState {
+  let s = s0;
+  for (let i = 0; i < BALANCE2.visasInitiaux; i++)
+    s = D.tamponner2(s, maintenant, () => 0.99).s;
+  return D.tick2(s, 5, maintenant).s;
+}
+
 /** Sauvegarde du préréglage, horodatée à `maintenant` (pas de rattrapage d'absence au chargement). */
 export function sauvegardePreset(preset: Preset, maintenant: number): GameState {
   if (preset === 'acte1Debut') return acte1Debut(maintenant);
@@ -385,6 +407,7 @@ export function sauvegardePreset(preset: Preset, maintenant: number): GameState 
   s = { ...s, acte2: x };
   // La fiche de poste du chef de service est réputée lue, sauf à la prise de fonctions.
   if (preset !== 'debut') s = marquerFiche2(s, true, maintenant);
+  if (preset === 'visasEpuises') s = epuiserVisas(s, maintenant);
   // Courrier déjà mérité : réputé envoyé, sauf à l'entrée (Prise de fonctions) et à la fin (Rapport annuel).
   if (preset === 'debut') {
     return {

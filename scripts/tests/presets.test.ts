@@ -16,6 +16,7 @@ const ACTE: Record<string, 1 | 2> = {
   acte1Milieu: 1,
   finActeI: 1,
   debut: 2,
+  visasEpuises: 2,
   atelier: 2,
   compliquer: 2,
   achats: 2,
@@ -34,6 +35,7 @@ test('raccourcis : ordre des préréglages, de l’acte I à la Réforme', () =>
     'acte1Milieu',
     'finActeI',
     'debut',
+    'visasEpuises',
     'atelier',
     'compliquer',
     'achats',
@@ -128,6 +130,26 @@ test('raccourci « compliquer rapporte » : Atelier ouvert, Signature permise, l
   assert.equal(justificatif.demandes, 0);
   assert.equal(justificatif.delivres, 0);
   assert.equal(F.vueFiche2(s, T)?.nonLues, 0);
+});
+
+test('raccourci « prise de fonctions » : aucun guichet, 20 demandes à viser, note n° 1 cachée', () => {
+  const s = sauvegardePreset('debut', T);
+  assert.equal(x2(s).guichets, 0);
+  assert.equal(D.visasEnAttente(x2(s)), 20);
+  assert.ok(!D.notesVisibles2(s).includes('prise'));
+});
+
+test('raccourci « visas épuisés » : À viser 0, demandes à la vérification des pièces, note n° 1 visible et nouvelle', () => {
+  const s = sauvegardePreset('visasEpuises', T);
+  assert.equal(x2(s).guichets, 0);
+  assert.ok(D.visasEnAttente(x2(s)) < 1);
+  assert.ok(x2(s).usagers.identite[0] >= 1);
+  assert.equal(x2(s).reouvertureVisible, true);
+  assert.ok(D.notesVisibles2(s).includes('prise'));
+  assert.deepEqual(x2(s).notesVues, []);
+  assert.ok(s.budget >= D.coutGuichet(0), 'de quoi payer le premier guichet');
+  assert.equal(F.vueFiche2(s, T)?.visible, false);
+  assert.deepEqual(nouvellesLettres(s, T), []);
 });
 
 test('raccourci « pièce de nos services » : il ne reste qu’à exiger un justificatif', () => {
