@@ -1,0 +1,484 @@
+<title>Début de l’Acte II</title>
+<style>
+  :root {
+    --creme: #F9F4E0;
+    --carton: #E8E0C5;
+    --papier: #FFFFFF;
+    --papier-chaud: #FFF8E8;
+    --papier-fiche: #FFFEF9;
+    --anthracite: #2D3436;
+    --crayon: #636E72;
+    --crayon-clair: #9AA3A6;
+    --bleu: #5D9CEC;
+    --bleu-flanc: #3A6FB5;
+    --bleu-texte: #2F6DB8;
+    --bleu-fond: #EAF2FE;
+    --pastel-bleu: #A0C4FF;
+    --pastel-vert: #C7ECB5;
+    --pastel-jaune: #FFEAA7;
+    --vert: #A3CB38;
+    --rouge: #D63031;
+    --rouge-fond: #FDE3DE;
+    --vert-encre: #4F7A12;
+    --voile: rgba(45, 52, 54, .55);
+    --f-titre: 'Fredoka', 'Nunito', system-ui, sans-serif;
+    --f-texte: 'Nunito', system-ui, sans-serif;
+    --f-chiffres: 'Roboto Mono', ui-monospace, monospace;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--carton); color: var(--anthracite); font-family: var(--f-texte); font-weight: 600; }
+  main { max-width: 1120px; margin: 0 auto; padding: 28px 16px 48px; }
+  header { margin-bottom: 22px; }
+  h1 { font-family: var(--f-titre); font-weight: 700; font-size: 30px; line-height: 36px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--crayon); font-size: 15px; }
+
+  /* Planche : un moment par rangée, texte à gauche, écrans à droite */
+  .planche { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 24px; }
+  .case { min-width: 0; background: var(--papier-chaud); border: 3px solid var(--anthracite); border-radius: 18px; box-shadow: 3px 3px 0 var(--anthracite); padding: 16px; display: grid; grid-template-columns: 220px 1fr; gap: 16px 24px; align-items: start; }
+  .texte-case { display: flex; flex-direction: column; gap: 8px; }
+  .tete { display: flex; align-items: center; gap: 10px; }
+  .num { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--anthracite); background: var(--bleu-fond); display: grid; place-items: center; font-family: var(--f-titre); font-weight: 700; font-size: 17px; }
+  h2 { font-family: var(--f-titre); font-weight: 600; font-size: 18px; line-height: 23px; margin: 0; }
+  .legende { margin: 0; font-size: 15px; line-height: 21px; color: var(--crayon); }
+  .ecrans { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; min-width: 0; }
+  @media (max-width: 860px) { .case { grid-template-columns: 1fr; } }
+  @media (max-width: 440px) { main { padding-top: 20px; } .case { padding: 12px; } h1 { font-size: 26px; line-height: 32px; } }
+
+  /* Cadre de téléphone */
+  .tel { position: relative; width: 375px; max-width: 100%; flex: none; border: 3px solid var(--anthracite); border-radius: 28px; overflow: hidden; background: var(--creme); box-shadow: 3px 3px 0 var(--anthracite); display: flex; flex-direction: column; }
+  .corps { padding: 12px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.s12 { width: 12px; height: 12px; }
+  svg.i.s14 { width: 14px; height: 14px; }
+  svg.i.s20 { width: 20px; height: 20px; }
+  svg.i.s24 { width: 24px; height: 24px; }
+
+  /* En-tête (components/EnTete.tsx, version compacte) */
+  .entete { display: flex; align-items: center; gap: 12px; padding: 8px 16px 4px; background: var(--creme); border-bottom: 3px solid var(--anthracite); }
+  .entete .cpt { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .entete .tampons { font-family: var(--f-chiffres); font-weight: 700; font-size: 24px; line-height: 30px; }
+  .entete .acte { font-weight: 800; font-size: 13px; color: var(--bleu-texte); }
+  .enveloppe { width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--anthracite); background: var(--papier); display: grid; place-items: center; box-shadow: 2px 2px 0 var(--anthracite); color: var(--anthracite); }
+
+  /* Tableau des ressources (components/Hud.tsx) */
+  .hud { display: flex; padding: 0 4px; border-bottom: 2px solid var(--anthracite); background: var(--creme); }
+  .col { flex: 1; min-width: 0; padding: 8px 4px; display: flex; flex-direction: column; gap: 4px; }
+  .col + .col { border-left: 1px solid var(--carton); }
+  .col.large { flex: 1.2; }
+  .col.long { flex: 1.15; }
+  .lab { font-weight: 800; font-size: 13px; line-height: 18px; color: var(--crayon); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v { font-family: var(--f-chiffres); font-weight: 700; font-size: 15px; line-height: 24px; white-space: nowrap; overflow: hidden; }
+  .deb { font-family: var(--f-chiffres); font-weight: 500; font-size: 11px; line-height: 15px; color: var(--crayon); white-space: nowrap; overflow: hidden; }
+  @media (max-width: 400px) { .hud { padding: 0; } .col { padding: 6px 4px; } .lab { font-size: 12px; } .v { font-size: 13px; line-height: 18px; } }
+
+  /* Bulle de la Direction (components/direction/BulleDirection.tsx) */
+  .bulle { margin: 0 4px; background: var(--papier); border: 2px solid var(--anthracite); border-radius: 12px; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .bulle .titre { font-weight: 800; font-size: 15px; line-height: 21px; }
+  .bulle .detail { font-weight: 800; font-size: 11px; line-height: 15px; color: var(--crayon); }
+  .chaine { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; color: var(--crayon); }
+  .fiche { display: inline-flex; align-items: center; gap: 4px; border: 1.5px solid var(--anthracite); border-radius: 6px; padding: 0 4px; background: var(--papier-chaud); color: var(--anthracite); font-size: 11px; line-height: 15px; white-space: nowrap; }
+  .fiche.allumee { background: var(--bleu); font-weight: 800; }
+  .fiche.encombree { border-width: 3px; }
+  .fiche.faite { background: var(--pastel-vert); }
+  .fiche.delivree { background: var(--pastel-vert); font-weight: 800; border-width: 2px; }
+  .fiche .n { font-family: var(--f-chiffres); font-weight: 500; }
+  .fiche.encombree .n { font-weight: 700; }
+
+  /* TAMPONNER (components/charte/BoutonPoussoir.tsx) */
+  .poussoir { margin: 0 4px; min-height: 56px; border: 2px solid var(--anthracite); border-bottom-width: 6px; border-bottom-color: var(--bleu-flanc); border-radius: 12px; background: var(--bleu); display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--f-titre); font-weight: 700; font-size: 18px; letter-spacing: .5px; color: var(--anthracite); box-shadow: 2px 2px 0 var(--anthracite); transition: transform .08s, border-bottom-width .08s; }
+  .poussoir.coupe { background: var(--carton); border-color: var(--crayon-clair); border-bottom-color: var(--crayon-clair); color: var(--crayon-clair); box-shadow: none; }
+  .avant .poussoir.coupe { background: var(--bleu); border-color: var(--anthracite); border-bottom-color: var(--bleu-flanc); color: var(--anthracite); box-shadow: 2px 2px 0 var(--anthracite); }
+  .appui .poussoir { transform: translateY(4px); border-bottom-width: 2px; margin-bottom: 4px; }
+
+  /* Bascule avant / après (le script pose .avant pendant la première moitié) */
+  .si-avant { display: none; }
+  .avant .si-avant { display: inline-flex; }
+  .avant .si-apres { display: none; }
+
+  /* Barre d'onglets (app/(tabs)/_layout.tsx) */
+  .barre { display: flex; background: var(--papier-chaud); border-top: 3px solid var(--anthracite); padding: 4px 0 6px; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--crayon); font-weight: 800; font-size: 11px; line-height: 15px; }
+  .tab.actif { color: var(--bleu-texte); }
+  .tab .pic { position: relative; display: grid; }
+  .badge { position: absolute; top: -8px; right: -12px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 12px; border: 1.5px solid var(--anthracite); background: var(--rouge); color: var(--papier); font-weight: 800; font-size: 11px; line-height: 17px; text-align: center; }
+
+  /* Panneaux, relevé « Production du service » */
+  .panneau { position: relative; border: 3px solid var(--anthracite); border-radius: 18px; background: var(--papier); box-shadow: 3px 3px 0 var(--anthracite); margin: 0 3px 3px 0; }
+  .panneau.petit { border-radius: 12px; background: var(--papier-chaud); padding: 8px 12px; }
+  .effets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .effet { border: 1.5px solid var(--anthracite); border-radius: 6px; padding: 0 4px; font-family: var(--f-chiffres); font-weight: 700; font-size: 11px; line-height: 17px; white-space: nowrap; }
+  .plus { background: var(--pastel-vert); } .moins { background: var(--rouge-fond); } .neutre { background: var(--papier); }
+  .releve { display: flex; flex-direction: column; gap: 6px; margin-left: 4px; margin-right: 7px; }
+  .rel-titre { margin: 0; font-family: var(--f-titre); font-weight: 600; font-size: 13px; color: var(--crayon); }
+  .rel-titre .ville { font-family: var(--f-texte); font-weight: 600; font-size: 12px; }
+  .rel-ligne { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; column-gap: 8px; }
+  .rel-nom { font-weight: 800; font-size: 13px; line-height: 18px; }
+  .rel-chiffres { font-size: 12px; line-height: 18px; color: var(--crayon); white-space: nowrap; }
+  .rel-chiffres b { font-family: var(--f-chiffres); font-weight: 700; font-size: 13px; color: var(--anthracite); }
+  .rel-dest { font-size: 11px; line-height: 15px; color: var(--bleu-texte); font-weight: 800; }
+  .rel-valeur { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 2px; }
+
+  /* Fiche de poste (components/direction/FichePosteDirection.tsx) */
+  .tel.modale .fond { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .tel.modale .voile { position: relative; flex: 1; background: var(--voile); padding: 28px 14px; display: flex; align-items: center; }
+  .fp { width: 100%; background: var(--papier-fiche); border: 3px solid var(--anthracite); border-radius: 12px; box-shadow: 3px 3px 0 var(--anthracite); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .fp .ref { font-family: var(--f-chiffres); font-weight: 500; font-size: 11px; color: var(--crayon); }
+  .fp .titre { font-family: var(--f-titre); font-weight: 700; font-size: 22px; line-height: 26px; margin: -6px 0 0; }
+  .fp .titulaire { font-weight: 800; font-size: 13px; color: var(--crayon); border-bottom: 2px solid var(--anthracite); padding-bottom: 8px; margin-top: -6px; }
+  .missions { display: flex; flex-direction: column; gap: 12px; margin: 4px 0 0; padding: 0; list-style: none; }
+  .mission { display: flex; gap: 12px; align-items: flex-start; }
+  .pastille { width: 36px; height: 36px; flex: none; border-radius: 18px; border: 2px solid var(--anthracite); display: grid; place-items: center; color: var(--anthracite); }
+  .m-titre { font-family: var(--f-titre); font-weight: 600; font-size: 15px; line-height: 20px; }
+  .m-texte { font-size: 13px; line-height: 18px; color: var(--crayon); }
+  .chute { margin: 4px 0; font-weight: 800; font-size: 13px; font-style: italic; }
+
+  /* Service (components/service/CarteUnite.tsx, BoutonAchat.tsx) */
+  .titre-ecran { font-family: var(--f-titre); font-weight: 600; font-size: 18px; margin: 4px 0 0; }
+  .titre-ecran small { font-family: var(--f-texte); font-weight: 600; font-size: 13px; color: var(--crayon); }
+  .unite { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .unite .ligne { display: flex; align-items: center; gap: 12px; }
+  .unite .nom { font-weight: 800; font-size: 15px; }
+  .unite .nb { font-family: var(--f-chiffres); font-weight: 700; font-size: 13px; color: var(--bleu-texte); }
+  .unite .desc { font-size: 13px; color: var(--crayon); }
+  .achats { display: flex; gap: 8px; }
+  .achat { flex: 1; min-width: 0; min-height: 44px; border-radius: 12px; border: 2px solid var(--anthracite); background: var(--vert); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; font-family: var(--f-chiffres); font-size: 13px; line-height: 17px; text-align: center; }
+  .achat b { font-weight: 700; }
+  .achat span { font-weight: 500; }
+  .achat.off { background: var(--carton); color: var(--crayon); }
+  .nouveau { border: 1.5px solid var(--anthracite); border-radius: 6px; background: var(--bleu); padding: 1px 8px; font-weight: 800; font-size: 11px; }
+
+  /* Notes (app/(tabs)/notes.tsx) */
+  .note { padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--papier); }
+  .note .ent { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--anthracite); padding-bottom: 4px; }
+  .note .numero { font-family: var(--f-chiffres); font-weight: 700; font-size: 11px; letter-spacing: .5px; color: var(--crayon); }
+  .note .t { font-family: var(--f-titre); font-weight: 600; font-size: 15px; margin: 0; }
+  .note .x { font-size: 13px; line-height: 18px; margin: 0; }
+  .note .eff { font-weight: 800; font-size: 13px; color: var(--crayon); margin: 0; }
+  .note .pied { display: flex; justify-content: flex-end; margin-top: 2px; }
+  .approuver { min-height: 44px; border-radius: 12px; border: 2px solid var(--anthracite); background: var(--bleu); padding: 0 16px; display: grid; place-items: center; font-family: var(--f-titre); font-weight: 700; font-size: 15px; }
+
+  @media (prefers-reduced-motion: reduce) { .poussoir { transition: none; } }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@600;800&family=Roboto+Mono:wght@500;700&display=swap">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></symbol>
+  <symbol id="i-userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></symbol>
+  <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M15 12h-5M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+  <symbol id="i-stamp" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z"/><path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-3-3c-1.66 0-3 1-3 3s1 2 1 3.5V13"/></symbol>
+  <symbol id="i-landmark" viewBox="0 0 24 24"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7"/><path d="M12 2 20 7H4z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M13 10h5M13 14h3"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+</svg>
+
+<main>
+  <header>
+    <h1>Début de l’Acte II</h1>
+    <p>Du premier visa au premier guichet.</p>
+  </header>
+
+  <ol class="planche">
+    <!-- 1 -->
+    <li class="case">
+      <div class="texte-case">
+        <div class="tete"><span class="num">1</span><h2>Votre fiche de poste</h2></div>
+        <p class="legende">Le chef de service prend son poste : viser, délivrer, encaisser.</p>
+      </div>
+      <div class="ecrans">
+        <div class="tel modale" role="img" aria-label="Fiche de poste du chef de service : les usagers demandent des Cartes d’identité ; vous tamponnez le dernier formulaire, le visa ; chaque carte délivrée rapporte une dotation. Bouton Prendre mon poste.">
+          <div class="fond" aria-hidden="true">
+            <div data-entete></div>
+            <div class="hud">
+              <div class="col large"><span class="lab">Budget</span><span class="v">0&nbsp;€</span></div>
+              <div class="col long"><span class="lab">Formulaires</span><span class="v">300</span></div>
+              <div class="col"><span class="lab">À viser</span><span class="v">20</span></div>
+            </div>
+            <div class="corps"></div>
+          </div>
+          <div class="voile">
+            <div class="fp">
+              <span class="ref">Fiche de poste n° 3-B</span>
+              <p class="titre">Chef de service</p>
+              <span class="titulaire">Agent : Camille</span>
+              <ol class="missions">
+                <li class="mission"><span class="pastille" style="background:var(--pastel-bleu)"><svg class="i"><use href="#i-clip"/></svg></span><div><div class="m-titre">1. Les usagers demandent des Cartes d’identité.</div><div class="m-texte">Chaque demande est une liasse de formulaires, un par étape.</div></div></li>
+                <li class="mission"><span class="pastille" style="background:var(--bleu-fond)"><svg class="i"><use href="#i-stamp"/></svg></span><div><div class="m-titre">2. Vous tamponnez le dernier : le visa.</div><div class="m-texte">La carte est délivrée à l’usager.</div></div></li>
+                <li class="mission"><span class="pastille" style="background:var(--pastel-jaune)"><svg class="i"><use href="#i-copy"/></svg></span><div><div class="m-titre">3. Chaque carte délivrée rapporte une dotation.</div><div class="m-texte">Plus elle exige de formulaires, plus elle rapporte.</div></div></li>
+              </ol>
+              <p class="chute">Le S.I.C. se réserve le droit de compléter la présente fiche.</p>
+              <span class="poussoir">PRENDRE MON POSTE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+
+    <!-- 2 -->
+    <li class="case">
+      <div class="texte-case">
+        <div class="tete"><span class="num">2</span><h2>Vous visez</h2></div>
+        <p class="legende">Un tap : un visa, un formulaire, une carte délivrée.</p>
+      </div>
+      <div class="ecrans">
+        <div class="tel" data-bascule role="img" aria-label="Écran Direction à l’arrivée : Mme Lefèvre demande une Carte d’identité ; un tap sur Tamponner : À viser 20 puis 19, Formulaires 300 puis 299, Budget 0 puis 1,60 € ; la carte est délivrée.">
+          <div data-entete></div>
+          <div class="hud">
+            <div class="col large"><span class="lab">Budget</span><span class="v" data-de="0" data-a="1.6" data-f="eur2" data-saut>1,60&nbsp;€</span></div>
+            <div class="col long"><span class="lab">Formulaires</span><span class="v" data-de="300" data-a="299" data-f="n" data-saut>299</span></div>
+            <div class="col"><span class="lab">À viser</span><span class="v" data-de="20" data-a="19" data-f="n" data-saut>19</span></div>
+          </div>
+          <div class="corps">
+            <div class="bulle">
+              <span class="titre">Mme Lefèvre demande une Carte d’identité</span>
+              <span class="detail"><span class="si-avant">Attend votre visa</span><span class="si-apres">Repart avec sa Carte d’identité</span></span>
+              <div class="chaine">
+                <span class="fiche faite"><svg class="i s12"><use href="#i-check"/></svg>Vérification des pièces</span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche allumee si-avant"><svg class="i s12"><use href="#i-stamp"/></svg>Visa ← ici</span>
+                <span class="fiche faite si-apres"><svg class="i s12"><use href="#i-check"/></svg>Visa</span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche si-avant"><svg class="i s12"><use href="#i-card"/></svg>Délivrée</span>
+                <span class="fiche delivree si-apres"><svg class="i s12"><use href="#i-card"/></svg>Délivrée</span>
+              </div>
+            </div>
+            <div class="panneau petit releve">
+              <p class="rel-titre">Production du service <span class="ville">· 70&nbsp;usagers en ville</span></p>
+              <div class="rel-ligne"><span class="rel-nom">Carte d’identité</span><span class="rel-chiffres"><b>20</b> demandes · <b data-de="0" data-a="1" data-f="n" data-saut>1</b> délivrée</span></div>
+              <div class="rel-dest">→ usagers</div>
+            </div>
+            <span class="poussoir">TAMPONNER</span>
+          </div>
+          <div data-barre="0"></div>
+        </div>
+      </div>
+    </li>
+
+    <!-- 3 -->
+    <li class="case">
+      <div class="texte-case">
+        <div class="tete"><span class="num">3</span><h2>Plus rien à viser</h2></div>
+        <p class="legende">Les demandes s’entassent ; personne ne vérifie les pièces.</p>
+      </div>
+      <div class="ecrans">
+        <div class="tel" data-bascule role="img" aria-label="Écran Direction : À viser 0, Budget 32 € ; M. Bernard attend la Vérification des pièces, 14 demandes y sont bloquées et personne ne s’en charge ; Tamponner est grisé ; 20 cartes délivrées ; une note attend dans l’onglet Notes.">
+          <div data-entete></div>
+          <div class="hud">
+            <div class="col large"><span class="lab">Budget</span><span class="v" data-de="27.2" data-a="32" data-f="eur2">32,00&nbsp;€</span></div>
+            <div class="col long"><span class="lab">Formulaires</span><span class="v" data-de="283" data-a="280" data-f="n">280</span></div>
+            <div class="col"><span class="lab">À viser</span><span class="v" data-de="3" data-a="0" data-f="n">0</span></div>
+          </div>
+          <div class="corps">
+            <div class="bulle">
+              <span class="titre">M. Bernard demande une Carte d’identité</span>
+              <span class="detail">Attend la vérification des pièces</span>
+              <div class="chaine">
+                <span class="fiche encombree">Vérification des pièces<span class="n" data-de="11" data-a="14" data-f="n">14</span></span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche"><svg class="i s12"><use href="#i-stamp"/></svg>Visa<span class="n" data-de="3" data-a="0" data-f="n">0</span></span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche"><svg class="i s12"><use href="#i-card"/></svg>Délivrée</span>
+              </div>
+            </div>
+            <div class="panneau petit releve">
+              <p class="rel-titre">Production du service <span class="ville">· 70&nbsp;usagers en ville</span></p>
+              <div class="rel-ligne"><span class="rel-nom">Carte d’identité</span><span class="rel-chiffres"><b data-de="17" data-a="20" data-f="n">20</b> délivrées</span></div>
+              <div class="rel-dest">→ usagers</div>
+            </div>
+            <span class="poussoir coupe">TAMPONNER</span>
+          </div>
+          <div data-barre="0" data-badge="2" data-badge-classe="si-apres"></div>
+        </div>
+      </div>
+    </li>
+
+    <!-- 4 -->
+    <li class="case">
+      <div class="texte-case">
+        <div class="tete"><span class="num">4</span><h2>Réouverture du guichet 3</h2></div>
+        <p class="legende">C’est pour ça : quelqu’un doit vérifier les pièces.</p>
+      </div>
+      <div class="ecrans">
+        <div class="tel" role="img" aria-label="Notes : note de service n° 001, Réouverture du guichet 3 ; effet : débloque le recrutement des guichets ; gratuit ; bouton Approuver.">
+          <div data-entete></div>
+          <div class="hud">
+            <div class="col large"><span class="lab">Budget</span><span class="v">32,00&nbsp;€</span></div>
+            <div class="col long"><span class="lab">Formulaires</span><span class="v">280</span></div>
+            <div class="col"><span class="lab">À viser</span><span class="v">0</span></div>
+          </div>
+          <div class="corps">
+            <div class="panneau note">
+              <div class="ent"><span class="numero">NOTE DE SERVICE N° 001</span><span class="nouveau">NOUVEAU</span></div>
+              <p class="t">Réouverture du guichet 3</p>
+              <p class="x">Les pièces justificatives seront désormais vérifiées au guichet. Le guichet 3 rouvre, sous votre autorité.</p>
+              <p class="eff">Effet : Débloque le recrutement des guichets.</p>
+              <div class="pied"><span class="approuver">APPROUVER · Gratuit</span></div>
+            </div>
+          </div>
+          <div data-barre="2" data-badge="2"></div>
+        </div>
+      </div>
+    </li>
+
+    <!-- 5 -->
+    <li class="case">
+      <div class="texte-case">
+        <div class="tete"><span class="num">5</span><h2>Le guichet tourne</h2></div>
+        <p class="legende">Les pièces sont vérifiées, les demandes reviennent sur votre bureau.</p>
+      </div>
+      <div class="ecrans">
+        <div class="tel" role="img" aria-label="Onglet Service : Guichets, 0 étape par seconde ; carte Guichet, aucun possédé ; acheter ×1 pour 30 €.">
+          <div data-entete></div>
+          <div class="hud">
+            <div class="col large"><span class="lab">Budget</span><span class="v">34,40&nbsp;€</span></div>
+            <div class="col long"><span class="lab">Formulaires</span><span class="v">280</span></div>
+            <div class="col"><span class="lab">À viser</span><span class="v">0</span></div>
+          </div>
+          <div class="corps">
+            <p class="titre-ecran">Guichets <small>· 0 étape/s au total</small></p>
+            <div class="panneau unite">
+              <div class="ligne">
+                <span class="pastille" style="background:var(--bleu-fond)"><svg class="i"><use href="#i-landmark"/></svg></span>
+                <div><div class="nom">Guichet <span class="nb">×0</span> <span class="nouveau">NOUVEAU</span></div><div class="desc">Vérifie les pièces justificatives.</div></div>
+              </div>
+              <div class="achats">
+                <span class="achat"><b>×1</b><span>30&nbsp;€</span></span>
+                <span class="achat off"><b>×10</b><span>609&nbsp;€</span></span>
+                <span class="achat"><b>Max</b><span>×1 30&nbsp;€</span></span>
+              </div>
+            </div>
+          </div>
+          <div data-barre="1"></div>
+        </div>
+        <div class="tel" role="img" aria-label="Écran Direction : le guichet vérifie les pièces ; Vérification des pièces passe de 14 à 3, À viser de 0 à 9.">
+          <div data-entete></div>
+          <div class="hud">
+            <div class="col large"><span class="lab">Budget</span><span class="v" data-de="4.4" data-a="19.2" data-f="eur2">19,20&nbsp;€</span></div>
+            <div class="col long"><span class="lab">Formulaires</span><span class="v" data-de="280" data-a="271" data-f="n">271</span></div>
+            <div class="col"><span class="lab">À viser</span><span class="v" data-de="0" data-a="9" data-f="n">9</span></div>
+          </div>
+          <div class="corps">
+            <div class="bulle">
+              <span class="titre">M. Diallo demande une Carte d’identité</span>
+              <span class="detail">Attend votre visa</span>
+              <div class="chaine">
+                <span class="fiche"><svg class="i s12"><use href="#i-landmark"/></svg>Vérification des pièces<span class="n" data-de="14" data-a="3" data-f="n">3</span></span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche allumee"><svg class="i s12"><use href="#i-stamp"/></svg>Visa ← ici<span class="n" data-de="0" data-a="9" data-f="n">9</span></span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche"><svg class="i s12"><use href="#i-card"/></svg>Délivrée</span>
+              </div>
+            </div>
+            <div class="panneau petit releve">
+              <p class="rel-titre">Production du service <span class="ville">· 70&nbsp;usagers en ville</span></p>
+              <div class="rel-ligne"><span class="rel-nom">Carte d’identité</span><span class="rel-chiffres"><b data-de="20" data-a="29" data-f="n">29</b> délivrées</span></div>
+              <div class="rel-dest">→ usagers</div>
+            </div>
+            <span class="poussoir">TAMPONNER</span>
+          </div>
+          <div data-barre="0"></div>
+        </div>
+      </div>
+    </li>
+
+    <!-- 6 -->
+    <li class="case">
+      <div class="texte-case">
+        <div class="tete"><span class="num">6</span><h2>Compliquer coûte du papier</h2></div>
+        <p class="legende">Plus de formulaires par carte, plus de dotation, des usagers partent.</p>
+      </div>
+      <div class="ecrans">
+        <div class="tel" role="img" aria-label="Écran Direction : quatre étapes, Vérification des pièces, Signature, Commission, Visa ; Carte d’identité, 412 délivrées, +9 € la carte, 4 formulaires la carte, 12 abandons.">
+          <div data-entete></div>
+          <div class="hud">
+            <div class="col large"><span class="lab">Budget</span><span class="v" data-de="3200" data-a="3640" data-f="eur">3&#8239;640&nbsp;€</span></div>
+            <div class="col long"><span class="lab">Formulaires</span><span class="v" data-de="560" data-a="500" data-f="n">500</span></div>
+            <div class="col"><span class="lab">À viser</span><span class="v" data-de="6" data-a="9" data-f="n">9</span></div>
+          </div>
+          <div class="corps">
+            <div class="bulle">
+              <span class="titre">Mme Petit demande une Carte d’identité</span>
+              <span class="detail">Attend votre visa</span>
+              <div class="chaine">
+                <span class="fiche"><svg class="i s12"><use href="#i-landmark"/></svg>Vérification des pièces<span class="n">5</span></span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche encombree"><svg class="i s12"><use href="#i-landmark"/></svg>Signature<span class="n">11</span></span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche"><svg class="i s12"><use href="#i-landmark"/></svg>Commission<span class="n">7</span></span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche allumee"><svg class="i s12"><use href="#i-stamp"/></svg>Visa ← ici<span class="n">9</span></span>
+                <svg class="i s12"><use href="#i-clip"/></svg>
+                <span class="fiche"><svg class="i s12"><use href="#i-card"/></svg>Délivrée</span>
+              </div>
+            </div>
+            <div class="panneau petit releve">
+              <p class="rel-titre">Production du service <span class="ville">· <span data-de="70" data-a="58" data-f="n">58</span>&nbsp;usagers en ville</span></p>
+              <div class="rel-ligne"><span class="rel-nom">Carte d’identité</span><span class="rel-chiffres"><b data-de="340" data-a="412" data-f="n">412</b> délivrées</span></div>
+              <div class="rel-valeur">
+                <span class="effet plus">+<span data-de="4" data-a="9" data-f="n">9</span>&nbsp;€ la carte</span>
+                <span class="effet neutre"><span data-de="2" data-a="4" data-f="n">4</span> formulaires la carte</span>
+                <span class="effet moins"><span data-de="0" data-a="12" data-f="ab">12 abandons</span></span>
+              </div>
+              <div class="rel-dest">→ usagers</div>
+            </div>
+            <span class="poussoir">TAMPONNER</span>
+          </div>
+          <div data-barre="0"></div>
+        </div>
+      </div>
+    </li>
+  </ol>
+</main>
+
+<script>
+(() => {
+  // En-tête compact et barre d'onglets, identiques sur chaque écran.
+  const ENTETE = '<div class="entete" aria-hidden="true"><div class="cpt"><span class="tampons">12 480</span><span class="acte">tampons apposés</span></div><span class="enveloppe"><svg class="i s20"><use href="#i-mail"/></svg></span></div>';
+  const ONGLETS = [['i-building', 'Direction'], ['i-userplus', 'Service'], ['i-scroll', 'Notes'], ['i-wrench', 'Atelier'], ['i-settings', 'Options']];
+  document.querySelectorAll('[data-entete]').forEach((el) => { el.outerHTML = ENTETE; });
+  document.querySelectorAll('[data-barre]').forEach((el) => {
+    const actif = +el.dataset.barre;
+    const badge = el.dataset.badge !== undefined ? +el.dataset.badge : -1;
+    const classe = el.dataset.badgeClasse || '';
+    el.outerHTML = '<div class="barre" aria-hidden="true">' + ONGLETS.map(([i, l], k) =>
+      `<span class="tab${k === actif ? ' actif' : ''}"><span class="pic"><svg class="i s24"><use href="#${i}"/></svg>${k === badge ? `<span class="badge ${classe}">1</span>` : ''}</span>${l}</span>`).join('') + '</div>';
+  });
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  // Format français : espace fine insécable pour les milliers, virgule décimale, espace insécable avant €.
+  const groupes = (s) => s.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const FMT = {
+    n: (v) => groupes(String(Math.round(v))),
+    eur: (v) => groupes(String(Math.round(v))) + ' €',
+    eur2: (v) => { const [e, c] = v.toFixed(2).split('.'); return groupes(e) + ',' + c + ' €'; },
+    ab: (v) => { const k = Math.round(v); return k + (k > 1 ? ' abandons' : ' abandon'); },
+  };
+  const nums = [...document.querySelectorAll('[data-de]')].map((el) => ({
+    el, de: +el.dataset.de, a: +el.dataset.a, f: FMT[el.dataset.f], saut: el.hasAttribute('data-saut'), dernier: '',
+  }));
+  const bascules = [...document.querySelectorAll('[data-bascule]')];
+
+  // Boucle de 7 s : départ tenu, montée douce, arrivée tenue ; un tap (saut) au milieu.
+  const P = 7000, T0 = 700, T1 = 5200;
+  const lisse = (t) => t * t * (3 - 2 * t);
+  function image(now) {
+    const t = now % P;
+    const k = t < T0 ? 0 : t > T1 ? 1 : lisse((t - T0) / (T1 - T0));
+    bascules.forEach((el) => { el.classList.toggle('avant', k < .5); el.classList.toggle('appui', Math.abs(k - .5) < .05); });
+    for (const n of nums) {
+      const v = n.saut ? (k < .5 ? n.de : n.a) : n.de + (n.a - n.de) * k;
+      const s = n.f(v);
+      if (s !== n.dernier) { n.dernier = s; n.el.textContent = s; }
+    }
+    requestAnimationFrame(image);
+  }
+  requestAnimationFrame(image);
+})();
+</script>
