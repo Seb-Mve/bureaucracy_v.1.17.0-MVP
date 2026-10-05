@@ -134,7 +134,7 @@ export interface LigneProduction {
   versUsagers: boolean;
 }
 
-/** Documents délivrés par une procédure, arrondis : 0,96 carte (4 % d'abandon au visa) compte pour une carte. */
+/** Documents délivrés par une procédure, arrondis : 0,96 carte (4 % d'abandon au visa d'un agent) compte pour une carte. */
 export function delivresEntiers(x: EtatActe2, p: ProcId): number {
   return Math.round(x.stats.delivresUsagers[p] + x.stats.delivresService[p]);
 }

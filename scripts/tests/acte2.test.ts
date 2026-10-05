@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as E from '../../data/engine';
 import * as D from '../../data/acte2/moteur';
 import { nouvellesLettres } from '../../data/courrier';
+import { sauvegardePreset } from '../../data/presets';
 import { lettreAbsence2 } from '../../data/acte2/courrier2';
 import { estSauvegardeValide, normaliserSauvegarde } from '../../data/save';
 import type { GameState } from '../../types/game';
@@ -363,6 +364,19 @@ test('sans guichet, rien ne bouge tant que le chef de service ne tamponne pas', 
   );
 });
 
+test('sans guichet, la ville ne grandit pas : personne ne s’installe avant le premier guichet', () => {
+  const t = 1_000_000_000;
+  const s0 = sauvegardePreset('debut', t);
+  let s = s0;
+  for (let i = 1; i <= 600; i++) s = D.tick2(s, 0.1, t + i * 100).s;
+  proche(x(s).population, x(s0).population);
+  // Les demandes s'entassent (specs/012), mais seulement celles des usagers déjà en ville.
+  assert.ok(
+    x(s).usagers.identite[0] <= x(s0).population - BALANCE2.visasInitiaux,
+    'la pile ne vient que des habitants de départ',
+  );
+});
+
 test('20 visas paient le premier guichet ; dépensés en ramettes, le guichet 3 rouvre d’office', () => {
   const coutGuichet = D.coutGuichet(0, 0);
   // Grade de départ, sans Jurisprudence, sans rejet : le minimum.
@@ -397,7 +411,7 @@ test('20 visas paient le premier guichet ; dépensés en ramettes, le guichet 3 
 
 test('un visa compte le document remis à son usager', () => {
   const r = D.tamponner2(base2(), 0, () => 0.99);
-  proche(r.ev.delivres, 1 - BALANCE2.abandonParPoint);
+  proche(r.ev.delivres, 1);
   const vide = D.tamponner2(
     avec2(base2(), { usagers: { ...x(base2()).usagers, identite: [0, 0] } }),
     0,
@@ -499,14 +513,11 @@ const jamais = () => 0.999;
 test('rejet d’un usager : il perd patience et peut abandonner', () => {
   const s0 = avec2(auVisa(base2(), 5, 0), { tauxRejet: 0.5 });
   const r = D.tamponner2(s0, 0, toujours);
-  // 4 % abandonnent au visa ; le reste est rejeté (tirage) ; un tiers des rejetés abandonne.
-  proche(x(r.s).abandons, 0.04 + 0.96 / 3);
-  proche(x(r.s).usagers.identite[0], 4 + 0.96 - 0.96 / 3);
-  proche(
-    r.s.budget - s0.budget,
-    BALANCE2.dotation * (1 + 0.96 * BALANCE2.primeRejet),
-  );
-  proche(x(D.tamponner2(s0, 0, jamais).s).abandons, 0.04);
+  // Le visa du joueur ne coûte aucune patience ; la demande est rejetée (tirage) ; un tiers des rejetés abandonne.
+  proche(x(r.s).abandons, 1 / 3);
+  proche(x(r.s).usagers.identite[0], 4 + 1 - 1 / 3);
+  proche(r.s.budget - s0.budget, BALANCE2.dotation * (1 + BALANCE2.primeRejet));
+  proche(x(D.tamponner2(s0, 0, jamais).s).abandons, 0);
 });
 
 test('rejet d’un dossier en boucle : aucun coût, il est redéposé', () => {

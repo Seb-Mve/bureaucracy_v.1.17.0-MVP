@@ -356,7 +356,7 @@ function nettoyer(st: Stocks): Stocks {
 /**
  * Fait franchir leur étape aux lots : dotation, Conformité, tampons, formulaires, patience,
  * dossiers liés, boucles, rejet en fin de procédure, dématérialisation.
- * `alea` fourni (coup du joueur) : rejet tiré au sort ; absent (automates) : taux moyen.
+ * `alea` fourni (coup du joueur) : rejet tiré au sort, aucune perte de patience ; absent (automates) : taux moyen.
  */
 function franchir(
   s: GameState,
@@ -415,10 +415,10 @@ function franchir(
     conf += (u0 + sans) * def.conf * ex.conf;
     if (e.type === 'visa') ev.visas += u0 + sans;
 
-    // Patience : une part des usagers abandonne à chaque étape.
-    // Droit acquis (Jurisprudence) : la première étape de chaque procédure ne coûte aucune patience.
+    // Patience : une part des usagers abandonne à chaque étape. Le visa du joueur (`alea` fourni) délivre une
+    // demande entière. Droit acquis (Jurisprudence) : la première étape de chaque procédure ne coûte aucune patience.
     const ab =
-      m.droitAcquis && l.k === 0
+      alea !== undefined || (m.droitAcquis && l.k === 0)
         ? 0
         : u0 *
           Math.min(1, def.patience * BALANCE2.abandonParPoint * ex.patience);
@@ -562,11 +562,13 @@ export function tick2(
   const demandees = PROCS_DEMANDEES.filter((p) => m.procsOuvertes.includes(p));
   for (const p of demandees) usagers[p][0] += nouvelles / demandees.length;
 
-  const installes = servie
-    ? Math.max(0, BALANCE2.populationMax - x0.population) *
-      BALANCE2.installationRate *
-      dt
-    : 0;
+  // Personne ne s'installe avant le premier guichet (specs/012) : la ville attend que le service ouvre.
+  const installes =
+    servie && x0.guichets > 0
+      ? Math.max(0, BALANCE2.populationMax - x0.population) *
+        BALANCE2.installationRate *
+        dt
+      : 0;
   const partis = servie
     ? 0
     : (inactifs - nouvelles) * (1 - Math.exp(-BALANCE2.exode * dt));

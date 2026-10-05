@@ -140,8 +140,8 @@ test('abandons par procédure : patience et rejet, comptés dans la procédure d
     usagers: { ...x(b).usagers, identite: [5] },
   });
   const r = D.tamponner2(s, 0, () => 0);
-  // 4 % au visa, puis un tiers des 0,96 rejetés.
-  proche(x(r.s).stats.abandonsProc.identite, 0.04 + 0.96 / 3);
+  // Aucune patience perdue au visa du joueur, puis un tiers de la demande rejetée.
+  proche(x(r.s).stats.abandonsProc.identite, 1 / 3);
   proche(x(r.s).stats.abandonsProc.identite, x(r.s).abandons);
   assert.equal(x(r.s).stats.abandonsProc.domicile, 0);
 });

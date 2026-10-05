@@ -162,16 +162,13 @@ test('un visa délivre la carte à l’usager ; un justificatif est délivré au
   });
   s = avec2(s, { usagers: { ...x(s).usagers, identite: [5] } });
   const carte = D.tamponner2(s, 0, jamais).s;
-  // 4 % des usagers abandonnent au visa ; les autres repartent avec leur carte.
-  proche(x(carte).stats.delivresUsagers.identite, 1 - BALANCE2.abandonParPoint);
+  // Le visa du joueur délivre une carte entière à son usager.
+  proche(x(carte).stats.delivresUsagers.identite, 1);
   assert.equal(x(carte).stats.delivresService.identite, 0);
   // Un dossier d'usager dans une procédure que personne ne demande : un dossier lié, délivré au service.
   s = avec2(s, { usagers: { ...x(s).usagers, identite: [0], domicile: [5] } });
   const justificatif = D.tamponner2(s, 0, jamais).s;
-  proche(
-    x(justificatif).stats.delivresService.domicile,
-    1 - BALANCE2.abandonParPoint,
-  );
+  proche(x(justificatif).stats.delivresService.domicile, 1);
   assert.equal(x(justificatif).stats.delivresUsagers.domicile, 0);
 });
 
@@ -270,11 +267,12 @@ test('un usager qui atteint la pièce de service en boucle est renvoyé chez lui
 
 test('tant que la carte est délivrée aux usagers, personne ne s’impatiente en attendant', () => {
   let s = avecProcedures(base2(), { identite: [{ type: 'visa' }] });
+  // Un guichet ouvert (personne ne s'installe avant le premier) ; aucun agent : personne ne franchit le visa.
   s = avec2(s, {
     population: 100,
+    guichets: 1,
     usagers: { ...x(s).usagers, identite: [100] },
   });
-  // Aucun agent : personne ne franchit le visa pendant cette seconde.
   const r = D.tick2(s, 1, 1000).s;
   proche(x(r).usagers.identite[0], 100);
   assert.equal(x(r).abandons, 0);
@@ -341,11 +339,11 @@ test('avant la boucle, les seuls abandons sont ceux que coûtent les étapes', (
   const y = dixMinutesDebut();
   assert.ok(y.premiereBoucle === null);
   // Pièce et Visa coûtent chacune 1 point de patience en ×1 : chaque étape franchie par un usager en perd
-  // `abandonParPoint` ; avant la boucle, toutes les étapes franchies le sont par des usagers.
+  // `abandonParPoint`, sauf les visas du joueur ; avant la boucle, toutes les étapes franchies le sont par des usagers.
   assert.ok(y.stats.franchies > 250, `${y.stats.franchies}`);
   proche(
     y.stats.abandonsProc.identite,
-    BALANCE2.abandonParPoint * y.stats.franchies,
+    BALANCE2.abandonParPoint * (y.stats.franchies - y.stats.visasTampons),
     1e-6,
   );
   proche(y.abandons, y.stats.abandonsProc.identite);
@@ -363,7 +361,8 @@ test('avant la boucle, les seuls abandons sont ceux que coûtent les étapes', (
   );
   proche(
     simple.stats.abandonsProc.identite,
-    BALANCE2.abandonParPoint * simple.stats.franchies,
+    BALANCE2.abandonParPoint *
+      (simple.stats.franchies - simple.stats.visasTampons),
     1e-6,
   );
   assert.ok(

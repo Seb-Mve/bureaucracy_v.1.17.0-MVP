@@ -164,9 +164,18 @@ test('possessif d’un document : « sa carte », « son titre », « son attest
 test('première carte visée : délivrée à son usager, relevé à 1', () => {
   const t = 1_000_000_000;
   const { s, ev } = D.tamponner2(sauvegardePreset('debut', t), t);
-  proche(ev.delivres, 1 - BALANCE2.abandonParPoint);
+  proche(ev.delivres, 1);
   const carte = (P.lignesProduction(s, t) as P.LigneProduction[])[0];
   assert.equal(carte.delivres, 1);
   assert.equal(carte.delivresTexte, '1 délivrée');
   assert.equal(V.vueDirection(s, t)?.parapheur?.attente, 'Attend votre visa');
+});
+
+test('20 taps à la prise de fonctions : 20 cartes délivrées', () => {
+  const t = 1_000_000_000;
+  let s = sauvegardePreset('debut', t);
+  for (let i = 0; i < 20; i++) s = D.tamponner2(s, t, () => 0.99).s;
+  const carte = (P.lignesProduction(s, t) as P.LigneProduction[])[0];
+  assert.equal(carte.delivresTexte, '20 délivrées');
+  assert.equal(D.visasEnAttente(x(s)), 0);
 });
