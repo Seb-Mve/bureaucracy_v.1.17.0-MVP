@@ -36,8 +36,9 @@ export function formatEntier(value: number): string {
  * « 1,50 » sous 10, « 70 440 » jusqu'à 99 999, puis « 401 k », « 4,47 M ».
  */
 export function formatEuros(value: number): string {
-  // Sous 10 € : toujours deux décimales (« 0,20 », « 9,10 »), jamais une seule.
-  if (value < 10) return (Math.floor(Math.max(0, value) * 100) / 100).toFixed(2).replace('.', ',');
+  // Sous 10 € : toujours deux décimales (« 0,20 », « 9,10 »), jamais une seule. L'epsilon garde le centime
+  // d'un produit flottant juste en dessous (1,6 × 1,4 = 2,2399… → « 2,24 »).
+  if (value < 10) return (Math.floor(Math.max(0, value) * 100 + 1e-6) / 100).toFixed(2).replace('.', ',');
   if (value < SEUIL_COMPACT) return Math.floor(value).toLocaleString('fr-FR');
   return formatCompact(value);
 }

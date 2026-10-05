@@ -23,6 +23,13 @@ test('montants : même règle que les quantités', () => {
   assert.equal(formatEuros(401190.42), '401 k');
 });
 
+test('montants : un produit flottant juste sous le centime n’en perd pas un', () => {
+  // 1,6 × 1,4 vaut 2,2399999… en virgule flottante : on affiche 2,24, pas 2,23.
+  assert.equal(formatEuros(1.6 * 1.4), '2,24');
+  assert.equal(formatEuros(0.1 + 0.2), '0,30');
+  assert.equal(formatEuros(2.239), '2,23');
+});
+
 test('compact : arrondi vers le bas, sans zéros inutiles, au plus 4 chiffres', () => {
   assert.equal(formatCompact(1999), '1,99 k');
   assert.equal(formatCompact(999999), '999 k');

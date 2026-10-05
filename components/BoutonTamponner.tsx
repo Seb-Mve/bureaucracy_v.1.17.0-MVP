@@ -85,6 +85,9 @@ export default function BoutonTamponner() {
         libelle={libelle}
         onPress={surTap}
         immediat
+        // Acte II : rien à viser, le bouton s'éteint et le dit aux lecteurs d'écran ; en rupture, il reste
+        // touchable pour annoncer « RUPTURE D’IMPRIMÉS ».
+        desactive={!!direction && vide && !rupture}
         hauteur={compact ? 54 : 66}
         taille={libelle === 'TAMPONNER' ? Typo.grand : Typo.titre}
         couleur={eteint ? Colors.carton : encre.face}

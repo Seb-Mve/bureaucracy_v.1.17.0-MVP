@@ -9,6 +9,9 @@ import CarteRamettes from '@/components/service/CarteRamettes';
 import CarteAchats from '@/components/service/CarteAchats';
 import CarteUnite from '@/components/service/CarteUnite';
 
+/** Débit au total : « 0 » quand il est négligeable, comme les débits signés (jamais « 0,00 »). */
+const debitTotal = (v: number): string => (v < 0.01 ? '0' : formatDebit(v));
+
 /**
  * Onglet Service de l'acte II : fournitures (ramettes, puis Service des achats), guichets (franchissent les
  * étapes) et agents (accordent les visas).
@@ -29,7 +32,7 @@ export default function ServiceDirection() {
         <Text style={styles.titre}>
           Guichets{' '}
           <Text style={styles.sousTitre}>
-            · {formatDebit(etapesParSeconde)}{' '}
+            · {debitTotal(etapesParSeconde)}{' '}
             {etapesParSeconde < 2 ? 'étape/s' : 'étapes/s'} au total
           </Text>
         </Text>
@@ -46,7 +49,7 @@ export default function ServiceDirection() {
           <Text style={styles.titre}>
             Agents{' '}
             <Text style={styles.sousTitre}>
-              · {formatDebit(visasParSeconde)} visas/s au total
+              · {debitTotal(visasParSeconde)} visas/s au total
             </Text>
           </Text>
         )}

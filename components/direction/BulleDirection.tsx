@@ -59,7 +59,11 @@ export default function BulleDirection({
 
   // Un coup qui délivre un document à son usager : la bulle le garde un instant (avant d'enregistrer l'état).
   useEffect(() => {
-    if (!verdict || verdict.id === dernierVerdict.current) return;
+    if (!verdict) {
+      setRepart(null);
+      return;
+    }
+    if (verdict.id === dernierVerdict.current) return;
     dernierVerdict.current = verdict.id;
     const servi = precedent.current;
     if (!verdict.delivre || !servi || servi.parapheur.repart === null) {
@@ -67,9 +71,14 @@ export default function BulleDirection({
       return;
     }
     setRepart(servi);
+  }, [verdict]);
+
+  // « Repart » s'efface après un instant ; un nouveau document délivré relance le délai.
+  useEffect(() => {
+    if (!repart) return;
     const t = setTimeout(() => setRepart(null), DUREE_REPART);
     return () => clearTimeout(t);
-  }, [verdict]);
+  }, [repart]);
 
   // La demande affichée, mémorisée pour le prochain coup.
   useEffect(() => {
