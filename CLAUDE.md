@@ -61,7 +61,7 @@ Components must never import from `data/`. Everything goes through `useGameState
 - **Acts:** the game loop, the offline catch-up and every action dispatch on `s.acte`: Act I runs `data/engine.ts`, Act II runs `data/acte2/moteur.ts` (`tick2`, `tamponner2`, `simulerAbsence2` + `lettreAbsence2`); Act I code never runs on an Act II state, and Act I fields kept in the save are never shown at Act II. Screens read Act II through `direction`, `service2` and `atelier` (pure views: `data/acte2/vues.ts`, `data/acte2/vueAtelier.ts`; null at Act I) and the act's ink `encre` (`Encres` in `constants/Colors.ts`: orange, then blue). `FinActeModal` calls `entrerDirection`.
 - **Raccourcis de test:** `chargerRaccourci(id)` (only when `raccourcisActifs`), `raccourcis` (titles and details of the presets).
 - **Réforme:** `reformer` (Options → Formulaire R-01) resets to the Cerfa screen (`cerfaNumero`), `acheterJurisprudence` spends trombones (final, no undo); `reforme` is the Options view (trombones and Jurisprudence appear only after the first Réforme). Components live in `components/reforme/`.
-- **Lisibilité (Act II):** `fiche2` (job sheet view; `marquerFichePoste` opens/closes the Act I or Act II sheet depending on the act), `debits` (smoothed €/s and formulaires/s, not saved; reset after an absence, a Réforme, a test shortcut), `reglerAchats` (Service des achats switch), `production` (« Production du service » lines, one per open procedure).
+- **Lisibilité (Act II):** `fiche2` (job sheet view; `marquerFichePoste` opens/closes the Act I or Act II sheet depending on the act), `reglerAchats` (Service des achats switch), `production` (« Production du service » lines, one per open procedure).
 
 ### PreferencesContext (`context/PreferencesContext.tsx`)
 
@@ -85,7 +85,6 @@ Vibrations and reduced animations, stored under their own AsyncStorage key (`bur
 | `data/acte2/vues.ts` | Act II views: Direction screen (parapheur, step chain, Démat.), Service, notes |
 | `data/acte2/vueAtelier.ts` | Atelier view: step effects (symbol + word), loops, catalogue |
 | `data/acte2/fiche.ts` | Act II job sheet: lines unlocked by notes in force, read lines, Options badge |
-| `data/acte2/debits.ts` | Header rates: event flows, cost of a formulaire bought by the Service des achats, exponential smoothing |
 | `data/acte2/production.ts` | What the service delivers: each procedure's document (article, gender), value of a document, « Production du service » lines |
 | `data/jurisprudence.ts` | What survives a Réforme: initial `reformes`, Jurisprudence effects, déjà-vu, drawn service names (imported by both engines) |
 | `data/reforme.ts` | The Réforme: trombones, `reformer`, Cerfa number, its letter, Jurisprudence purchase, Options view |
