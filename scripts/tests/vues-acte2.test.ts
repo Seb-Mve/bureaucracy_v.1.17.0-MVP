@@ -61,10 +61,10 @@ test('écran Direction à l’entrée : 20 demandes à viser, aucun guichet, Car
   assert.deepEqual(d.delivrance, { nom: 'Délivrée' });
   // Ses pièces ont été vérifiées (personne n'y attend) : coche ; le visa est « ici ».
   assert.deepEqual(
-    d.etapes.map((e) => [e.nom, e.pictogramme, e.allumee, e.faite, e.ici]),
+    d.etapes.map((e) => [e.nom, e.pictogramme, e.faite, e.ici]),
     [
-      ['Vérification des pièces', null, false, true, false],
-      ['Visa', 'visa', true, false, true],
+      ['Vérification des pièces', null, true, false],
+      ['Visa', 'visa', false, true],
     ],
   );
   assert.equal(d.etapes[1].attente, BALANCE2.visasInitiaux);
@@ -114,12 +114,12 @@ test('plus rien à viser : la bulle suit la demande qui attend la vérification 
   assert.equal(d.parapheur?.rang, 0);
   assert.equal(d.parapheur?.attente, 'Attend la vérification des pièces');
   assert.match(d.parapheur?.titre ?? '', /^(Mme|M\.) .+ demande une Carte d’identité$/);
-  // Aucun guichet : pas de pictogramme de guichet ; rien d'allumé, rien de fait.
+  // Aucun guichet : pas de pictogramme de guichet ; rien d'« ici », rien de fait.
   assert.deepEqual(
-    d.etapes.map((e) => [e.attente, e.pictogramme, e.allumee, e.ici, e.faite]),
+    d.etapes.map((e) => [e.attente, e.pictogramme, e.ici, e.faite]),
     [
-      [5, null, false, false, false],
-      [0, 'visa', false, false, false],
+      [5, null, false, false],
+      [0, 'visa', false, false],
     ],
   );
   assert.equal(vue(avec2(sansVisa, { guichets: 1 })).etapes[0].pictogramme, 'guichet');
@@ -222,13 +222,13 @@ test('préréglages de vérification : sauvegardes valides, à l’acte voulu', 
   );
 });
 
-test('tableau de circulation : demandes en attente à chaque étape, et qui la traite', () => {
+test('tableau de circulation : demandes en attente à chaque étape, la plus encombrée marquée', () => {
   const d = V.vueDirection(base2(), 0) as V.VueDirection;
   assert.deepEqual(
-    d.etapes.map((e) => [e.nom, e.attente, e.traitePar, e.allumee, e.encombree]),
+    d.etapes.map((e) => [e.nom, e.attente, e.encombree]),
     [
-      ['Vérification des pièces', 0, 'guichets', false, false],
-      ['Visa', BALANCE2.visasInitiaux, 'visa', true, true],
+      ['Vérification des pièces', 0, false],
+      ['Visa', BALANCE2.visasInitiaux, true],
     ],
   );
 });

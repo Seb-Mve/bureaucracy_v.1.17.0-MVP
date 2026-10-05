@@ -92,21 +92,16 @@ export const numeroRegistre = (n: number): string =>
   n < 1000 ? n.toString().padStart(3, '0') : formatEntier(n);
 
 /**
- * Une fiche du tableau de circulation (bulle) : les demandes qui attendent à cette étape et qui la traite.
- * Un visa en attente « s'allume » ; la fiche la plus encombrée est marquée ; une étape que la demande de la
- * bulle a franchie et où plus personne n'attend est « faite ».
+ * Une fiche du tableau de circulation (bulle) : les demandes qui attendent à cette étape. La fiche la plus
+ * encombrée est marquée ; une étape que la demande de la bulle a franchie et où plus personne n'attend est « faite ».
  */
 export interface EtapeChaine {
   type: EtapeType;
   nom: string;
   /** Demandes (usagers et sans usager) qui attendent à cette étape. */
   attente: number;
-  /** Qui franchit l'étape : les guichets, ou le chef de service et ses agents (visa). */
-  traitePar: 'guichets' | 'visa';
   /** Pictogramme : tampon (visa), guichet, ou aucun tant que le service n'a pas de guichet (specs/012). */
   pictogramme: 'visa' | 'guichet' | null;
-  /** Visa avec au moins une demande en attente. */
-  allumee: boolean;
   /** L'étape où attendent le plus de demandes (au moins une ; la première en cas d'égalité). */
   encombree: boolean;
   /** Franchie par la demande de la bulle, et plus personne n'y attend (coche, fond vert). */
@@ -228,9 +223,7 @@ export function tableauCirculation(
       type: e.type,
       nom: NOMS_COURTS[e.type],
       attente: attentes[k],
-      traitePar: visa ? 'visa' : 'guichets',
       pictogramme: visa ? 'visa' : x.guichets > 0 ? 'guichet' : null,
-      allumee: visa && attentes[k] >= 1,
       encombree: k === rangMax,
       faite: rang !== null && k < rang && attentes[k] === 0,
       ici: visa && k === rang && attentes[k] >= 1,
