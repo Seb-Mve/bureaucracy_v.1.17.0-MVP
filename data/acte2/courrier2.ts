@@ -28,7 +28,11 @@ export const LETTRES_ACTE2: LettreDef[] = [
     id: 'a2-prise',
     objet: 'Prise de fonctions',
     corps: (s) =>
-      `${nom(s)},\n\nVous êtes nommé·e chef de service.\n\nLe budget non consommé de l’exercice précédent a été restitué au Trésor. Le guichet 3 vous est confié à titre d’unité.`,
+      `${nom(s)},\n\nVous êtes nommé·e chef de service.\n\nLe budget non consommé de l’exercice précédent a été restitué au Trésor. ${
+        s.acte2 !== null && s.acte2.guichets > 0
+          ? 'Vos guichets vous sont confiés à titre d’unités.'
+          : 'Le guichet 3 est fermé pour réorganisation.'
+      }`,
     declencheur: (s) => s.acte2 !== null,
   },
   {

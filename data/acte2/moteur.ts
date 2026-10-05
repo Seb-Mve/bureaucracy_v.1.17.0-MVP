@@ -70,7 +70,7 @@ export function abandonsProcNuls(): Record<ProcId, number> {
 /** Compteur par procédure à zéro (documents délivrés). */
 export const parProcNul = (): Record<ProcId, number> => abandonsProcNuls();
 
-/** État de la Direction à l'entrée dans l'acte : le guichet 3 et la procédure du S.I.C. */
+/** État de la Direction à l'entrée dans l'acte : aucun guichet, la procédure du S.I.C. et 20 demandes au visa. */
 export function etatInitialActe2(maintenant: number): EtatActe2 {
   const procedures = copieProcedures(PROCEDURES_INITIALES);
   const usagers = stocksPour(procedures);
@@ -101,6 +101,7 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
     ficheVue: false,
     ficheLues: [],
     achatsActifs: true,
+    reouvertureVisible: false,
     stats: {
       franchies: 0,
       franchiesBoucle: 0,
@@ -273,6 +274,32 @@ export function visasEnAttente(x: EtatActe2): number {
   return t;
 }
 
+/**
+ * Plus rien à viser, et au moins une demande attend à la première étape d'une procédure que les usagers
+ * demandent : la note « Réouverture du guichet 3 » apparaît (specs/012).
+ */
+export function reouvertureAttendue(x: EtatActe2): boolean {
+  let enTete = 0;
+  for (const p of PROCS_DEMANDEES) enTete += x.usagers[p][0] ?? 0;
+  return visasEnAttente(x) < 1 && enTete >= 1;
+}
+
+/**
+ * Filet du premier guichet (specs/012) : recrutement ouvert, aucun guichet ni agent, rien à viser et plus de
+ * quoi payer un guichet (le budget des 20 visas est parti en ramettes) — le guichet 3 rouvre d'office.
+ */
+export function guichetDOffice(s: GameState, m: Modifiers2): boolean {
+  const x = s.acte2;
+  return (
+    x !== null &&
+    m.recrutementVisible &&
+    x.guichets === 0 &&
+    vitesseVisas(x) === 0 &&
+    visasEnAttente(x) < 1 &&
+    s.budget < coutGuichet(0, guichetsOfferts(s))
+  );
+}
+
 /** Étapes (hors visas) franchies par seconde par les Guichets. */
 export function vitesseGuichets(x: EtatActe2): number {
   return x.guichets * BALANCE2.guichet.vitesse;
@@ -317,6 +344,7 @@ const evVide = (): Events2 => ({
   achats: 0,
   rupture: false,
   aucunVisa: false,
+  delivres: 0,
 });
 
 function nettoyer(st: Stocks): Stocks {
@@ -450,8 +478,10 @@ function franchir(
     // Délivrance : remis à l'usager dans une procédure qu'il demande, sinon délivré pour un dossier du service.
     const livresU = u - rejU;
     const livresS = b - rejB + c - rejC;
-    if (PROCS_DEMANDEES.includes(l.p)) delivresUsagers[l.p] += livresU;
-    else delivresService[l.p] += livresU;
+    if (PROCS_DEMANDEES.includes(l.p)) {
+      delivresUsagers[l.p] += livresU;
+      ev.delivres += livresU;
+    } else delivresService[l.p] += livresU;
     delivresService[l.p] += livresS;
   }
 
@@ -598,7 +628,23 @@ export function tick2(
     ...visa.map((l) => ({ ...l, u: l.u * rV, b: l.b * rV, c: l.c * rV })),
   ];
   const r = franchir(s, lots, enJeu ? m : { ...m, rejetMax: 0 }, maintenant);
-  return { s: r.s, ev: { ...r.ev, achats: commande.cout } };
+  // La note « Réouverture du guichet 3 » apparaît quand plus rien n'est à viser ; elle le reste (specs/012).
+  // Sans de quoi payer le premier guichet, il rouvre d'office : la Direction ne reste jamais bloquée.
+  const y = r.s.acte2 as EtatActe2;
+  const apparue = !y.reouvertureVisible && reouvertureAttendue(y);
+  const office = guichetDOffice(r.s, m);
+  const s1: GameState =
+    apparue || office
+      ? {
+          ...r.s,
+          acte2: {
+            ...y,
+            reouvertureVisible: y.reouvertureVisible || apparue,
+            guichets: office ? 1 : y.guichets,
+          },
+        }
+      : r.s;
+  return { s: s1, ev: { ...r.ev, achats: commande.cout } };
 }
 
 /**
@@ -729,7 +775,7 @@ export function tamponner2(
   };
 }
 
-/** Guichets offerts à l'entrée dans l'acte : le guichet 3, ou dix avec Antériorité (Jurisprudence). */
+/** Guichets offerts à l'entrée dans l'acte : aucun (specs/012), ou dix avec Antériorité (Jurisprudence). */
 export function guichetsOfferts(s: GameState): number {
   return aJurisprudence(s, 'anteriorite')
     ? REFORME.guichetsAnteriorite

@@ -36,12 +36,14 @@ export const NOTES2: NoteDef2[] = [
   {
     id: 'prise',
     numero: 1,
-    titre: 'Prise de fonctions',
-    texte: 'Vous êtes nommé chef de service. Votre bureau sera livré prochainement. Votre bureau, c’est le guichet 3.',
-    effet: 'Débloque le recrutement des Guichets.',
+    titre: 'Réouverture du guichet 3',
+    texte: 'Les pièces justificatives seront désormais vérifiées au guichet. Le guichet 3 rouvre, sous votre autorité.',
+    effet: 'Débloque le recrutement des guichets.',
     cout: 0,
     instruction: 0,
-    visible: si(() => true),
+    // Plus rien à viser et des demandes attendent la vérification des pièces (specs/012) ; aussitôt avec des
+    // guichets offerts (Antériorité), qui vérifient déjà les pièces.
+    visible: si((x) => x.reouvertureVisible || x.guichets > 0),
     appliquer: (m) => {
       m.recrutementVisible = true;
     },

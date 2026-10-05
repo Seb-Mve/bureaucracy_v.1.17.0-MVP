@@ -297,7 +297,7 @@ test('Précédent : l’acte I recommence avec 3 stagiaires, ou les reçoit auss
   );
 });
 
-test('Antériorité : l’acte II commence avec 10 guichets, le suivant au prix du deuxième', () => {
+test('Antériorité : l’acte II commence avec 10 guichets et la note n° 1, le suivant au prix du premier', () => {
   const s1 = avecJurisprudence(E.signerCerfa(E.etatInitial(0), 'Test', 0), [
     'anteriorite',
   ]);
@@ -305,17 +305,19 @@ test('Antériorité : l’acte II commence avec 10 guichets, le suivant au prix 
   assert.equal(x(s2).guichets, REFORME.guichetsAnteriorite);
   assert.equal(
     D.coutGuichet(x(s2).guichets, D.guichetsOfferts(s2)),
-    D.coutGuichet(1),
+    D.coutGuichet(0),
   );
+  assert.ok(D.notesVisibles2(s2).includes('prise'));
 });
 
 test('Droit acquis : la première étape de chaque procédure ne coûte aucune patience', () => {
-  const base = avec2(
-    D.entrerActe2(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0),
-    {
-      population: BALANCE2.fileInitiale,
-    },
-  );
+  const s0 = D.entrerActe2(E.signerCerfa(E.etatInitial(0), 'Test', 0), 0);
+  // Un guichet, 20 demandes à la vérification des pièces ; population = demandes en cours (aucune nouvelle).
+  const base = avec2(s0, {
+    guichets: 1,
+    population: 20 + BALANCE2.visasInitiaux,
+    usagers: { ...x(s0).usagers, identite: [20, BALANCE2.visasInitiaux] },
+  });
   const sans = D.tick2(base, 1, 1000).s;
   const avec = D.tick2(avecJurisprudence(base, ['droitAcquis']), 1, 1000).s;
   // Aucune impatience (la carte est délivrée) ; seule la Pièce (0,5 dossier franchi, 1 point) coûte de la patience sans.
@@ -417,11 +419,12 @@ test('vues : le dossier administratif montre trombones et Jurisprudence après l
 });
 
 test('vues : une note déjà instruite le dit, les guichets offerts ne comptent pas dans le prix', () => {
-  const s2 = { ...D.entrerActe2(E.signerCerfa(R.reformer(avantReforme(), 0, zero), 'Camille', 0), 0), budget: 0 };
+  const entree = D.entrerActe2(E.signerCerfa(R.reformer(avantReforme(), 0, zero), 'Camille', 0), 0);
+  const s2 = { ...avec2(entree, { reouvertureVisible: true }), budget: 0 };
   const note = V.notesAffichees2(s2, 0).find((n) => n.id === 'prise')!;
   assert.equal(note.dejaInstruite, true);
   const anterieur = avecJurisprudence(avec2(s2, { guichets: REFORME.guichetsAnteriorite }), ['anteriorite']);
-  assert.equal(V.vueService2(avecNotes2(anterieur, ['prise']), 0)?.guichet.cout, D.coutGuichet(1));
+  assert.equal(V.vueService2(avecNotes2(anterieur, ['prise']), 0)?.guichet.cout, D.coutGuichet(0));
 });
 
 test('préréglages de la Réforme : Réforme possible, puis Cerfa n° 00001*02 et trombones à dépenser', () => {

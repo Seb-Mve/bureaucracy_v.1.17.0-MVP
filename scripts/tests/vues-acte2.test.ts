@@ -42,11 +42,11 @@ test('vues de l’acte II : rien à l’acte I', () => {
   assert.deepEqual(V.notesAffichees2(s, 0), []);
 });
 
-test('écran Direction à l’entrée : visas du guichet 3, Carte d’identité, pas de dématérialisation', () => {
+test('écran Direction à l’entrée : 20 demandes à viser, aucun guichet, Carte d’identité', () => {
   const d = vue(base2());
   assert.equal(d.visas, BALANCE2.visasInitiaux);
-  assert.equal(d.usagers, BALANCE2.fileInitiale + BALANCE2.visasInitiaux);
-  assert.equal(d.guichets, 1);
+  assert.equal(d.usagers, BALANCE2.visasInitiaux);
+  assert.equal(d.guichets, 0);
   assert.equal(d.demat, null);
   assert.equal(d.rupture, false);
   // Seuls des usagers attendent : le parapheur est la demande d'une personne.
@@ -142,20 +142,21 @@ test('taux de rejet affiché : plafonné tant que « Rejet élargi » n’est pa
 test('Service : le guichet et les agents débloqués, achats en lot', () => {
   const s = { ...avecNotes(base2(), ['prise', 'agents']), budget: 99 };
   const sv = V.vueService2(s, 0) as V.VueService2;
-  assert.equal(sv.guichet.possedes, 1);
-  assert.equal(sv.guichet.cout, D.coutGuichet(1));
+  // Aucun guichet à l'entrée (specs/012) : le premier coûte 30 €.
+  assert.equal(sv.guichet.possedes, 0);
+  assert.equal(sv.guichet.cout, 30);
   // 30 + 35 = 65 ; un troisième (40) dépasserait 99.
   assert.equal(sv.guichet.maxAchetables, 2);
-  assert.equal(sv.guichet.coutMax, D.coutGuichet(1) + D.coutGuichet(2));
+  assert.equal(sv.guichet.coutMax, D.coutGuichet(0) + D.coutGuichet(1));
   let dix = 0;
-  for (let i = 0; i < 10; i++) dix += D.coutGuichet(1 + i);
+  for (let i = 0; i < 10; i++) dix += D.coutGuichet(i);
   assert.equal(sv.guichet.cout10, dix);
   assert.deepEqual(
     sv.agents.map((a) => a.id),
     ['instructeur'],
   );
   assert.equal(sv.agents[0].achetable, false);
-  assert.equal(sv.etapesParSeconde, BALANCE2.guichet.vitesse);
+  assert.equal(sv.etapesParSeconde, 0);
   assert.equal(sv.visasParSeconde, 0);
 });
 
@@ -211,8 +212,8 @@ test('tableau de circulation : dossiers en attente à chaque étape, et qui la t
   assert.deepEqual(
     d.etapes.map((e) => [e.nom, e.attente, e.traitePar, e.allumee, e.encombree]),
     [
-      ['Pièce', BALANCE2.fileInitiale, 'guichets', false, true],
-      ['Visa', BALANCE2.visasInitiaux, 'visa', true, false],
+      ['Pièce', 0, 'guichets', false, false],
+      ['Visa', BALANCE2.visasInitiaux, 'visa', true, true],
     ],
   );
 });

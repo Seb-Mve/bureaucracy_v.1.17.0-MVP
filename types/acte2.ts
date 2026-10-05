@@ -119,6 +119,11 @@ export interface EtatActe2 {
   ficheLues: LigneFiche2Id[];
   /** Interrupteur du Service des achats (note « Marché public de fournitures »). */
   achatsActifs: boolean;
+  /**
+   * La note n° 1 « Réouverture du guichet 3 » est apparue (specs/012) : plus rien à viser alors qu'une demande
+   * attendait à la première étape. Elle reste visible ensuite.
+   */
+  reouvertureVisible: boolean;
   stats: StatsActe2;
 }
 
@@ -162,4 +167,6 @@ export interface Events2 {
   achats: number;
   rupture: boolean;
   aucunVisa: boolean;
+  /** Documents remis à des usagers (procédures qu'ils demandent), rejets déduits. */
+  delivres: number;
 }

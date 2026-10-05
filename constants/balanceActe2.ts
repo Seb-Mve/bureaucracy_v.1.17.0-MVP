@@ -19,10 +19,13 @@ export const BALANCE2 = {
   installationRate: 1 / 60,
   /** Demandes par seconde et par usager inactif. */
   demandeRate: 1 / 500,
-  /** Dossiers d'usagers qui attendent déjà à la Carte d'identité. */
-  fileInitiale: 20,
-  /** Parapheurs qui attendent déjà le visa du chef de service : il tamponne dès la première seconde. */
-  visasInitiaux: 12,
+  /** Demandes qui attendent déjà à la première étape de la Carte d'identité : aucune (specs/012). */
+  fileInitiale: 0,
+  /**
+   * Demandes qui attendent déjà le visa du chef de service (specs/012) : il vise dès la première seconde, et ces
+   * 20 visas paient le premier guichet (20 × 1,60 € ≥ BALANCE2.guichet.coutBase).
+   */
+  visasInitiaux: 20,
   budgetInitial: 0,
   formulairesInitiaux: 300,
   /**
@@ -51,8 +54,8 @@ export const BALANCE2 = {
   rejetMaxInitial: 0.5,
   /** Guichets : étapes franchies par seconde et prix. */
   guichet: { vitesse: 0.5, coutBase: 30, croissance: 1.15 },
-  /** Le guichet 3 de l'acte I, compressé en unité. */
-  guichetsInitiaux: 1,
+  /** Aucun guichet à l'entrée (specs/012) : le guichet 3 rouvre avec la note n° 1, puis s'achète. */
+  guichetsInitiaux: 0,
   etapesMax: 8,
   /**
    * Points de dématérialisation correspondant à 100 %. Relevé de 55 000 avec specs/011 : les dossiers qui

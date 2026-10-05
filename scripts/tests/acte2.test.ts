@@ -44,15 +44,14 @@ test('entrée dans l’acte II : seul le compteur de tampons est conservé', () 
   assert.equal(s.tampons, 160000);
   assert.equal(s.budget, BALANCE2.budgetInitial);
   assert.equal(s.formulaires, BALANCE2.formulairesInitiaux);
-  assert.equal(x(s).guichets, 1);
+  // specs/012 : aucun guichet, 20 demandes au visa, personne à la vérification des pièces.
+  assert.equal(x(s).guichets, 0);
+  assert.equal(x(s).reouvertureVisible, false);
   assert.deepEqual(
     x(s).procedures.identite.map((e) => e.type),
     ['piece', 'visa'],
   );
-  assert.deepEqual(x(s).usagers.identite, [
-    BALANCE2.fileInitiale,
-    BALANCE2.visasInitiaux,
-  ]);
+  assert.deepEqual(x(s).usagers.identite, [0, 20]);
   assert.deepEqual(x(s).boucles.domicile, [0]);
   assert.equal(x(s).debut, 1000);
 });
@@ -316,13 +315,102 @@ test('le catalogue compte 18 notes numérotées de 1 à 18', () => {
   );
 });
 
-test('la note n° 1 est visible d’emblée et ouvre le recrutement', () => {
-  const s = base2();
+test('la note n° 1 apparaît quand plus rien n’est à viser et qu’une demande attend la vérification des pièces, puis le reste', () => {
+  let s = base2();
+  assert.ok(!D.notesVisibles2(s).includes('prise'), 'cachée à l’arrivée');
+  for (let i = 0; i < BALANCE2.visasInitiaux; i++)
+    s = D.tamponner2(s, 0, () => 0.99).s;
+  assert.ok(D.visasEnAttente(x(s)) < 1e-9);
+  assert.ok(
+    !D.notesVisibles2(s).includes('prise'),
+    'personne n’attend encore la vérification',
+  );
+  // Sans guichet, les nouvelles demandes s'entassent à la première étape.
+  s = D.tick2(s, 1, 1000).s;
+  assert.ok(x(s).usagers.identite[0] >= 1);
+  assert.equal(x(s).reouvertureVisible, true);
+  assert.ok(D.notesVisibles2(s).includes('prise'));
+  // Une demande revenue au visa ne la cache plus.
+  s = D.tick2(
+    avec2(s, { usagers: { ...x(s).usagers, identite: [0, 5] } }),
+    0.1,
+    1100,
+  ).s;
   assert.ok(D.notesVisibles2(s).includes('prise'));
   assert.equal(
-    D.getModifiers2(D.acheterNote2(s, 'prise', 0), 0).recrutementVisible,
+    D.getModifiers2(D.acheterNote2(s, 'prise', 1100), 1100).recrutementVisible,
     true,
   );
+});
+
+test('note n° 1 : visible d’emblée quand des guichets sont offerts (Antériorité)', () => {
+  assert.ok(
+    D.notesVisibles2(avec2(base2(), { guichets: 10 })).includes('prise'),
+  );
+});
+
+test('sans guichet, rien ne bouge tant que le chef de service ne tamponne pas', () => {
+  const s0 = base2();
+  let s = s0;
+  for (let i = 1; i <= 100; i++) s = D.tick2(s, 0.1, i * 100).s;
+  assert.equal(s.tampons, s0.tampons);
+  assert.equal(s.budget, s0.budget);
+  assert.equal(s.formulaires, s0.formulaires);
+  assert.equal(D.visasEnAttente(x(s)), BALANCE2.visasInitiaux);
+  assert.ok(
+    x(s).usagers.identite[0] > 20,
+    'les demandes s’entassent à la vérification des pièces',
+  );
+});
+
+test('20 visas paient le premier guichet ; dépensés en ramettes, le guichet 3 rouvre d’office', () => {
+  const coutGuichet = D.coutGuichet(0, 0);
+  // Grade de départ, sans Jurisprudence, sans rejet : le minimum.
+  let min = { ...base2(), budget: 0, tampons: 0 };
+  for (let i = 0; i < BALANCE2.visasInitiaux; i++)
+    min = D.tamponner2(min, 0, () => 0.99).s;
+  assert.ok(min.budget >= coutGuichet, `${min.budget} < ${coutGuichet}`);
+  // Dernier grade, Ancienneté reconnue et Vide juridique, rejet au maximum (la prime s'ajoute) : le maximum.
+  let max = {
+    ...avec2(base2(), { tauxRejet: BALANCE2.rejetMaxInitial }),
+    budget: 0,
+    tampons: 1e9,
+    reformes: {
+      ...base2().reformes,
+      jurisprudence: ['anciennete', 'videJuridique'],
+    },
+  } as GameState;
+  for (let i = 0; i < BALANCE2.visasInitiaux; i++)
+    max = D.tamponner2(max, 0, () => 0).s;
+  // Avec de la chance au rejet, une ramette (60 € avec Vide juridique) devient abordable avant le guichet.
+  max = D.tick2(max, 1, 1000).s;
+  max = D.acheterNote2(max, 'prise', 1000);
+  const ramette = D.acheterRamettes2(max, 1);
+  assert.notEqual(ramette, max, 'une ramette achetée');
+  assert.ok(ramette.budget < coutGuichet);
+  assert.equal(x(ramette).guichets, 0);
+  // Plus rien à viser, plus de quoi payer un guichet : il rouvre d'office au tick suivant.
+  assert.equal(x(D.tick2(ramette, 0.1, 1100).s).guichets, 1);
+  // Jamais tant qu'un guichet est payable.
+  assert.equal(x(D.tick2(max, 0.1, 1100).s).guichets, 0);
+});
+
+test('un visa compte le document remis à son usager', () => {
+  const r = D.tamponner2(base2(), 0, () => 0.99);
+  proche(r.ev.delivres, 1 - BALANCE2.abandonParPoint);
+  const vide = D.tamponner2(
+    avec2(base2(), { usagers: { ...x(base2()).usagers, identite: [0, 0] } }),
+    0,
+  );
+  assert.equal(vide.ev.delivres, 0);
+});
+
+test('sauvegarde antérieure à specs/012 : la note n° 1 reste visible', () => {
+  const s = base2();
+  const { reouvertureVisible: _r, ...reste } = x(s);
+  const ancien = { ...s, acte2: reste } as unknown as GameState;
+  assert.equal(estSauvegardeValide(ancien), true);
+  assert.equal(x(normaliserSauvegarde(ancien)).reouvertureVisible, true);
 });
 
 test('l’Atelier ouvre le Justificatif de domicile et la Pièce justificative', () => {
@@ -367,14 +455,19 @@ function auVisa(s: GameState, usagers: number, boucles: number): GameState {
 }
 
 test('les guichets franchissent les pièces, jamais les visas', () => {
-  // Population = dossiers en cours : aucune nouvelle demande pendant ce tick.
+  // Un guichet ; population = demandes en cours : aucune nouvelle demande pendant ce tick.
+  const b = base2();
   const s = D.tick2(
-    avec2(base2(), { population: BALANCE2.fileInitiale }),
+    avec2(b, {
+      guichets: 1,
+      population: 20 + BALANCE2.visasInitiaux,
+      usagers: { ...x(b).usagers, identite: [20, BALANCE2.visasInitiaux] },
+    }),
     1,
     1000,
   ).s;
   // La carte est délivrée aux usagers : personne ne s'impatiente en attendant (specs/011).
-  proche(x(s).usagers.identite[0], BALANCE2.fileInitiale - 0.5);
+  proche(x(s).usagers.identite[0], 20 - 0.5);
   proche(
     x(s).usagers.identite[1],
     BALANCE2.visasInitiaux + 0.5 * (1 - BALANCE2.abandonParPoint),
@@ -536,9 +629,11 @@ test('sans boucle, le Taux de dématérialisation reste à 0 exactement', () => 
 test('guichets : il faut la note n° 1, puis le prix monte de 15 %', () => {
   const s = base2();
   assert.equal(D.acheterGuichet(s, 0), s);
-  assert.equal(x(D.acheterGuichet(avecNotes2(s, ['prise']), 0)).guichets, 2);
-  assert.equal(D.coutGuichet(1), 30);
-  assert.equal(D.coutGuichet(2), Math.ceil(30 * 1.15));
+  const achete = D.acheterGuichet(avecNotes2(s, ['prise']), 0);
+  assert.equal(x(achete).guichets, 1);
+  assert.equal(s.budget - achete.budget, 30);
+  assert.equal(D.coutGuichet(0), 30);
+  assert.equal(D.coutGuichet(1), Math.ceil(30 * 1.15));
 });
 
 test('agents : débloqués par note, ancienneté comprise', () => {
@@ -716,7 +811,7 @@ test('entrée dans l’acte II : des visas attendent dès la première seconde',
 });
 
 test('notes vues de l’acte II : la pastille « NOUVEAU » s’éteint, une seule fois', () => {
-  const vue = D.marquerNotesVues2(base2());
+  const vue = D.marquerNotesVues2(avec2(base2(), { reouvertureVisible: true }));
   assert.deepEqual(x(vue).notesVues, ['prise']);
   assert.equal(D.marquerNotesVues2(vue), vue);
 });

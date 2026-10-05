@@ -313,7 +313,8 @@ test('une fois la boucle formée, chaque seconde d’attente, une part des usage
  */
 function dixMinutesDebut(identite?: Etape[], equipe = false): EtatActe2 {
   let s = sauvegardePreset('debut', 0);
-  s = { ...s, formulaires: 1e9 };
+  // Le guichet 3 rouvert (specs/012 : la prise de fonctions n'en a plus).
+  s = avec2({ ...s, formulaires: 1e9 }, { guichets: 1 });
   if (equipe)
     s = avec2(s, {
       guichets: 20,

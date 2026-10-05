@@ -87,7 +87,8 @@ function reformesValides(x: unknown): boolean {
  * et, à l'acte II, l'âge des services (`duree`, depuis `debut`), la Mémoire des services, la fiche de poste
  * du chef de service (refermée, aucune ligne lue : la pastille d'Options invite à la lire), le Service des
  * achats (en service), les abandons par procédure (inconnus : zéro) et, depuis specs/011, les dossiers qui
- * poursuivent leur procédure (aucun) et les documents délivrés (zéro).
+ * poursuivent leur procédure (aucun) et les documents délivrés (zéro) ; depuis specs/012, la note n° 1 déjà
+ * apparue (elle l'était dès l'entrée).
  */
 export function normaliserSauvegarde(s: GameState): GameState {
   const { circulairesVues: _, ...reste } = s as GameState & { circulairesVues?: unknown };
@@ -108,6 +109,8 @@ export function normaliserSauvegarde(s: GameState): GameState {
           ? x.ficheLues.filter((id) => LIGNES_FICHE2.includes(id))
           : [],
         achatsActifs: x.achatsActifs ?? true,
+        // Avant specs/012, la note n° 1 était visible dès l'entrée dans l'acte.
+        reouvertureVisible: x.reouvertureVisible ?? true,
         suites: suitesValides(x) ? x.suites : stocksPour(x.procedures),
         stats: {
           ...x.stats,
