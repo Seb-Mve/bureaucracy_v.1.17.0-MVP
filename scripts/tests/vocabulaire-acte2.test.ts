@@ -79,3 +79,13 @@ test('étapes renommées : « pièce » ne désigne plus que la vérification', 
   for (const e of Object.values(ETAPES))
     if (e.type !== 'piece') assert.ok(!/pièce/i.test(e.nom), e.nom);
 });
+
+test('notes de l’acte II : « pièce » seulement pour la vérification ou les pièces justificatives', () => {
+  for (const n of NOTES2)
+    for (const t of [n.titre, n.texte, n.effet]) {
+      const reste = t
+        .replace(/Vérification des pièces/g, '')
+        .replace(/pièces justificatives/gi, '');
+      assert.ok(!/pièce/i.test(reste), t);
+    }
+});
