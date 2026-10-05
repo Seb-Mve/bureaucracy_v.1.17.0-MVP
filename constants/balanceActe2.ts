@@ -67,7 +67,7 @@ export const BALANCE2 = {
    * qu'à la Réforme : ce facteur fait peser l'acte II plus lourd que l'acte I dans les trombones.
    */
   conformiteParPoint: 120,
-  /** Délai du filet de sécurité après la note « Pièce délivrée par nos services » (min). */
+  /** Délai du filet de sécurité après la note « Justificatif délivré par nos services » (min). */
   filetMinutes: 15,
   /**
    * Prix d'une ramette (BALANCE.ramette formulaires) à l'acte II : les fournitures pèsent 30 à 40 % des
@@ -95,8 +95,8 @@ export interface EtapeDef {
 export const ETAPES: Record<EtapeType, EtapeDef> = {
   piece: {
     type: 'piece',
-    nom: 'Pièce justificative',
-    description: 'Une pièce de plus. Elle justifie la suivante.',
+    nom: 'Vérification des pièces',
+    description: 'Une vérification de plus. Elle justifie la suivante.',
     conf: 1,
     dotation: 1,
     delai: 3,
@@ -122,7 +122,7 @@ export const ETAPES: Record<EtapeType, EtapeDef> = {
   },
   pieceService: {
     type: 'pieceService',
-    nom: 'Pièce délivrée par nos services',
+    nom: 'Justificatif exigé',
     description: 'Exige un document délivré par une autre de vos procédures.',
     conf: 1,
     dotation: 1,

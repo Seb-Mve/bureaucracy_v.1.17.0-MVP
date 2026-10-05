@@ -54,7 +54,7 @@ export const LETTRES_ACTE2: LettreDef[] = [
     objet: 'Constat de non-sollicitation (relance)',
     corps: (s) => {
       const noms = s.reformes.denomination.procedures;
-      return `La procédure « ${noms.identite} » pourrait exiger une pièce délivrée par la procédure « ${noms.domicile} ». L’inverse serait également fondé.\n\nLe S.I.C. ne donne pas d’instruction. Il constate.`;
+      return `La procédure « ${noms.identite} » pourrait exiger un justificatif délivré par la procédure « ${noms.domicile} ». L’inverse serait également fondé.\n\nLe S.I.C. ne donne pas d’instruction. Il constate.`;
     },
     declencheur: (s, t) => filet(s.acte2, t, 2),
   },
@@ -63,7 +63,7 @@ export const LETTRES_ACTE2: LettreDef[] = [
     objet: 'Votre demande n° 000001',
     corps: (s) => {
       const p = s.acte2?.premiereModif ?? 'identite';
-      return `Votre demande de démission demeure incomplète.\n\nPièce manquante : justificatif de conformité à la procédure « ${s.reformes.denomination.procedures[p]} ».`;
+      return `Votre demande de démission demeure incomplète.\n\nJustificatif manquant : attestation de conformité à la procédure « ${s.reformes.denomination.procedures[p]} ».`;
     },
     declencheur: (s) =>
       s.demission.deposeeLe !== null &&
@@ -96,7 +96,7 @@ export function lettreAbsence2(
   return {
     id: `absence-${maintenant}`,
     objet: 'Pendant votre absence',
-    corps: `Pendant votre absence (${dureeAbsence(secondes)}), vos services ont franchi ${formatEntier(franchies)} étapes et perçu ${formatMontant(budget)} de dotation.\n\nAucun dossier n’a été rejeté : la rigueur ne se délègue pas.\n\nVos procédures ont suivi leur cours.`,
+    corps: `Pendant votre absence (${dureeAbsence(secondes)}), vos services ont franchi ${formatEntier(franchies)} étapes et perçu ${formatMontant(budget)} de dotation.\n\nAucune demande n’a été rejetée : la rigueur ne se délègue pas.\n\nVos procédures ont suivi leur cours.`,
     recue: maintenant,
     lue: false,
   };

@@ -88,7 +88,7 @@ test('Atelier : procédures ouvertes, catalogue complet, étapes non réglement�
   const id = a.procedures[0];
   assert.deepEqual(
     id.etapes.map((e) => e.nom),
-    ['Pièce justificative', 'Visa'],
+    ['Vérification des pièces', 'Visa'],
   );
   assert.deepEqual(id.exigeables, [
     { id: 'domicile', nom: 'Justificatif de domicile' },

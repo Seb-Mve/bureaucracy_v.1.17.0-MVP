@@ -413,7 +413,7 @@ test('sauvegarde antérieure à specs/012 : la note n° 1 reste visible', () => 
   assert.equal(x(normaliserSauvegarde(ancien)).reouvertureVisible, true);
 });
 
-test('l’Atelier ouvre le Justificatif de domicile et la Pièce justificative', () => {
+test('l’Atelier ouvre le Justificatif de domicile et la Vérification des pièces', () => {
   const m = D.getModifiers2(avecNotes2(base2(), ['atelier']), 0);
   assert.equal(m.atelierVisible, true);
   assert.deepEqual(m.procsOuvertes, ['identite', 'domicile']);

@@ -13,7 +13,7 @@ export type EtapeType = 'visa' | 'piece' | 'signature' | 'pieceService' | 'refle
 
 export interface Etape {
   type: EtapeType;
-  /** Procédure exigée (étape « Pièce délivrée par nos services » seulement). */
+  /** Procédure exigée (étape « Justificatif exigé » seulement). */
   exige?: ProcId;
 }
 

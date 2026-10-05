@@ -68,7 +68,7 @@ export const PRESETS_INFO: PresetInfo[] = [
   },
   {
     id: 'pieceService',
-    titre: 'Acte II — pièce de nos services',
+    titre: 'Acte II — justificatif exigé',
     detail: 'Il ne reste qu’à exiger un justificatif',
   },
   {

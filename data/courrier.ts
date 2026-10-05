@@ -48,7 +48,7 @@ const LETTRES_AVANCEMENT: LettreDef[] = GRADES.slice(1).map((g, i) => ({
   id: `grade${i + 1}`,
   objet: `Avancement : ${g.nom}`,
   corps: (s: GameState) =>
-    `${nom(s)},\n\n${AVANCEMENTS[i + 1] ?? `Vous êtes promu·e ${g.nom}.`}\n\nPrime d’avancement : dotation +${Math.round((i + 1) * BALANCE.bonusGrade * 100)} % par dossier.`,
+    `${nom(s)},\n\n${AVANCEMENTS[i + 1] ?? `Vous êtes promu·e ${g.nom}.`}\n\nPrime d’avancement : dotation +${Math.round((i + 1) * BALANCE.bonusGrade * 100)} % par ${s.acte === 2 ? 'demande' : 'dossier'}.`,
   declencheur: (s: GameState) => rangGrade(s.tampons) >= i + 1,
 }));
 

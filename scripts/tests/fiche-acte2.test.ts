@@ -39,9 +39,17 @@ test('fiche de poste du chef de service : trois lignes à la prise de fonctions,
   assert.deepEqual(
     f.lignes.map((l) => l.titre),
     [
-      'Les dossiers circulent d’étape en étape',
-      'Vous visez les parapheurs',
-      'Chaque étape consomme des formulaires',
+      'Les usagers demandent des Cartes d’identité.',
+      'Vous tamponnez le dernier : le visa.',
+      'Chaque carte délivrée rapporte une dotation.',
+    ],
+  );
+  assert.deepEqual(
+    f.lignes.map((l) => l.texte),
+    [
+      'Chaque demande est une liasse de formulaires, un par étape.',
+      'La carte est délivrée à l’usager.',
+      'Plus elle exige de formulaires, plus elle rapporte.',
     ],
   );
   assert.equal(
@@ -100,6 +108,10 @@ test('fiche de poste : refermée, elle est lue ; une note en vigueur ajoute une 
         l.titre + l.texte,
       ),
       `la fiche explique un arbitrage ou nomme la boucle : ${l.id}`,
+    );
+    assert.ok(
+      !/dossier|parapheur/i.test(l.titre + l.texte),
+      `un seul mot, « demande » : ${l.id}`,
     );
   }
 });

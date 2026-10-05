@@ -21,7 +21,7 @@ export function articlesDirection(
   const articles: Article[] = [
     {
       titre: 'Le visa',
-      texte: `Chaque coup de tampon accorde un visa en attente. Le nombre de tampons apposés fixe votre grade : chaque grade ajoute ${pct(BALANCE.bonusGrade)} de dotation.`,
+      texte: `Chaque coup de tampon vise une demande en attente. Le nombre de tampons apposés fixe votre grade : chaque grade ajoute ${pct(BALANCE.bonusGrade)} de dotation.`,
     },
     {
       titre: 'Budget et formulaires',
@@ -34,7 +34,7 @@ export function articlesDirection(
     {
       titre: 'Les procédures',
       texte:
-        'Un dossier franchit les étapes de sa procédure dans l’ordre. Les guichets franchissent toutes les étapes, sauf les visas.',
+        'Une demande franchit les étapes de sa procédure dans l’ordre. Les guichets franchissent toutes les étapes, sauf les visas.',
     },
   ];
   if (d.recrutementVisible) {
@@ -53,13 +53,13 @@ export function articlesDirection(
   articles.push({
     titre: 'Taux de rejet',
     texte:
-      'Un dossier rejeté en fin de procédure rapporte une prime et repart en tête de sa procédure. Le rejet n’use que la patience des usagers.',
+      'Une demande rejetée en fin de procédure rapporte une prime et repart en tête de sa procédure. Le rejet n’use que la patience des usagers.',
   });
   if (d.atelierVisible) {
     articles.push({
       titre: 'Atelier des procédures',
       texte:
-        'Le chef de service complète les procédures : ajouter, retirer ou déplacer une étape. Une modification s’applique aussitôt aux dossiers en cours.',
+        'Le chef de service complète les procédures : ajouter, retirer ou déplacer une étape. Une modification s’applique aussitôt aux demandes en cours.',
     });
   }
   if (d.exemplairesVisible) {

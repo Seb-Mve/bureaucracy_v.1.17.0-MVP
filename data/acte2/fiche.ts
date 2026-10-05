@@ -1,7 +1,8 @@
 /**
  * Fiche de poste du chef de service (acte II) : même format que celle du guichet 3. Elle s'ouvre à la prise
- * de fonctions, se relit depuis Options ; trois lignes d'orientation, puis les agents et le service des achats
- * à leur note (specs/011 : aucune ligne n'explique un arbitrage). Rien ne nomme la boucle ni la dématérialisation.
+ * de fonctions, se relit depuis Options ; trois lignes d'orientation (specs/012 : la demande, le visa, la dotation),
+ * puis les agents et le service des achats à leur note (aucune ligne n'explique un arbitrage). Rien ne nomme la
+ * boucle ni la dématérialisation ; le seul mot pour ce que le service traite est « demande ».
  */
 import type { GameState } from '../../types/game';
 import type { EtatActe2, LigneFiche2Id, Note2Id } from '../../types/acte2';
@@ -19,33 +20,31 @@ const LIGNES: LigneDef[] = [
   {
     id: 'circulation',
     note: null,
-    titre: 'Les dossiers circulent d’étape en étape',
-    texte:
-      'Chaque procédure est une suite d’étapes. Un dossier les franchit dans l’ordre, sans exception.',
+    titre: 'Les usagers demandent des Cartes d’identité.',
+    texte: 'Chaque demande est une liasse de formulaires, un par étape.',
   },
   {
     id: 'guichets',
     note: null,
-    titre: 'Vous visez les parapheurs',
-    texte:
-      'Chaque tap accorde un visa en attente. Les guichets traitent le reste.',
+    titre: 'Vous tamponnez le dernier : le visa.',
+    texte: 'La carte est délivrée à l’usager.',
   },
   {
     id: 'dotation',
     note: null,
-    titre: 'Chaque étape consomme des formulaires',
-    texte: 'Sans formulaires, plus aucune étape ne se franchit.',
+    titre: 'Chaque carte délivrée rapporte une dotation.',
+    texte: 'Plus elle exige de formulaires, plus elle rapporte.',
   },
   {
     id: 'agents',
     note: 'agents',
-    titre: 'Les agents visent à votre place',
+    titre: 'Les agents visent à votre place.',
     texte: 'Ils accordent les visas en attente, au rythme de leur ancienneté.',
   },
   {
     id: 'achats',
     note: 'achats',
-    titre: 'Les fournitures sont commandées par le service des achats',
+    titre: 'Les fournitures sont commandées par le service des achats.',
     texte: 'Il prélève sur votre budget ce que le marché public exige.',
   },
 ];

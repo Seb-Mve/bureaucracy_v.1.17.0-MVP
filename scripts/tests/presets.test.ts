@@ -152,7 +152,7 @@ test('raccourci « visas épuisés » : À viser 0, demandes à la vérification
   assert.deepEqual(nouvellesLettres(s, T), []);
 });
 
-test('raccourci « pièce de nos services » : il ne reste qu’à exiger un justificatif', () => {
+test('raccourci « justificatif exigé » : il ne reste qu’à exiger un justificatif', () => {
   const s = sauvegardePreset('pieceService', T);
   assert.ok(D.getModifiers2(s, T).etapesDisponibles.includes('pieceService'));
   assert.ok(
