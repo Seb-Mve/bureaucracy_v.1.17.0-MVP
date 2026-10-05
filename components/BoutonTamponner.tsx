@@ -24,7 +24,8 @@ function espaceLibre(e: KeyboardEvent): boolean {
  * Le bouton TAMPONNER : un dossier à l'acte I, un visa à l'acte II. En rupture, rien ne s'affiche d'avance :
  * c'est en tamponnant dans le vide que le bouton le dit (« PLUS DE FORMULAIRES », « RUPTURE D’IMPRIMÉS » à
  * l'acte II ; la pastille de l'onglet où s'en procurer fait le reste). Le gain d'un coup se lit dans les compteurs.
- * Rien à traiter : « AUCUN DOSSIER » à l'acte I ; à l'acte II, le bouton s'éteint sans rien dire (specs/012).
+ * Rien à traiter : « AUCUN DOSSIER » à l'acte I ; à l'acte II, le bouton s'éteint sans rien dire mais reste
+ * touchable : c'est en tamponnant dans le vide que la note « Réouverture du guichet 3 » apparaît (specs/012).
  */
 export default function BoutonTamponner() {
   const { tamponner, enAttente, rupture, direction, encre } = useGameState();
@@ -85,9 +86,6 @@ export default function BoutonTamponner() {
         libelle={libelle}
         onPress={surTap}
         immediat
-        // Acte II : rien à viser, le bouton s'éteint et le dit aux lecteurs d'écran ; en rupture, il reste
-        // touchable pour annoncer « RUPTURE D’IMPRIMÉS ».
-        desactive={!!direction && vide && !rupture}
         hauteur={compact ? 54 : 66}
         taille={libelle === 'TAMPONNER' ? Typo.grand : Typo.titre}
         couleur={eteint ? Colors.carton : encre.face}

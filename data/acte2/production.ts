@@ -152,7 +152,14 @@ export function lignesProduction(
     const nom = s.reformes.denomination.procedures[p];
     const doc = documentDe(nom);
     const demandee = PROCS_DEMANDEES.includes(p);
-    const demandes = Math.floor(dossiersEnCours(x, p));
+    // Demandes reçues : en cours, délivrées ou abandonnées. Un visa en délivre une sans changer ce total : seul
+    // « délivrées » monte (specs/012).
+    const demandes = Math.round(
+      dossiersEnCours(x, p) +
+        x.stats.delivresUsagers[p] +
+        x.stats.delivresService[p] +
+        x.stats.abandonsProc[p],
+    );
     const delivres = delivresEntiers(x, p);
     const abandons = Math.floor(x.stats.abandonsProc[p]);
     const demandesMot = mot(demandes, 'demande', 'demandes');

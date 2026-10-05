@@ -18,14 +18,6 @@ import * as V from '@/data/acte2/vues';
 import * as A from '@/data/acte2/vueAtelier';
 import * as F from '@/data/acte2/fiche';
 import { lignesProduction, type LigneProduction } from '@/data/acte2/production';
-import {
-  DEBITS_NULS,
-  ajouterFlux,
-  coutFormulaireDebit,
-  fluxDe,
-  lisserDebits,
-  type Debits,
-} from '@/data/acte2/debits';
 import { lettreAbsence2 } from '@/data/acte2/courrier2';
 import * as R from '@/data/reforme';
 import { PRESETS_INFO, sauvegardePreset, type Preset, type PresetInfo } from '@/data/presets';
@@ -37,7 +29,6 @@ export type { EtapeChaine, ParapheurAffiche, UniteAffichee, VueDirection, VueSer
 export type { ChoixEtape, EffetAffiche, EtapeAtelier, ProcAtelier, VueAtelier } from '@/data/acte2/vueAtelier';
 export type { LigneFicheAffichee, VueFiche2 } from '@/data/acte2/fiche';
 export type { LigneProduction } from '@/data/acte2/production';
-export type { Debits } from '@/data/acte2/debits';
 export type { LigneFiche2Id } from '@/types/acte2';
 export type { Encre };
 export type { JurisprudenceId } from '@/types/reforme';
@@ -151,7 +142,6 @@ interface GameContextType {
   /** Relevé « Production du service » : une ligne par procédure ouverte (acte II) ; null à l'acte I. */
   production: LigneProduction[] | null;
   /** Débits lissés de l'en-tête, €/s et formulaires/s (acte II) ; null à l'acte I. */
-  debits: Debits | null;
   /** Trombones, Réforme possible et Jurisprudence (dossier administratif). */
   reforme: R.VueReforme;
   /** Numéro du Cerfa d'embauche de la partie (00001*01, puis *02… après chaque Réforme). */
@@ -231,13 +221,6 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const [pret, setPret] = useState(false);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [abandonsFile, setAbandonsFile] = useState(0);
-  const [debits, setDebits] = useState<Debits>(DEBITS_NULS);
-  /** Flux des taps de l'acte II depuis le dernier tick (lissés avec celui du tick). */
-  const fluxTaps = useRef<Debits>(DEBITS_NULS);
-  const remettreDebits = useCallback(() => {
-    fluxTaps.current = DEBITS_NULS;
-    setDebits(DEBITS_NULS);
-  }, []);
   /** Fractions d'abandon pas encore montrées (le moteur agrège des parts de dossier). */
   const abandonsEnCours = useRef(0);
   const compterAbandons = useCallback((n: number) => {
@@ -318,17 +301,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       let s1: GameState;
       if (ecart > SEUIL_ABSENCE) {
         s1 = rattraperAbsence(s0, maintenant);
-        // L'absence n'entre pas dans les débits affichés.
-        fluxTaps.current = DEBITS_NULS;
-        setDebits(DEBITS_NULS);
       } else if (s0.acte === 2) {
         // Acte II : le moteur de la Direction, jamais celui du guichet.
-        const dt = Math.max(0, ecart) / 1000;
-        const r2 = D.tick2(s0, dt, maintenant);
-        const flux = ajouterFlux(fluxTaps.current, fluxDe(r2.ev, coutFormulaireDebit(s0, maintenant)));
-        fluxTaps.current = DEBITS_NULS;
-        setDebits((d) => lisserDebits(d, flux, dt));
-        s1 = r2.s;
+        s1 = D.tick2(s0, Math.max(0, ecart) / 1000, maintenant).s;
       } else {
         const r = E.tick(s0, Math.max(0, ecart) / 1000, maintenant);
         compterAbandons(r.ev.abandons);
@@ -352,9 +327,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
   const tamponner = useCallback((): { rupture: boolean } => {
     if (etatRef.current.acte === 2) {
       // Acte II : le coup vise un parapheur ; la scène et les compteurs réagissent au même verdict qu'à l'acte I.
-      const t2 = Date.now();
-      const r2 = D.tamponner2(etatRef.current, t2);
-      fluxTaps.current = ajouterFlux(fluxTaps.current, fluxDe(r2.ev, coutFormulaireDebit(etatRef.current, t2)));
+      const r2 = D.tamponner2(etatRef.current, Date.now());
       if (r2.ev.visas > 0) {
         verdictId.current += 1;
         setVerdict({
@@ -528,10 +501,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     setVerdict(null);
     setAbandonsFile(0);
     abandonsEnCours.current = 0;
-    remettreDebits();
     vibrerSi('succes');
     appliquer(D.entrerActe2({ ...s, finActeVue: true }, Date.now()));
-  }, [appliquer, vibrerSi, remettreDebits]);
+  }, [appliquer, vibrerSi]);
 
   const reformer = useCallback(() => {
     const s = R.reformer(etatRef.current, Date.now());
@@ -540,10 +512,9 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     setVerdict(null);
     setAbandonsFile(0);
     abandonsEnCours.current = 0;
-    remettreDebits();
     vibrerSi('succes');
     appliquer(s);
-  }, [appliquer, vibrerSi, remettreDebits]);
+  }, [appliquer, vibrerSi]);
 
   const acheterJurisprudence = useCallback(
     (id: JurisprudenceId) => {
@@ -573,9 +544,8 @@ export default function GameStateProvider({ children }: { children: React.ReactN
     setVerdict(null);
     setAbandonsFile(0);
     abandonsEnCours.current = 0;
-    remettreDebits();
     appliquer(E.etatInitial(Date.now()));
-  }, [appliquer, remettreDebits]);
+  }, [appliquer]);
 
   const chargerRaccourci = useCallback(
     (id: Preset) => {
@@ -585,12 +555,11 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       setVerdict(null);
       setAbandonsFile(0);
       abandonsEnCours.current = 0;
-      remettreDebits();
-      appliquer(s);
+        appliquer(s);
       AsyncStorage.setItem(CLE_SAUVEGARDE, JSON.stringify(s)).catch(() => undefined);
       router.replace('/');
     },
-    [appliquer, remettreDebits],
+    [appliquer],
   );
 
   const maintenant = etat.derniereMaj;
@@ -713,7 +682,6 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       atelier,
       fiche2,
       production,
-      debits: direction ? debits : null,
       reforme,
       cerfaNumero: R.numeroCerfa(etat),
       demanderRequisition,
@@ -747,7 +715,7 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       deposerDemission, marquerLettresLues, marquerFinActeVue, marquerFichePoste,
       nouvellePartie, rupture, rejet, prixRamette, direction, service2, atelier, acheterGuichet, acheterAgent2,
       reglerExemplaires, modifierProcedure, entrerDirection, reforme, reformer, acheterJurisprudence, chargerRaccourci,
-      fiche2, production, debits, reglerAchats,
+      fiche2, production, reglerAchats,
     ],
   );
 

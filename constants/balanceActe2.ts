@@ -19,13 +19,18 @@ export const BALANCE2 = {
   installationRate: 1 / 60,
   /** Demandes par seconde et par usager inactif. */
   demandeRate: 1 / 500,
-  /** Demandes qui attendent déjà à la première étape de la Carte d'identité : aucune (specs/012). */
-  fileInitiale: 0,
+  /**
+   * Demandes qui attendent déjà la vérification des pièces (specs/012) : la file ne bouge pas avant le premier
+   * guichet, aucune nouvelle demande n'arrive.
+   */
+  fileInitiale: 14,
   /**
    * Demandes qui attendent déjà le visa du chef de service (specs/012) : il vise dès la première seconde, et ces
-   * 20 visas paient le premier guichet (20 × 1,60 € ≥ BALANCE2.guichet.coutBase).
+   * 50 visas paient le premier guichet (50 × 1,60 € ≥ BALANCE2.guichet.coutBase).
    */
-  visasInitiaux: 20,
+  visasInitiaux: 50,
+  /** Taps dans le vide (rien à viser) avant que la note « Réouverture du guichet 3 » apparaisse (specs/012). */
+  tapsAvantReouverture: 3,
   budgetInitial: 0,
   formulairesInitiaux: 300,
   /**
@@ -76,8 +81,6 @@ export const BALANCE2 = {
   prixRamette: 80,
   /** Service des achats : il commande quand le stock couvre moins de ces secondes de capacité. */
   achatsSecondes: 30,
-  /** Débits de l'en-tête (€/s, formulaires/s) : constante de lissage (s). */
-  lissageDebits: 3,
 } as const;
 
 export interface EtapeDef {

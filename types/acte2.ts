@@ -121,9 +121,11 @@ export interface EtatActe2 {
   achatsActifs: boolean;
   /**
    * La note n° 1 « Réouverture du guichet 3 » est apparue (specs/012) : plus rien à viser alors qu'une demande
-   * attendait à la première étape. Elle reste visible ensuite.
+   * attendait à la première étape, le joueur a tamponné dans le vide. Elle reste visible ensuite.
    */
   reouvertureVisible: boolean;
+  /** Taps sur TAMPONNER sans rien à viser, avant que la note n° 1 apparaisse. */
+  tapsSansVisa: number;
   stats: StatsActe2;
 }
 

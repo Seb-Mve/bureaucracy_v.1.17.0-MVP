@@ -387,11 +387,8 @@ test('quand plus aucune démarche n’aboutit, personne ne s’installe et la vi
   const s = avec2(s0, { population: 1000, guichets: 0 });
   assert.equal(aboutitPourUsagers(x(s), ['identite', 'domicile']), false);
   const r = D.tick2(s, 1, 1000).s;
-  const nouvelles = 1000 * (1 - Math.exp(-BALANCE2.demandeRate));
-  proche(
-    x(r).population,
-    1000 - (1000 - nouvelles) * (1 - Math.exp(-BALANCE2.exode)),
-  );
+  // Sans guichet, aucune nouvelle demande (specs/012) : tous les habitants sans démarche peuvent partir.
+  proche(x(r).population, 1000 - 1000 * (1 - Math.exp(-BALANCE2.exode)));
 });
 
 test('une procédure demandée aboutit tant qu’aucune de ses pièces ne ramène à elle', () => {

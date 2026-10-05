@@ -48,7 +48,7 @@ export const PRESETS_INFO: PresetInfo[] = [
   {
     id: 'debut',
     titre: 'Acte II — prise de fonctions',
-    detail: 'Entrée à la Direction, aucun guichet, 20 demandes à viser',
+    detail: 'Entrée à la Direction, aucun guichet, 50 demandes à viser',
   },
   {
     id: 'visasEpuises',
@@ -268,12 +268,12 @@ function finActeI(t: number): GameState {
 }
 
 /**
- * Les 20 visas de l'arrivée accordés un par un, puis 5 s sans guichet : plus rien à viser, les nouvelles
- * demandes attendent la vérification des pièces et la note « Réouverture du guichet 3 » est apparue.
+ * Les visas de l'arrivée accordés un par un, puis quelques taps dans le vide : plus rien à viser, des demandes
+ * attendent la vérification des pièces et la note « Réouverture du guichet 3 » est apparue.
  */
 function epuiserVisas(s0: GameState, maintenant: number): GameState {
   let s = s0;
-  for (let i = 0; i < BALANCE2.visasInitiaux; i++)
+  for (let i = 0; i < BALANCE2.visasInitiaux + BALANCE2.tapsAvantReouverture; i++)
     s = D.tamponner2(s, maintenant, () => 0.99).s;
   return D.tick2(s, 5, maintenant).s;
 }

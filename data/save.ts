@@ -111,6 +111,7 @@ export function normaliserSauvegarde(s: GameState): GameState {
         achatsActifs: x.achatsActifs ?? true,
         // Avant specs/012, la note n° 1 était visible dès l'entrée dans l'acte.
         reouvertureVisible: x.reouvertureVisible ?? true,
+        tapsSansVisa: estNombre(x.tapsSansVisa) ? x.tapsSansVisa : 0,
         suites: suitesValides(x) ? x.suites : stocksPour(x.procedures),
         stats: {
           ...x.stats,

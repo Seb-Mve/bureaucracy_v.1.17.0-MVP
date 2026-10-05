@@ -70,7 +70,7 @@ export function abandonsProcNuls(): Record<ProcId, number> {
 /** Compteur par procédure à zéro (documents délivrés). */
 export const parProcNul = (): Record<ProcId, number> => abandonsProcNuls();
 
-/** État de la Direction à l'entrée dans l'acte : aucun guichet, la procédure du S.I.C. et 20 demandes au visa. */
+/** État de la Direction à l'entrée dans l'acte : aucun guichet, la procédure du S.I.C. et 50 demandes au visa. */
 export function etatInitialActe2(maintenant: number): EtatActe2 {
   const procedures = copieProcedures(PROCEDURES_INITIALES);
   const usagers = stocksPour(procedures);
@@ -102,6 +102,7 @@ export function etatInitialActe2(maintenant: number): EtatActe2 {
     ficheLues: [],
     achatsActifs: true,
     reouvertureVisible: false,
+    tapsSansVisa: 0,
     stats: {
       franchies: 0,
       franchiesBoucle: 0,
@@ -276,7 +277,7 @@ export function visasEnAttente(x: EtatActe2): number {
 
 /**
  * Plus rien à viser, et au moins une demande attend à la première étape d'une procédure que les usagers
- * demandent : la note « Réouverture du guichet 3 » apparaît (specs/012).
+ * demandent : quelques taps dans le vide font apparaître la note « Réouverture du guichet 3 » (specs/012).
  */
 export function reouvertureAttendue(x: EtatActe2): boolean {
   let enTete = 0;
@@ -286,7 +287,7 @@ export function reouvertureAttendue(x: EtatActe2): boolean {
 
 /**
  * Filet du premier guichet (specs/012) : recrutement ouvert, aucun guichet ni agent, rien à viser et plus de
- * quoi payer un guichet (le budget des 20 visas est parti en ramettes) — le guichet 3 rouvre d'office.
+ * quoi payer un guichet (le budget des visas de l'arrivée est parti en ramettes) — le guichet 3 rouvre d'office.
  */
 export function guichetDOffice(s: GameState, m: Modifiers2): boolean {
   const x = s.acte2;
@@ -558,7 +559,9 @@ export function tick2(
     0,
     x0.population - impatients - sommeStocks(usagers),
   );
-  const nouvelles = inactifs * (1 - Math.exp(-BALANCE2.demandeRate * dt));
+  // Rien ne bouge avant le premier guichet (specs/012) : aucune nouvelle demande, seuls les visas du joueur.
+  const nouvelles =
+    x0.guichets > 0 ? inactifs * (1 - Math.exp(-BALANCE2.demandeRate * dt)) : 0;
   const demandees = PROCS_DEMANDEES.filter((p) => m.procsOuvertes.includes(p));
   for (const p of demandees) usagers[p][0] += nouvelles / demandees.length;
 
@@ -630,22 +633,9 @@ export function tick2(
     ...visa.map((l) => ({ ...l, u: l.u * rV, b: l.b * rV, c: l.c * rV })),
   ];
   const r = franchir(s, lots, enJeu ? m : { ...m, rejetMax: 0 }, maintenant);
-  // La note « Réouverture du guichet 3 » apparaît quand plus rien n'est à viser ; elle le reste (specs/012).
-  // Sans de quoi payer le premier guichet, il rouvre d'office : la Direction ne reste jamais bloquée.
+  // Sans de quoi payer le premier guichet, il rouvre d'office : la Direction ne reste jamais bloquée (specs/012).
   const y = r.s.acte2 as EtatActe2;
-  const apparue = !y.reouvertureVisible && reouvertureAttendue(y);
-  const office = guichetDOffice(r.s, m);
-  const s1: GameState =
-    apparue || office
-      ? {
-          ...r.s,
-          acte2: {
-            ...y,
-            reouvertureVisible: y.reouvertureVisible || apparue,
-            guichets: office ? 1 : y.guichets,
-          },
-        }
-      : r.s;
+  const s1: GameState = guichetDOffice(r.s, m) ? { ...r.s, acte2: { ...y, guichets: 1 } } : r.s;
   return { s: s1, ev: { ...r.ev, achats: commande.cout } };
 }
 
@@ -755,7 +745,25 @@ export function tamponner2(
       total += l.u + l.b + l.c;
     });
   }
-  if (total < 1e-9) return { s, ev: { ...evVide(), aucunVisa: true } };
+  if (total < 1e-9) {
+    // Tamponner dans le vide alors que des demandes attendent la vérification des pièces : au bout de quelques
+    // taps, la note « Réouverture du guichet 3 » apparaît (specs/012).
+    const x1 = s.acte2 as EtatActe2;
+    if (x1.reouvertureVisible || !reouvertureAttendue(x1))
+      return { s, ev: { ...evVide(), aucunVisa: true } };
+    const tapsSansVisa = x1.tapsSansVisa + 1;
+    return {
+      s: {
+        ...s,
+        acte2: {
+          ...x1,
+          tapsSansVisa,
+          reouvertureVisible: tapsSansVisa >= BALANCE2.tapsAvantReouverture,
+        },
+      },
+      ev: { ...evVide(), aucunVisa: true },
+    };
+  }
   const part = Math.min(1, m.tapPower / total);
   const r = franchir(
     s,

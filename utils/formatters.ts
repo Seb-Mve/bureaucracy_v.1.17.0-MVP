@@ -58,11 +58,3 @@ export function formatPourcent(value: number): string {
   return (Math.floor(value * 10) / 10).toFixed(1).replace('.', ',');
 }
 
-/**
- * Débit signé (« +15 », « −13 », « +0,40 »), sans unité : même écriture que les débits, avec le signe
- * typographique ; « 0 » quand il est négligeable.
- */
-export function formatDebitSigne(value: number): string {
-  if (!Number.isFinite(value) || Math.abs(value) < 0.01) return '0';
-  return `${value > 0 ? '+' : '−'}${formatDebit(Math.abs(value))}`;
-}

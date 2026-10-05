@@ -45,7 +45,8 @@ test('relevé « Production du service » : demandes, délivrés, valeur d’une
   });
   const [carte, justificatif] = P.lignesProduction(s, 0) as P.LigneProduction[];
   assert.equal(carte.nom, 'Carte d’identité');
-  assert.equal(carte.demandes, BALANCE2.fileInitiale + BALANCE2.visasInitiaux);
+  // En cours + délivrées + abandons : 64 + 312,6 + 1,2.
+  assert.equal(carte.demandes, BALANCE2.fileInitiale + BALANCE2.visasInitiaux + 314);
   assert.equal(carte.demandesTexte, `${carte.demandes} demandes`);
   assert.equal(carte.delivresTexte, '313 délivrées');
   assert.equal(carte.delivresMot, 'délivrées');
@@ -69,7 +70,7 @@ test('relevé « Production du service » : demandes, délivrés, valeur d’une
   );
 });
 
-test('relevé : les demandes comptent tous les dossiers en cours, avec ou sans usager', () => {
+test('relevé : les demandes comptent tous les dossiers en cours, avec ou sans usager, et ceux déjà sortis', () => {
   const b = avecNotes(base2(), ['atelier']);
   const s = avec2(b, {
     usagers: { ...x(b).usagers, identite: [1, 1] },
@@ -80,6 +81,27 @@ test('relevé : les demandes comptent tous les dossiers en cours, avec ou sans u
     (P.lignesProduction(s, 0) as P.LigneProduction[])[0].demandes,
     7,
   );
+  const sortis = avec2(s, {
+    stats: {
+      ...x(s).stats,
+      delivresUsagers: { ...x(s).stats.delivresUsagers, identite: 4 },
+      abandonsProc: { ...x(s).stats.abandonsProc, identite: 2 },
+    },
+  });
+  assert.equal(
+    (P.lignesProduction(sortis, 0) as P.LigneProduction[])[0].demandes,
+    13,
+  );
+});
+
+test('relevé : un visa délivre une carte sans changer le nombre de demandes', () => {
+  const t = 1_000_000_000;
+  const s0 = sauvegardePreset('debut', t);
+  const avant = (P.lignesProduction(s0, t) as P.LigneProduction[])[0];
+  const s = D.tamponner2(s0, t, () => 0.99).s;
+  const apres = (P.lignesProduction(s, t) as P.LigneProduction[])[0];
+  assert.equal(apres.demandes, avant.demandes);
+  assert.equal(apres.delivres, avant.delivres + 1);
 });
 
 test('relevé : une fois la boucle formée, la carte n’a plus de destination', () => {
@@ -171,11 +193,11 @@ test('première carte visée : délivrée à son usager, relevé à 1', () => {
   assert.equal(V.vueDirection(s, t)?.parapheur?.attente, 'Attend votre visa');
 });
 
-test('20 taps à la prise de fonctions : 20 cartes délivrées', () => {
+test('tous les visas de la prise de fonctions : autant de cartes délivrées', () => {
   const t = 1_000_000_000;
   let s = sauvegardePreset('debut', t);
-  for (let i = 0; i < 20; i++) s = D.tamponner2(s, t, () => 0.99).s;
+  for (let i = 0; i < BALANCE2.visasInitiaux; i++) s = D.tamponner2(s, t, () => 0.99).s;
   const carte = (P.lignesProduction(s, t) as P.LigneProduction[])[0];
-  assert.equal(carte.delivresTexte, '20 délivrées');
+  assert.equal(carte.delivresTexte, `${BALANCE2.visasInitiaux} délivrées`);
   assert.equal(D.visasEnAttente(x(s)), 0);
 });

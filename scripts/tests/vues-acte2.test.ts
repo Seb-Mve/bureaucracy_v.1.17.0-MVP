@@ -42,10 +42,10 @@ test('vues de l’acte II : rien à l’acte I', () => {
   assert.deepEqual(V.notesAffichees2(s, 0), []);
 });
 
-test('écran Direction à l’entrée : 20 demandes à viser, aucun guichet, Carte d’identité', () => {
+test('écran Direction à l’entrée : des demandes à viser, aucun guichet, Carte d’identité', () => {
   const d = vue(base2());
   assert.equal(d.visas, BALANCE2.visasInitiaux);
-  assert.equal(d.usagers, BALANCE2.visasInitiaux);
+  assert.equal(d.usagers, BALANCE2.fileInitiale + BALANCE2.visasInitiaux);
   assert.equal(d.guichets, 0);
   assert.equal(d.ville, `${formatEntier(BALANCE2.populationInitiale)} usagers en ville`);
   assert.equal(d.demat, null);
@@ -59,11 +59,11 @@ test('écran Direction à l’entrée : 20 demandes à viser, aucun guichet, Car
   assert.equal(d.parapheur?.attente, 'Attend votre visa');
   assert.equal(d.parapheur?.repart, 'Repart avec sa Carte d’identité');
   assert.deepEqual(d.delivrance, { nom: 'Délivrée' });
-  // Ses pièces ont été vérifiées (personne n'y attend) : coche ; le visa est « ici ».
+  // La file figée de la vérification des pièces (specs/012) s'affiche ; le visa est « ici ».
   assert.deepEqual(
     d.etapes.map((e) => [e.nom, e.pictogramme, e.faite, e.ici]),
     [
-      ['Vérification des pièces', null, true, false],
+      ['Vérification des pièces', null, false, false],
       ['Visa', 'visa', false, true],
     ],
   );
@@ -227,7 +227,7 @@ test('tableau de circulation : demandes en attente à chaque étape, la plus enc
   assert.deepEqual(
     d.etapes.map((e) => [e.nom, e.attente, e.encombree]),
     [
-      ['Vérification des pièces', 0, false],
+      ['Vérification des pièces', BALANCE2.fileInitiale, false],
       ['Visa', BALANCE2.visasInitiaux, true],
     ],
   );

@@ -14,6 +14,13 @@ Un usager **demande** une Carte d’identité. La demande est **une liasse de fo
 
 ## Ce qui change
 
+### Retours du 2026-10-05 (soir), appliqués
+- Le débit « €/s » et « /s » sous Budget et Formulaires est **retiré** : il réagissait aux taps et n'existe pas à l'Acte I.
+- **Rien ne bouge avant le premier guichet** : aucune nouvelle demande n'arrive ; une file fixe de 14 demandes attend la vérification des pièces.
+- **50 demandes** au Visa au départ (au lieu de 20).
+- La note n° 1 n'apparaît plus dès qu'À viser vaut 0 : il faut **3 taps dans le vide** sur TAMPONNER grisé (le bouton reste touchable).
+- « N demandes » du relevé compte les demandes **reçues** (en cours, délivrées, abandonnées) : un visa ne le change pas, seul « délivrées » monte (comme le storyboard).
+
 ### 1. Démarrage sans guichet
 - L'Acte II démarre **sans aucun guichet** (`guichetsInitiaux` à 0 ; la Jurisprudence Antériorité garde son effet) et avec **20 demandes déjà au Visa** (assez pour payer le premier guichet : 20 visas × 1,60 € ≥ 30 €).
 - Tant qu'il n'y a pas de guichet, les nouvelles demandes s'entassent à la première étape ; le compteur Tampons apposés, le budget et les formulaires ne bougent **que** quand le joueur tamponne.

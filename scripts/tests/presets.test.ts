@@ -5,6 +5,7 @@ import { estSauvegardeValide } from '../../data/save';
 import { nouvellesLettres } from '../../data/courrier';
 import { PRESETS, PRESETS_INFO, sauvegardePreset } from '../../data/presets';
 import * as D from '../../data/acte2/moteur';
+import { BALANCE2 } from '../../constants/balanceActe2';
 import * as F from '../../data/acte2/fiche';
 import * as P from '../../data/acte2/production';
 import { procsEnBoucle } from '../../data/acte2/procedures';
@@ -132,10 +133,10 @@ test('raccourci « compliquer rapporte » : Atelier ouvert, Signature permise, l
   assert.equal(F.vueFiche2(s, T)?.nonLues, 0);
 });
 
-test('raccourci « prise de fonctions » : aucun guichet, 20 demandes à viser, note n° 1 cachée', () => {
+test('raccourci « prise de fonctions » : aucun guichet, des demandes à viser, note n° 1 cachée', () => {
   const s = sauvegardePreset('debut', T);
   assert.equal(x2(s).guichets, 0);
-  assert.equal(D.visasEnAttente(x2(s)), 20);
+  assert.equal(D.visasEnAttente(x2(s)), BALANCE2.visasInitiaux);
   assert.ok(!D.notesVisibles2(s).includes('prise'));
 });
 
