@@ -108,6 +108,8 @@ export interface Verdict {
   abandon: boolean;
   /** Le dossier qui vient d'être tamponné (celui qui était au guichet). */
   usager: UsagerAffiche | null;
+  /** Acte II : le coup a délivré un document à son usager (la bulle le montre repartir avec). */
+  delivre?: boolean;
 }
 
 interface GameContextType {
@@ -355,7 +357,13 @@ export default function GameStateProvider({ children }: { children: React.ReactN
       fluxTaps.current = ajouterFlux(fluxTaps.current, fluxDe(r2.ev, coutFormulaireDebit(etatRef.current, t2)));
       if (r2.ev.visas > 0) {
         verdictId.current += 1;
-        setVerdict({ id: verdictId.current, rejete: false, abandon: false, usager: null });
+        setVerdict({
+          id: verdictId.current,
+          rejete: false,
+          abandon: false,
+          usager: null,
+          delivre: r2.ev.delivres > 0,
+        });
         vibrerSi('leger');
       }
       appliquer(r2.s);

@@ -24,6 +24,7 @@ function espaceLibre(e: KeyboardEvent): boolean {
  * Le bouton TAMPONNER : un dossier à l'acte I, un visa à l'acte II. En rupture, rien ne s'affiche d'avance :
  * c'est en tamponnant dans le vide que le bouton le dit (« PLUS DE FORMULAIRES », « RUPTURE D’IMPRIMÉS » à
  * l'acte II ; la pastille de l'onglet où s'en procurer fait le reste). Le gain d'un coup se lit dans les compteurs.
+ * Rien à traiter : « AUCUN DOSSIER » à l'acte I ; à l'acte II, le bouton s'éteint sans rien dire (specs/012).
  */
 export default function BoutonTamponner() {
   const { tamponner, enAttente, rupture, direction, encre } = useGameState();
@@ -46,8 +47,12 @@ export default function BoutonTamponner() {
 
   const vide = direction ? direction.visas < 1 : enAttente < 1;
   const libelleSignal = direction ? 'RUPTURE D’IMPRIMÉS' : 'PLUS DE FORMULAIRES';
-  const libelleVide = direction ? 'AUCUN VISA' : 'AUCUN DOSSIER';
-  const libelle = signal > 0 ? libelleSignal : vide && !rupture ? libelleVide : 'TAMPONNER';
+  const libelle =
+    signal > 0
+      ? libelleSignal
+      : vide && !rupture && !direction
+        ? 'AUCUN DOSSIER'
+        : 'TAMPONNER';
   const eteint = rupture || vide;
 
   // Web : la barre d'espace tamponne (un appui = un coup).
@@ -93,7 +98,7 @@ export default function BoutonTamponner() {
               : 'Plus de formulaires'
             : vide
               ? direction
-                ? 'Aucun visa en attente'
+                ? 'Aucune demande à viser'
                 : 'Aucun dossier en attente'
               : undefined
         }
