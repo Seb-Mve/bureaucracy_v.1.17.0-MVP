@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { IdCard, Landmark, Paperclip, Stamp } from 'lucide-react-native';
-import { useGameState } from '@/context/GameStateContext';
+import { Check, IdCard, Landmark, Paperclip, Stamp } from 'lucide-react-native';
+import {
+  useGameState,
+  type EtapeChaine,
+  type ParapheurAffiche,
+} from '@/context/GameStateContext';
 import Colors, {
   Charte,
   Espace,
@@ -11,35 +15,96 @@ import Colors, {
 } from '@/constants/Colors';
 import { formatEntier } from '@/utils/formatters';
 
+/** Durée pendant laquelle la bulle montre l'usager qui repart avec son document (ms). */
+const DUREE_REPART = 1200;
+
+/** Ce que la bulle montrait juste avant un coup : la demande, sa chaîne et la fiche de délivrance. */
+interface Instantane {
+  parapheur: ParapheurAffiche;
+  etapes: EtapeChaine[];
+  delivrance: { nom: string };
+}
+
+/** Lecture d'une fiche pour l'accessibilité. */
+function lectureFiche(e: EtapeChaine, repart: boolean): string {
+  if (repart || e.faite) return `${e.nom}, faite`;
+  const qui =
+    e.pictogramme === 'visa'
+      ? 'visée par vous et vos agents'
+      : e.pictogramme === 'guichet'
+        ? 'traitée par les guichets'
+        : 'aucun guichet';
+  return `${e.nom}, ${formatEntier(e.attente)} en attente, ${qui}${e.encombree ? ', la plus encombrée' : ''}${e.ici ? ', ici' : ''}`;
+}
+
 /**
- * Bulle de l'écran Direction : la demande que le prochain coup vise (« Mme Lefèvre demande une Carte d’identité »,
- * ou « Demande n° 9 907 · Carte d’identité » quand personne ne l'attend), et le tableau de circulation de sa
- * procédure, en fiches reliées par des trombones, jusqu'à la fiche « Délivrée ». Chaque fiche porte qui la traite
- * (guichet ou tampon) et les dossiers qui y attendent ; les visas en attente s'allument (fond d'encre) ; la plus
- * encombrée a un bord épais ; « Délivrée » passe en gras sur fond vert dès le premier document (jamais la seule
- * couleur).
+ * Bulle de l'écran Direction (specs/012) : la demande que suit la bulle (« Mme Lefèvre demande une Carte
+ * d’identité », ou « Demande n° 9 907 · Carte d’identité » sans usager), ce qu'elle attend (« Attend votre
+ * visa », « Attend la vérification des pièces ») et sa procédure en fiches reliées par des trombones, jusqu'à
+ * « Délivrée ». Chaque fiche porte qui la traite (tampon, guichet, rien tant qu'il n'y a pas de guichet) et les
+ * demandes qui y attendent ; une étape franchie où plus personne n'attend porte une coche ; le visa de la
+ * demande s'allume (« ← ici ») ; la plus encombrée a un bord épais. Juste après une délivrance, la bulle garde
+ * l'usager servi : « Repart avec sa Carte d’identité », toute la chaîne cochée, « Délivrée » en gras sur fond
+ * vert (jamais la seule couleur).
  */
 export default function BulleDirection({
   compact = false,
 }: {
   compact?: boolean;
 }) {
-  const { direction, encre } = useGameState();
-  if (!direction) return null;
-  const { parapheur, etapes, delivrance } = direction;
+  const { direction, verdict, encre } = useGameState();
+  const [repart, setRepart] = useState<Instantane | null>(null);
+  const dernierVerdict = useRef(verdict?.id ?? null);
+  const precedent = useRef<Instantane | null>(null);
 
-  const titre = parapheur ? parapheur.titre : 'Aucun parapheur à viser';
-  const detail = parapheur ? 'Visa du chef de service' : null;
+  // Un coup qui délivre un document à son usager : la bulle le garde un instant (avant d'enregistrer l'état).
+  useEffect(() => {
+    if (!verdict || verdict.id === dernierVerdict.current) return;
+    dernierVerdict.current = verdict.id;
+    const servi = precedent.current;
+    if (!verdict.delivre || !servi || servi.parapheur.repart === null) {
+      setRepart(null);
+      return;
+    }
+    setRepart(servi);
+    const t = setTimeout(() => setRepart(null), DUREE_REPART);
+    return () => clearTimeout(t);
+  }, [verdict]);
+
+  // La demande affichée, mémorisée pour le prochain coup.
+  useEffect(() => {
+    precedent.current = direction?.parapheur
+      ? {
+          parapheur: direction.parapheur,
+          etapes: direction.etapes,
+          delivrance: direction.delivrance,
+        }
+      : null;
+  });
+
+  if (!direction) return null;
+  const vue: Instantane | null =
+    repart ??
+    (direction.parapheur
+      ? {
+          parapheur: direction.parapheur,
+          etapes: direction.etapes,
+          delivrance: direction.delivrance,
+        }
+      : null);
+  const etapes = vue?.etapes ?? direction.etapes;
+  const delivrance = vue?.delivrance ?? direction.delivrance;
+  const servi = repart !== null;
+
+  const titre = vue ? vue.parapheur.titre : 'Aucune demande en cours';
+  const detail = vue
+    ? servi
+      ? vue.parapheur.repart
+      : vue.parapheur.attente
+    : null;
   const chaine = etapes
-    .map(
-      (e) =>
-        `${e.nom}, ${formatEntier(e.attente)} en attente, ${
-          e.traitePar === 'visa'
-            ? 'visée par vous et vos agents'
-            : 'traitée par les guichets'
-        }${e.encombree ? ', la plus encombrée' : ''}`,
-    )
-    .concat(delivrance.nom)
+    .map((e) => lectureFiche(e, servi))
+    .concat(`${delivrance.nom}${servi ? ', faite' : ''}`)
     .join(' ; ');
 
   return (
@@ -59,52 +124,53 @@ export default function BulleDirection({
         )}
         {!compact && (
           <View style={styles.chaine}>
-            {etapes.map((e, i) => (
-              <React.Fragment key={`${e.type}-${i}`}>
-                {i > 0 && <Paperclip size={12} color={Colors.crayon} />}
-                <View
-                  style={[
-                    styles.fiche,
-                    e.encombree && styles.ficheEncombree,
-                    e.allumee && { backgroundColor: encre.face },
-                  ]}
-                >
-                  {e.traitePar === 'visa' ? (
-                    <Stamp size={12} color={Colors.anthracite} />
-                  ) : (
-                    <Landmark size={12} color={Colors.anthracite} />
-                  )}
-                  <Text
+            {etapes.map((e, i) => {
+              const faite = servi || e.faite;
+              const ici = !servi && e.ici;
+              return (
+                <React.Fragment key={`${e.type}-${i}`}>
+                  {i > 0 && <Paperclip size={12} color={Colors.crayon} />}
+                  <View
                     style={[
-                      styles.ficheTexte,
-                      e.allumee && styles.ficheAllumee,
+                      styles.fiche,
+                      !faite && e.encombree && styles.ficheEncombree,
+                      faite && styles.ficheFaite,
+                      ici && { backgroundColor: encre.face },
                     ]}
-                    numberOfLines={1}
                   >
-                    {e.nom}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.ficheNombre,
-                      e.encombree && styles.ficheNombreEncombre,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {formatEntier(e.attente)}
-                  </Text>
-                </View>
-              </React.Fragment>
-            ))}
+                    {faite ? (
+                      <Check size={12} color={Colors.anthracite} />
+                    ) : e.pictogramme === 'visa' ? (
+                      <Stamp size={12} color={Colors.anthracite} />
+                    ) : e.pictogramme === 'guichet' ? (
+                      <Landmark size={12} color={Colors.anthracite} />
+                    ) : null}
+                    <Text
+                      style={[styles.ficheTexte, ici && styles.ficheAllumee]}
+                      numberOfLines={1}
+                    >
+                      {ici ? `${e.nom} ← ici` : e.nom}
+                    </Text>
+                    {!faite && (
+                      <Text
+                        style={[
+                          styles.ficheNombre,
+                          e.encombree && styles.ficheNombreEncombre,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {formatEntier(e.attente)}
+                      </Text>
+                    )}
+                  </View>
+                </React.Fragment>
+              );
+            })}
             <Paperclip size={12} color={Colors.crayon} />
-            <View
-              style={[styles.fiche, delivrance.faite && styles.ficheDelivree]}
-            >
+            <View style={[styles.fiche, servi && styles.ficheDelivree]}>
               <IdCard size={12} color={Colors.anthracite} />
               <Text
-                style={[
-                  styles.ficheTexte,
-                  delivrance.faite && styles.ficheAllumee,
-                ]}
+                style={[styles.ficheTexte, servi && styles.ficheAllumee]}
                 numberOfLines={1}
               >
                 {delivrance.nom}
@@ -181,6 +247,10 @@ const styles = StyleSheet.create({
   ficheEncombree: {
     borderWidth: Charte.trait,
   },
+  /** Étape franchie : coche et fond vert (jamais la couleur seule). */
+  ficheFaite: {
+    backgroundColor: Colors.pastelVert,
+  },
   ficheNombre: {
     fontFamily: Fonts.chiffresRegular,
     fontSize: Typo.micro,
@@ -190,7 +260,7 @@ const styles = StyleSheet.create({
   ficheNombreEncombre: {
     fontFamily: Fonts.chiffres,
   },
-  /** « Délivrée » : bord moyen et fond vert, en plus du texte gras. */
+  /** « Délivrée » à la délivrance : bord moyen et fond vert, en plus du texte gras. */
   ficheDelivree: {
     borderWidth: Charte.traitFin,
     backgroundColor: Colors.pastelVert,

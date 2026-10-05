@@ -58,7 +58,7 @@ test('écran Direction à l’entrée : 20 demandes à viser, aucun guichet, Car
   assert.equal(d.parapheur?.rang, 1);
   assert.equal(d.parapheur?.attente, 'Attend votre visa');
   assert.equal(d.parapheur?.repart, 'Repart avec sa Carte d’identité');
-  assert.deepEqual(d.delivrance, { nom: 'Délivrée', faite: false });
+  assert.deepEqual(d.delivrance, { nom: 'Délivrée' });
   // Ses pièces ont été vérifiées (personne n'y attend) : coche ; le visa est « ici ».
   assert.deepEqual(
     d.etapes.map((e) => [e.nom, e.pictogramme, e.allumee, e.faite, e.ici]),
@@ -273,11 +273,17 @@ test('en-tête : les usagers qui ont une démarche en cours, pas les dossiers li
   assert.equal(vue(s).usagers, 5);
 });
 
-test('bulle : la chaîne se termine par « Délivrée », faite dès la première carte', () => {
+test('bulle : la chaîne se termine par « Délivrée » ou « Délivré », accordé au document', () => {
   const s = base2();
-  assert.deepEqual(vue(s).delivrance, { nom: 'Délivrée', faite: false });
-  const u = avec2(s, {
-    stats: { ...x(s).stats, delivresUsagers: { ...x(s).stats.delivresUsagers, identite: 1 } },
-  });
-  assert.deepEqual(vue(u).delivrance, { nom: 'Délivrée', faite: true });
+  assert.deepEqual(vue(s).delivrance, { nom: 'Délivrée' });
+  const d = s.reformes.denomination;
+  const titre: GameState = {
+    ...s,
+    reformes: {
+      ...s.reformes,
+      denomination: { ...d, procedures: { ...d.procedures, identite: 'Titre d’identité simplifié' } },
+    },
+  };
+  assert.deepEqual(vue(titre).delivrance, { nom: 'Délivré' });
+  assert.equal(vue(titre).parapheur?.repart, 'Repart avec son Titre d’identité simplifié');
 });

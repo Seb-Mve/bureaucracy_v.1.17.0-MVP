@@ -15,13 +15,7 @@ import type {
 import { AGENTS2, PROCS_DEMANDEES } from '../../constants/balanceActe2';
 import { formatEntier } from '../../utils/formatters';
 import { demandeur, tirage } from '../usagers';
-import {
-  compte,
-  delivresEntiers,
-  documentDe,
-  dossiersEnCours,
-  possessif,
-} from './production';
+import { compte, documentDe, dossiersEnCours, possessif } from './production';
 import {
   conditionsNote2,
   coutAgent2,
@@ -142,8 +136,8 @@ export interface VueDirection {
   parapheur: ParapheurAffiche | null;
   /** Étapes de la procédure de la demande (Carte d'identité s'il n'y en a pas). */
   etapes: EtapeChaine[];
-  /** Fiche qui clôt la chaîne : « Délivrée » (accordé au document), faite dès le premier document délivré. */
-  delivrance: { nom: string; faite: boolean };
+  /** Fiche qui clôt la chaîne : « Délivrée » (accordé au document) ; elle ne s'allume qu'à la délivrance (specs/012). */
+  delivrance: { nom: string };
   /** Numéro du panneau d'appel de la salle (null : salle vide, panneau éteint). */
   appel: number | null;
   recrutementVisible: boolean;
@@ -294,10 +288,7 @@ export function vueDirection(
     exemplairesVisible: m.exemplairesVisible,
     parapheur,
     etapes: tableauCirculation(x, p, tete?.k ?? null),
-    delivrance: {
-      nom: doc.feminin ? 'Délivrée' : 'Délivré',
-      faite: delivresEntiers(x, p) >= 1,
-    },
+    delivrance: { nom: doc.feminin ? 'Délivrée' : 'Délivré' },
     appel: usagers >= 1 ? numero - 1 : null,
     recrutementVisible: m.recrutementVisible,
     atelierVisible: m.atelierVisible,

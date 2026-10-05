@@ -161,11 +161,12 @@ test('possessif d’un document : « sa carte », « son titre », « son attest
   assert.equal(P.possessif('Attestation d’hébergement'), 'son');
 });
 
-test('première carte visée : délivrée, relevé à 1 et fiche « Délivrée » allumée', () => {
+test('première carte visée : délivrée à son usager, relevé à 1', () => {
   const t = 1_000_000_000;
-  const { s } = D.tamponner2(sauvegardePreset('debut', t), t);
+  const { s, ev } = D.tamponner2(sauvegardePreset('debut', t), t);
+  proche(ev.delivres, 1 - BALANCE2.abandonParPoint);
   const carte = (P.lignesProduction(s, t) as P.LigneProduction[])[0];
   assert.equal(carte.delivres, 1);
   assert.equal(carte.delivresTexte, '1 délivrée');
-  assert.equal(V.vueDirection(s, t)?.delivrance.faite, true);
+  assert.equal(V.vueDirection(s, t)?.parapheur?.attente, 'Attend votre visa');
 });
