@@ -47,6 +47,7 @@ test('écran Direction à l’entrée : 20 demandes à viser, aucun guichet, Car
   assert.equal(d.visas, BALANCE2.visasInitiaux);
   assert.equal(d.usagers, BALANCE2.visasInitiaux);
   assert.equal(d.guichets, 0);
+  assert.equal(d.ville, `${formatEntier(BALANCE2.populationInitiale)} usagers en ville`);
   assert.equal(d.demat, null);
   assert.equal(d.rupture, false);
   // Seuls des usagers attendent : le parapheur est la demande d'une personne.
@@ -54,12 +55,16 @@ test('écran Direction à l’entrée : 20 demandes à viser, aucun guichet, Car
   assert.equal(d.parapheur?.proc, 'identite');
   assert.match(d.parapheur?.demandeur ?? '', /^(Mme|M\.) \S/);
   assert.equal(d.parapheur?.titre, `${d.parapheur?.demandeur} demande une Carte d’identité`);
+  assert.equal(d.parapheur?.rang, 1);
+  assert.equal(d.parapheur?.attente, 'Attend votre visa');
+  assert.equal(d.parapheur?.repart, 'Repart avec sa Carte d’identité');
   assert.deepEqual(d.delivrance, { nom: 'Délivrée', faite: false });
+  // Ses pièces ont été vérifiées (personne n'y attend) : coche ; le visa est « ici ».
   assert.deepEqual(
-    d.etapes.map((e) => [e.nom, e.allumee]),
+    d.etapes.map((e) => [e.nom, e.pictogramme, e.allumee, e.faite, e.ici]),
     [
-      ['Pièce', false],
-      ['Visa', true],
+      ['Vérification des pièces', null, false, true, false],
+      ['Visa', 'visa', true, false, true],
     ],
   );
   assert.equal(d.etapes[1].attente, BALANCE2.visasInitiaux);
@@ -102,15 +107,24 @@ test('parapheur : la part des dossiers d’usagers au visa décide, numéro par 
   assert.ok(noms > 70 && noms < 130, `${noms} parapheurs nommés sur 200`);
 });
 
-test('sans visa en attente : aucun parapheur ; sans usager : panneau d’appel éteint', () => {
+test('plus rien à viser : la bulle suit la demande qui attend la vérification des pièces ; sans demande, rien', () => {
   const b = base2();
   const sansVisa = avec2(b, { usagers: { ...x(b).usagers, identite: [5, 0] } });
-  assert.equal(vue(sansVisa).parapheur, null);
+  const d = vue(sansVisa);
+  assert.equal(d.parapheur?.rang, 0);
+  assert.equal(d.parapheur?.attente, 'Attend la vérification des pièces');
+  assert.match(d.parapheur?.titre ?? '', /^(Mme|M\.) .+ demande une Carte d’identité$/);
+  // Aucun guichet : pas de pictogramme de guichet ; rien d'allumé, rien de fait.
   assert.deepEqual(
-    vue(sansVisa).etapes.map((e) => e.allumee),
-    [false, false],
+    d.etapes.map((e) => [e.attente, e.pictogramme, e.allumee, e.ici, e.faite]),
+    [
+      [5, null, false, false, false],
+      [0, 'visa', false, false, false],
+    ],
   );
+  assert.equal(vue(avec2(sansVisa, { guichets: 1 })).etapes[0].pictogramme, 'guichet');
   const vide = avec2(b, { usagers: { ...x(b).usagers, identite: [0, 0] } });
+  assert.equal(vue(vide).parapheur, null);
   assert.equal(vue(vide).appel, null);
 });
 
@@ -144,6 +158,7 @@ test('Service : le guichet et les agents débloqués, achats en lot', () => {
   const sv = V.vueService2(s, 0) as V.VueService2;
   // Aucun guichet à l'entrée (specs/012) : le premier coûte 30 €.
   assert.equal(sv.guichet.possedes, 0);
+  assert.equal(sv.guichet.description, 'Vérifie les pièces justificatives.');
   assert.equal(sv.guichet.cout, 30);
   // 30 + 35 = 65 ; un troisième (40) dépasserait 99.
   assert.equal(sv.guichet.maxAchetables, 2);
@@ -207,12 +222,12 @@ test('préréglages de vérification : sauvegardes valides, à l’acte voulu', 
   );
 });
 
-test('tableau de circulation : dossiers en attente à chaque étape, et qui la traite', () => {
+test('tableau de circulation : demandes en attente à chaque étape, et qui la traite', () => {
   const d = V.vueDirection(base2(), 0) as V.VueDirection;
   assert.deepEqual(
     d.etapes.map((e) => [e.nom, e.attente, e.traitePar, e.allumee, e.encombree]),
     [
-      ['Pièce', 0, 'guichets', false, false],
+      ['Vérification des pièces', 0, 'guichets', false, false],
       ['Visa', BALANCE2.visasInitiaux, 'visa', true, true],
     ],
   );

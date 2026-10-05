@@ -73,6 +73,13 @@ export function documentDe(nom: string): Document {
   return DOCUMENTS[nom] ?? { article: 'le document', feminin: false };
 }
 
+/** « sa Carte d’identité », « son Titre d’identité simplifié », « son attestation » (élision devant voyelle). */
+export function possessif(nom: string): 'sa' | 'son' {
+  return documentDe(nom).feminin && !/^[aeiouyhéèêàâîôû]/i.test(nom)
+    ? 'sa'
+    : 'son';
+}
+
 /** Le mot qui suit un nombre : pluriel à partir de 2, comme en français (« 0 demande », « 24 demandes »). */
 const mot = (n: number, singulier: string, pluriel: string): string =>
   n >= 2 ? pluriel : singulier;
@@ -89,6 +96,11 @@ export function valeurDocument(x: EtatActe2, p: ProcId, m: Modifiers2): number {
   let euros = 0;
   for (const e of x.procedures[p]) euros += dot * ETAPES[e.type].dotation;
   return euros;
+}
+
+/** Formulaires qu'exige un document : un par étape et par exemplaire (specs/012). */
+export function formulairesDocument(x: EtatActe2, p: ProcId): number {
+  return x.procedures[p].length * x.exemplaires;
 }
 
 /** Dossiers en cours dans une procédure : usagers, en boucle, et ceux qui poursuivent leur procédure. */
@@ -113,8 +125,9 @@ export interface LigneProduction {
   /** « 312 délivrées » */
   delivresTexte: string;
   /**
-   * Procédure que les usagers demandent : valeur d'un document (« +4,48 € la carte ») et usagers perdus
-   * (« 12 abandons »), symbole + mot comme les effets de l'Atelier ; null pour les autres procédures.
+   * Procédure que les usagers demandent, une fois l'Atelier ouvert (specs/012) : valeur d'un document
+   * (« +4,48 € la carte »), formulaires qu'il exige (« 4 formulaires la carte ») et usagers perdus
+   * (« 12 abandons »), symbole + mot comme les effets de l'Atelier ; null sinon.
    */
   valeur: EffetAffiche[] | null;
   /** Les documents de cette procédure sont remis à des usagers (« → usagers ») ; faux : aucune destination. */
@@ -157,15 +170,21 @@ export function lignesProduction(
       delivresMot,
       demandesTexte: `${formatEntier(demandes)} ${demandesMot}`,
       delivresTexte: `${formatEntier(delivres)} ${delivresMot}`,
-      valeur: demandee
-        ? [
-            {
-              texte: `+${formatEuros(valeurDocument(x, p, m))}\u00a0€ ${doc.article}`,
-              sens: 'plus',
-            },
-            { texte: compte(abandons, 'abandon', 'abandons'), sens: 'moins' },
-          ]
-        : null,
+      // Avant l'Atelier, un tap rapporte la dotation du seul visa : la valeur d'une carte entière tromperait.
+      valeur:
+        demandee && m.atelierVisible
+          ? [
+              {
+                texte: `+${formatEuros(valeurDocument(x, p, m))}\u00a0€ ${doc.article}`,
+                sens: 'plus',
+              },
+              {
+                texte: `${compte(formulairesDocument(x, p), 'formulaire', 'formulaires')} ${doc.article}`,
+                sens: 'neutre',
+              },
+              { texte: compte(abandons, 'abandon', 'abandons'), sens: 'moins' },
+            ]
+          : null,
       versUsagers: demandee && procedureAboutit(x.procedures, ouvertes, p),
     };
   });

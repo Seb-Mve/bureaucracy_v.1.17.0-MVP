@@ -15,7 +15,13 @@ import type {
 import { AGENTS2, PROCS_DEMANDEES } from '../../constants/balanceActe2';
 import { formatEntier } from '../../utils/formatters';
 import { demandeur, tirage } from '../usagers';
-import { delivresEntiers, documentDe } from './production';
+import {
+  compte,
+  delivresEntiers,
+  documentDe,
+  dossiersEnCours,
+  possessif,
+} from './production';
 import {
   conditionsNote2,
   coutAgent2,
@@ -34,19 +40,27 @@ import { dejaInstruite2 } from '../jurisprudence';
 
 /** Plafond d'un achat « Max » (collègues, guichets, agents), par sécurité. */
 export const ACHAT_MAX = 500;
-/** Numéro du premier parapheur présenté au chef de service (le panneau d'appel affiche le précédent). */
+/** Numéro de la première demande présentée au chef de service (le panneau d'appel affiche la précédente). */
 export const PREMIER_PARAPHEUR = 48;
 
-const DESCRIPTION_GUICHET =
-  'Le guichet 3 et ses semblables. Joignent les pièces, sans lire.';
-/** Noms courts des étapes, pour la chaîne de fiches de la bulle. */
+const DESCRIPTION_GUICHET = 'Vérifie les pièces justificatives.';
+/** Noms des étapes dans la chaîne de fiches de la bulle (specs/012 : « pièce » ne désigne que la vérification). */
 const NOMS_COURTS: Record<EtapeType, string> = {
-  piece: 'Pièce',
+  piece: 'Vérification des pièces',
   visa: 'Visa',
   signature: 'Signature',
-  pieceService: 'Pièce de service',
+  pieceService: 'Justificatif exigé',
   reflexion: 'Réflexion',
   commission: 'Commission',
+};
+/** Ce qu'attend la demande de la bulle, selon l'étape où elle se trouve. */
+const ATTENTES: Record<EtapeType, string> = {
+  piece: 'Attend la vérification des pièces',
+  visa: 'Attend votre visa',
+  signature: 'Attend la signature',
+  pieceService: 'Attend le justificatif exigé',
+  reflexion: 'Attend la fin du délai de réflexion',
+  commission: 'Attend la commission',
 };
 
 /** État de l'acte II, seulement quand la partie est à l'acte II. */
@@ -62,6 +76,7 @@ export function estNote2(id: NoteId | Note2Id): id is Note2Id {
 // Écran Direction
 // ---------------------------------------------------------------------------------------------
 
+/** La demande de la bulle (le nom « parapheur » reste interne : à l'écran, c'est une demande). */
 export interface ParapheurAffiche {
   numero: number;
   proc: ProcId;
@@ -70,6 +85,12 @@ export interface ParapheurAffiche {
   demandeur: string | null;
   /** « Mme Lefèvre demande une Carte d’identité », ou « Demande n° 9 907 · Carte d’identité ». */
   titre: string;
+  /** Rang de l'étape où elle attend. */
+  rang: number;
+  /** « Attend votre visa », « Attend la vérification des pièces »… */
+  attente: string;
+  /** Juste après sa délivrance : « Repart avec sa Carte d’identité » (null sans usager). */
+  repart: string | null;
 }
 
 /** Numéro sur trois chiffres au moins, comme un registre (« 048 », puis « 9 412 »). */
@@ -77,28 +98,38 @@ export const numeroRegistre = (n: number): string =>
   n < 1000 ? n.toString().padStart(3, '0') : formatEntier(n);
 
 /**
- * Une fiche du tableau de circulation (bulle) : les dossiers qui attendent à cette étape et qui la traite.
- * Un visa en attente « s'allume » ; la fiche la plus encombrée est marquée.
+ * Une fiche du tableau de circulation (bulle) : les demandes qui attendent à cette étape et qui la traite.
+ * Un visa en attente « s'allume » ; la fiche la plus encombrée est marquée ; une étape que la demande de la
+ * bulle a franchie et où plus personne n'attend est « faite ».
  */
 export interface EtapeChaine {
   type: EtapeType;
   nom: string;
-  /** Dossiers (usagers et sans usager) qui attendent à cette étape. */
+  /** Demandes (usagers et sans usager) qui attendent à cette étape. */
   attente: number;
   /** Qui franchit l'étape : les guichets, ou le chef de service et ses agents (visa). */
   traitePar: 'guichets' | 'visa';
-  /** Visa avec au moins un dossier en attente. */
+  /** Pictogramme : tampon (visa), guichet, ou aucun tant que le service n'a pas de guichet (specs/012). */
+  pictogramme: 'visa' | 'guichet' | null;
+  /** Visa avec au moins une demande en attente. */
   allumee: boolean;
-  /** L'étape où attendent le plus de dossiers (au moins un ; la première en cas d'égalité). */
+  /** L'étape où attendent le plus de demandes (au moins une ; la première en cas d'égalité). */
   encombree: boolean;
+  /** Franchie par la demande de la bulle, et plus personne n'y attend (coche, fond vert). */
+  faite: boolean;
+  /** Le visa où attend la demande de la bulle : « ← ici ». */
+  ici: boolean;
 }
 
 export interface VueDirection {
   /** Nom du service du chef (« La Direction », puis un autre à chaque Réforme). */
   nomService: string;
+  /** Demandes qui attendent un visa (colonne « À viser » de l'en-tête). */
   visas: number;
-  /** Usagers qui ont une démarche en cours (colonne Usagers de l'en-tête, salle de la scène). */
+  /** Usagers qui ont une démarche en cours (salle de la scène). */
   usagers: number;
+  /** « 1 500 usagers en ville » : habitants de la ville, au titre du relevé (specs/012). */
+  ville: string;
   guichets: number;
   /** Taux de dématérialisation (%), null tant que sa note n'est pas en vigueur. */
   demat: number | null;
@@ -109,7 +140,7 @@ export interface VueDirection {
   exemplaires: Exemplaires;
   exemplairesVisible: boolean;
   parapheur: ParapheurAffiche | null;
-  /** Étapes de la procédure du parapheur (Carte d'identité s'il n'y en a pas). */
+  /** Étapes de la procédure de la demande (Carte d'identité s'il n'y en a pas). */
   etapes: EtapeChaine[];
   /** Fiche qui clôt la chaîne : « Délivrée » (accordé au document), faite dès le premier document délivré. */
   delivrance: { nom: string; faite: boolean };
@@ -129,36 +160,91 @@ export interface VueDirection {
   finActeVue: boolean;
 }
 
-/** Dossiers d'usagers et dossiers en boucle qui attendent un visa dans la procédure `p`. */
-function visasDe(x: EtatActe2, p: ProcId): { u: number; b: number } {
-  let u = 0;
-  let b = 0;
-  x.procedures[p].forEach((e, k) => {
-    if (e.type !== 'visa') return;
-    u += x.usagers[p][k];
-    b += x.boucles[p][k] + x.suites[p][k];
-  });
-  return { u, b };
+/** Une demande en tête : sa procédure, le rang de son étape, et ce qui y attend (`u` usagers, `b` sans usager). */
+interface Tete {
+  p: ProcId;
+  k: number;
+  u: number;
+  b: number;
 }
 
-/** Tableau de circulation d'une procédure : dossiers en attente à chaque étape, et qui la traite. */
-export function tableauCirculation(x: EtatActe2, p: ProcId): EtapeChaine[] {
+/** Demandes qui attendent un visa dans la procédure `p`, et le visa le plus chargé. */
+function visasDe(x: EtatActe2, p: ProcId): Tete {
+  const t: Tete = { p, k: -1, u: 0, b: 0 };
+  let max = -1;
+  x.procedures[p].forEach((e, k) => {
+    if (e.type !== 'visa') return;
+    const u = x.usagers[p][k];
+    const b = x.boucles[p][k] + x.suites[p][k];
+    t.u += u;
+    t.b += b;
+    if (u + b > max) {
+      max = u + b;
+      t.k = k;
+    }
+  });
+  return t;
+}
+
+/**
+ * La demande de la bulle : au visa s'il y en a (procédure qui en a le plus) ; sinon, dans la procédure la plus
+ * chargée, la plus proche du bureau (la dernière étape où quelqu'un attend). Null : aucune demande nulle part.
+ */
+function demandeEnTete(x: EtatActe2, ouvertes: ProcId[]): Tete | null {
+  let tete: Tete | null = null;
+  for (const p of ouvertes) {
+    const v = visasDe(x, p);
+    if (v.u + v.b >= 1 && (!tete || v.u + v.b > tete.u + tete.b)) tete = v;
+  }
+  if (tete) return tete;
+  let charge = 0;
+  for (const p of ouvertes) {
+    const total = dossiersEnCours(x, p);
+    if (total <= charge) continue;
+    for (let k = x.procedures[p].length - 1; k >= 0; k--) {
+      const u = x.usagers[p][k];
+      const b = x.boucles[p][k] + x.suites[p][k];
+      if (u + b >= 1) {
+        tete = { p, k, u, b };
+        charge = total;
+        break;
+      }
+    }
+  }
+  return tete;
+}
+
+/**
+ * Tableau de circulation d'une procédure : demandes en attente à chaque étape, qui la traite, et le chemin de
+ * la demande de la bulle (`rang` : son étape, null s'il n'y en a pas).
+ */
+export function tableauCirculation(
+  x: EtatActe2,
+  p: ProcId,
+  rang: number | null = null,
+): EtapeChaine[] {
   const attentes = x.procedures[p].map((_, k) =>
     Math.floor(x.usagers[p][k] + x.boucles[p][k] + x.suites[p][k]),
   );
   const max = Math.max(...attentes);
   const rangMax = max >= 1 ? attentes.indexOf(max) : -1;
-  return x.procedures[p].map((e, k) => ({
-    type: e.type,
-    nom: NOMS_COURTS[e.type],
-    attente: attentes[k],
-    traitePar: e.type === 'visa' ? 'visa' : 'guichets',
-    allumee: e.type === 'visa' && attentes[k] >= 1,
-    encombree: k === rangMax,
-  }));
+  return x.procedures[p].map((e, k) => {
+    const visa = e.type === 'visa';
+    return {
+      type: e.type,
+      nom: NOMS_COURTS[e.type],
+      attente: attentes[k],
+      traitePar: visa ? 'visa' : 'guichets',
+      pictogramme: visa ? 'visa' : x.guichets > 0 ? 'guichet' : null,
+      allumee: visa && attentes[k] >= 1,
+      encombree: k === rangMax,
+      faite: rang !== null && k < rang && attentes[k] === 0,
+      ici: visa && k === rang && attentes[k] >= 1,
+    };
+  });
 }
 
-/** Écran Direction : ressources, parapheur à viser, scène et curseurs. Null hors de l'acte II. */
+/** Écran Direction : ressources, demande de la bulle, scène et curseurs. Null hors de l'acte II. */
 export function vueDirection(
   s: GameState,
   maintenant: number,
@@ -167,20 +253,14 @@ export function vueDirection(
   if (!x) return null;
   const m = getModifiers2(s, maintenant);
   const numero = PREMIER_PARAPHEUR + Math.floor(x.stats.visasTampons);
-  // Le parapheur en tête vient de la procédure qui a le plus de visas en attente.
-  let tete: { p: ProcId; u: number; b: number } | null = null;
-  for (const p of m.procsOuvertes) {
-    const v = visasDe(x, p);
-    if (v.u + v.b >= 1 && (!tete || v.u + v.b > tete.u + tete.b))
-      tete = { p, ...v };
-  }
+  const tete = demandeEnTete(x, m.procsOuvertes);
   const p: ProcId = tete?.p ?? 'identite';
   const usagers = Math.floor(usagersAvecDemarche(x));
   const noms = s.reformes.denomination.procedures;
   const doc = documentDe(noms[p]);
   let parapheur: ParapheurAffiche | null = null;
   if (tete) {
-    // Un usager attend ce parapheur selon la part des dossiers d'usagers à ce visa (tirage stable par numéro),
+    // Un usager attend cette demande selon la part des demandes d'usagers à son étape (tirage stable par numéro),
     // et seulement dans une procédure que les usagers demandent.
     const avecUsager =
       PROCS_DEMANDEES.includes(tete.p) &&
@@ -195,12 +275,16 @@ export function vueDirection(
       titre: qui
         ? `${qui} demande ${documentDe(nom).feminin ? 'une' : 'un'} ${nom}`
         : `Demande n° ${numeroRegistre(numero)} · ${nom}`,
+      rang: tete.k,
+      attente: ATTENTES[x.procedures[tete.p][tete.k].type],
+      repart: qui ? `Repart avec ${possessif(nom)} ${nom}` : null,
     };
   }
   return {
     nomService: s.reformes.denomination.direction,
     visas: Math.floor(visasEnAttente(x)),
     usagers,
+    ville: `${compte(x.population, 'usager', 'usagers')} en ville`,
     guichets: x.guichets,
     demat: m.dematVisible ? dematerialisation(x) : null,
     rupture: s.formulaires < x.exemplaires,
@@ -209,7 +293,7 @@ export function vueDirection(
     exemplaires: x.exemplaires,
     exemplairesVisible: m.exemplairesVisible,
     parapheur,
-    etapes: tableauCirculation(x, p),
+    etapes: tableauCirculation(x, p, tete?.k ?? null),
     delivrance: {
       nom: doc.feminin ? 'Délivrée' : 'Délivré',
       faite: delivresEntiers(x, p) >= 1,

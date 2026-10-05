@@ -55,6 +55,7 @@ test('relevé « Production du service » : demandes, délivrés, valeur d’une
       texte: `+${formatEuros(2 * BALANCE2.dotation)}\u00a0€ la carte`,
       sens: 'plus',
     },
+    { texte: '2 formulaires la carte', sens: 'neutre' },
     { texte: '1 abandon', sens: 'moins' },
   ]);
   assert.equal(carte.versUsagers, true);
@@ -131,6 +132,33 @@ test('chaque nom de procédure a son document, avec article et genre', () => {
   assert.equal(P.compte(0, 'demande', 'demandes'), '0 demande');
   assert.equal(P.compte(1, 'demande', 'demandes'), '1 demande');
   assert.equal(P.compte(2, 'demande', 'demandes'), '2 demandes');
+});
+
+test('relevé : valeur, formulaires et abandons seulement une fois l’Atelier ouvert ; formulaires × Exemplaires', () => {
+  const b = base2();
+  assert.equal((P.lignesProduction(b, 0) as P.LigneProduction[])[0].valeur, null);
+  const s = avec2(avecNotes(b, ['atelier', 'signature', 'exemplaires']), {
+    procedures: {
+      ...x(b).procedures,
+      identite: [{ type: 'piece' }, { type: 'signature' }, { type: 'commission' }, { type: 'visa' }],
+    },
+    usagers: { ...x(b).usagers, identite: [0, 0, 0, 0] },
+    boucles: { ...x(b).boucles, identite: [0, 0, 0, 0] },
+    suites: { ...x(b).suites, identite: [0, 0, 0, 0] },
+    exemplaires: 2,
+  });
+  assert.equal(P.formulairesDocument(x(s), 'identite'), 8);
+  assert.deepEqual(
+    (P.lignesProduction(s, 0) as P.LigneProduction[])[0].valeur?.map((e) => e.texte)[1],
+    '8 formulaires la carte',
+  );
+});
+
+test('possessif d’un document : « sa carte », « son titre », « son attestation »', () => {
+  assert.equal(P.possessif('Carte d’identité'), 'sa');
+  assert.equal(P.possessif('Démarche d’identification citoyenne'), 'sa');
+  assert.equal(P.possessif('Titre d’identité simplifié'), 'son');
+  assert.equal(P.possessif('Attestation d’hébergement'), 'son');
 });
 
 test('première carte visée : délivrée, relevé à 1 et fiche « Délivrée » allumée', () => {
