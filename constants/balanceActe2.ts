@@ -47,7 +47,7 @@ export const BALANCE2 = {
    * Exode (specs/011) : quand plus aucune procédure demandée n'aboutit pour les usagers, personne ne s'installe
    * plus et cette part des habitants sans démarche quitte la ville chaque seconde.
    */
-  exode: 0.01,
+  exode: 0.004,
   rejetMaxInitial: 0.5,
   /** Guichets : étapes franchies par seconde et prix. */
   guichet: { vitesse: 0.5, coutBase: 30, croissance: 1.15 },

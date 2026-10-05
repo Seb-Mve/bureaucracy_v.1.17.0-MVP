@@ -276,21 +276,21 @@ Sans Réforme, en minutes depuis l'entrée dans l'acte II :
 | Jalon | Robot 1 tap/s | Robot 2 taps/s | Robot 3 taps/s |
 |---|---|---|---|
 | Premier agent | 2.2 | 2.0 | 2.2 |
-| Atelier | 9.0 | 8.7 | 8.6 |
+| Atelier | 9.0 | 8.5 | 8.6 |
 | Marché public de fournitures (specs/010) | 17.2 | 16.0 | 15.2 |
 | Première boucle | 27.7 | 26.4 | 25.9 |
-| Dématérialisation 50 % | 84.4 | 81.7 | 80.7 |
-| Dématérialisation 100 % | 183.3 | 178.5 | 176.6 |
+| Dématérialisation 50 % | 85.8 | 83.2 | 82.2 |
+| Dématérialisation 100 % | 185.3 | 180.6 | 178.9 |
 
-Depuis specs/011 (ce que le service délivre) : seule la Carte d'identité reçoit des demandes ; le dossier qui franchit une pièce de service poursuit sa procédure jusqu'à la délivrance ; une fois qu'aucune procédure demandée n'aboutit, les usagers qui attendent s'impatientent (0,2 %/s), la ville ne se repeuple plus et se vide (1 %/s des habitants sans démarche) ; avant, seuls les points de patience des étapes et le rejet font abandonner ; la cible de dématérialisation passe à 68 000 points. 10 min après la première boucle, il reste 13 à 15 usagers en cours (1,1 à 1,6 % de leur maximum) et 1 665 à 1 677 documents ont été délivrés au service, aucun aux usagers ; en cumul, le service passe devant les usagers vers 53 – 54 min.
+Depuis specs/011 (ce que le service délivre) : seule la Carte d'identité reçoit des demandes ; le dossier qui franchit une pièce de service poursuit sa procédure jusqu'à la délivrance ; une fois qu'aucune procédure demandée n'aboutit, les usagers qui attendent s'impatientent (0,2 %/s), la ville ne se repeuple plus et se vide progressivement (0,4 %/s des habitants sans démarche) ; avant, seuls les points de patience des étapes et le rejet font abandonner ; la cible de dématérialisation passe à 68 000 points. Usagers en cours après la première boucle (part de leur maximum), à +0 / +2 / +4 / +6 / +10 min : 1 tap/s 537 / 483 / 389 / 289 / 138 (38,8 / 34,9 / 28,1 / 20,9 / 10,0 %) ; 2 taps/s 486 / 459 / 379 / 283 / 135 (44,2 / 41,8 / 34,5 / 25,8 / 12,3 %) ; 3 taps/s 444 / 440 / 371 / 279 / 133 (53,7 / 53,2 / 44,8 / 33,7 / 16,1 %). Critère de la spec 011 § 10 tenu : 10 min après la première boucle, moins de 25 % du maximum et environ 1 550 documents délivrés au service contre aucun aux usagers ; en cumul, le service passe devant les usagers vers 53 – 54 min.
 
 Depuis specs/010 (lisibilité), la ramette d'acte II coûte 80 € et l'étape rapporte 1,60 € de base : les fournitures pèsent 35 % des recettes en ×1 (44 % en ×2, le choix du robot), et le robot laisse les fournitures au Service des achats dès sa note.
 
-Avec une Réforme (2 taps/s, `balayage`) : rentable de 0 à 80 % de dématérialisation (fin de l'acte entre 110.9 et 176.9 min contre 178.5) ; l'acte I est rejoué en 18 à 22 min ; la plus petite Réforme rapporte 6 trombones.
+Avec une Réforme (2 taps/s, `balayage`) : rentable de 0 à 80 % de dématérialisation (fin de l'acte entre 112.5 et 180.2 min contre 180.7) ; l'acte I est rejoué en 18 à 22 min ; la plus petite Réforme rapporte 6 trombones.
 
-Le robot construit la boucle dès que l'étape est disponible. Avec 15 min de compréhension de la note n° 8 et une Réforme dès son déblocage (`node scripts/simulate-acte2.ts 2 300 0 15`) : Réforme débloquée à 41.4 min, acte I rejoué à 63.1 min, fin de l'acte à 114.5 min.
+Le robot construit la boucle dès que l'étape est disponible. Avec 15 min de compréhension de la note n° 8 et une Réforme dès son déblocage (`node scripts/simulate-acte2.ts 2 300 0 15`) : Réforme débloquée à 41.4 min, acte I rejoué à 63.2 min, fin de l'acte à 116.0 min.
 
-Cible du robot pour 100 % sans Réforme : 150 – 200 min (mesuré : 176.6 à 183.3). L'ancienne cible du robot pour 50 % (60 – 85 min, plan 1) est remplacée par le mur approuvé au plan 3 (81.7 min à 2 taps/s ; les tirages étant aléatoires, une exécution s'écarte de quelques dixièmes de minute). « Deux bonus à la première Réforme » se vérifie en trombones : la plus petite Réforme en rapporte 6 au moins, soit 3 + 3 (les deux bonus les moins chers), quoi que le robot choisisse d'acheter.
+Cible du robot pour 100 % sans Réforme : 150 – 200 min (mesuré : 178.9 à 185.3). L'ancienne cible du robot pour 50 % (60 – 85 min, plan 1) est remplacée par le mur approuvé au plan 3 (83.2 min à 2 taps/s ; les tirages étant aléatoires, une exécution s'écarte de quelques dixièmes de minute). « Deux bonus à la première Réforme » se vérifie en trombones : la plus petite Réforme en rapporte 6 au moins, soit 3 + 3 (les deux bonus les moins chers), quoi que le robot choisisse d'acheter.
 
 ## Interface
 

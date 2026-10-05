@@ -55,6 +55,8 @@ interface ApresBoucle {
   /** Documents délivrés pendant ces 10 minutes. */
   delivresUsagers: number;
   delivresService: number;
+  /** Usagers en cours à 0, 2, 4, 6 et 10 min après la première boucle. */
+  trajectoire: { min: number; usagers: number }[];
 }
 
 interface Partie {
@@ -82,6 +84,7 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
   let apresBoucle: ApresBoucle | null = null;
   let atelier: { s: GameState; t: number } | null = null;
   let aLaBoucle: { usagers: number; service: number } | null = null;
+  const trajectoire: { min: number; usagers: number }[] = [];
   for (let t = 1; t <= minutesMax * 60; t++) {
     const now = t * 1000;
     if (s.acte === 1) {
@@ -101,6 +104,9 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
     const enCours = D.usagersAvecDemarche(x);
     if (s.reformes.nombre === 0) usagersMax = Math.max(usagersMax, enCours);
     if (s.reformes.nombre === 0 && x.premiereBoucle !== null) {
+      for (const m of [0, 2, 4, 6])
+        if (trajectoire.length === [0, 2, 4, 6].indexOf(m) && now >= x.premiereBoucle + m * 60_000)
+          trajectoire.push({ min: m, usagers: enCours });
       if (aLaBoucle === null) aLaBoucle = delivres(s);
       else if (apresBoucle === null && now >= x.premiereBoucle + 600_000) {
         const d = delivres(s);
@@ -109,6 +115,7 @@ function jouer(reformeA: number | null, journal: boolean): Partie {
           usagersMax,
           delivresUsagers: d.usagers - aLaBoucle.usagers,
           delivresService: d.service - aLaBoucle.service,
+          trajectoire: [...trajectoire, { min: 10, usagers: enCours }],
         };
       }
       const d = delivres(s);
@@ -188,6 +195,9 @@ if (mode === 'balayage') {
     const part = (100 * a.usagers) / Math.max(1, a.usagersMax);
     console.log(
       `  10 min après la première boucle : ${Math.round(a.usagers)} usagers en cours (${part.toFixed(1)} % du maximum, ${Math.round(a.usagersMax)}) · en 10 min, ${Math.round(a.delivresService)} documents délivrés au service, ${Math.round(a.delivresUsagers)} aux usagers · ${part < 25 && a.delivresService > a.delivresUsagers ? 'critère tenu' : 'critère NON tenu'}`,
+    );
+    console.log(
+      `  trajectoire des usagers en cours après la première boucle : ${a.trajectoire.map((q) => `+${q.min} min ${Math.round(q.usagers)} (${((100 * q.usagers) / Math.max(1, a.usagersMax)).toFixed(1)} %)`).join(' · ')}`,
     );
   }
   if (p.atelier) {
