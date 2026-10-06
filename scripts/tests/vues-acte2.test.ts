@@ -47,6 +47,9 @@ test('écran Direction à l’entrée : des demandes à viser, aucun guichet, Ca
   assert.equal(d.visas, BALANCE2.visasInitiaux);
   assert.equal(d.usagers, BALANCE2.fileInitiale + BALANCE2.visasInitiaux);
   assert.equal(d.guichets, 0);
+  // Pas de Taux de rejet tant qu'aucun guichet n'est ouvert : une demande rejetée resterait bloquée.
+  assert.equal(d.rejetVisible, false);
+  assert.equal(vue(avec2(base2(), { guichets: 1 })).rejetVisible, true);
   assert.equal(d.ville, `${formatEntier(BALANCE2.populationInitiale)} usagers en ville`);
   assert.equal(d.demat, null);
   assert.equal(d.rupture, false);

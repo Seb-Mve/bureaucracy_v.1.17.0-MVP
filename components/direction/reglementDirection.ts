@@ -50,11 +50,13 @@ export function articlesDirection(
         'Une note approuvée prend effet aussitôt, ou au terme de son délai d’instruction quand elle en a un.',
     });
   }
-  articles.push({
-    titre: 'Taux de rejet',
-    texte:
-      'Une demande rejetée en fin de procédure rapporte une prime et repart en tête de sa procédure. Le rejet n’use que la patience des usagers.',
-  });
+  if (d.rejetVisible) {
+    articles.push({
+      titre: 'Taux de rejet',
+      texte:
+        'Une demande rejetée en fin de procédure rapporte une prime et repart en tête de sa procédure. Le rejet n’use que la patience des usagers.',
+    });
+  }
   if (d.atelierVisible) {
     articles.push({
       titre: 'Atelier des procédures',

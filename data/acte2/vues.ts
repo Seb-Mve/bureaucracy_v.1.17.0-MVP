@@ -126,6 +126,11 @@ export interface VueDirection {
   rupture: boolean;
   tauxRejet: number;
   rejetMax: number;
+  /**
+   * Curseur du Taux de rejet affiché : dès qu'un guichet est ouvert. Avant, une demande rejetée resterait
+   * bloquée à la vérification des pièces et ne rapporterait rien.
+   */
+  rejetVisible: boolean;
   exemplaires: Exemplaires;
   exemplairesVisible: boolean;
   parapheur: ParapheurAffiche | null;
@@ -277,6 +282,7 @@ export function vueDirection(
     rupture: s.formulaires < x.exemplaires,
     tauxRejet: Math.min(x.tauxRejet, m.rejetMax),
     rejetMax: m.rejetMax,
+    rejetVisible: x.guichets > 0,
     exemplaires: x.exemplaires,
     exemplairesVisible: m.exemplairesVisible,
     parapheur,
