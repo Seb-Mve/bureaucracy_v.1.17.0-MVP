@@ -110,6 +110,32 @@ export interface EtapeChaine {
   ici: boolean;
 }
 
+/**
+ * Circuit d'une demande (specs/013), de gauche à droite : les usagers qui attendent les guichets, les guichets,
+ * votre bureau (les demandes à viser), le document délivré. Chaque chiffre n'y figure qu'une fois : « À viser »
+ * reste dans l'en-tête.
+ */
+export interface CircuitAffiche {
+  /** Procédure suivie (« Carte d’identité »). */
+  procNom: string;
+  /** Mot court du document délivré (« Carte »). */
+  document: string;
+  /** Demandes qui attendent aux étapes des guichets (toutes sauf le visa). */
+  attendent: number;
+  guichets: number;
+  /** Plus rien à viser. */
+  bureauVide: boolean;
+  /** Aucun guichet ouvert, plus rien à viser et des usagers qui attendent : la case Guichets clignote. */
+  bloque: boolean;
+  /** Des agents visent avec vous. */
+  agents: boolean;
+  /**
+   * La demande suivie, sous le circuit : « M. Benali » (ou « Demande n° 9 907 ») et ce qu'elle attend, en
+   * minuscule (« attend votre visa », « attend qu’un guichet ouvre ») ; `repart` juste après sa délivrance.
+   */
+  ligne: { qui: string; attente: string; repart: string | null } | null;
+}
+
 export interface VueDirection {
   /** Nom du service du chef (« La Direction », puis un autre à chaque Réforme). */
   nomService: string;
@@ -134,6 +160,12 @@ export interface VueDirection {
   exemplaires: Exemplaires;
   exemplairesVisible: boolean;
   parapheur: ParapheurAffiche | null;
+  circuit: CircuitAffiche;
+  /**
+   * Colonne Formulaires de l'en-tête : dès le premier guichet, qui en consomme sans vous (specs/013), ou en
+   * rupture. Avant, les demandes à viser ne manquent jamais de formulaires.
+   */
+  formulairesVisible: boolean;
   /** Étapes de la procédure de la demande (Carte d'identité s'il n'y en a pas). */
   etapes: EtapeChaine[];
   /** Fiche qui clôt la chaîne : « Délivrée » (accordé au document) ; elle ne s'allume qu'à la délivrance (specs/012). */
@@ -236,6 +268,44 @@ export function tableauCirculation(
   });
 }
 
+const minusculeInitiale = (t: string): string => t.charAt(0).toLowerCase() + t.slice(1);
+
+/** La demande suivie, sous le circuit : sans guichet ouvert, elle attend qu'un guichet ouvre. */
+function ligneCircuit(x: EtatActe2, d: ParapheurAffiche): NonNullable<CircuitAffiche['ligne']> {
+  const auVisa = x.procedures[d.proc][d.rang]?.type === 'visa';
+  return {
+    qui: d.demandeur ?? `Demande n° ${numeroRegistre(d.numero)}`,
+    attente: !auVisa && x.guichets === 0 ? 'attend qu’un guichet ouvre' : minusculeInitiale(d.attente),
+    repart: d.repart ? minusculeInitiale(d.repart) : null,
+  };
+}
+
+/** Circuit de la procédure `p` (specs/013). */
+export function circuitDe(
+  x: EtatActe2,
+  p: ProcId,
+  nom: string,
+  parapheur: ParapheurAffiche | null = null,
+): CircuitAffiche {
+  let attendent = 0;
+  x.procedures[p].forEach((e, k) => {
+    if (e.type !== 'visa') attendent += x.usagers[p][k] + x.boucles[p][k] + x.suites[p][k];
+  });
+  const n = Math.floor(attendent);
+  const bureauVide = visasEnAttente(x) < 1;
+  const agents = x.agents.instructeur + x.agents.chefBureau + x.agents.sousDirecteur > 0;
+  return {
+    procNom: nom,
+    document: nom.split(/[\s\u00a0]/)[0],
+    attendent: n,
+    guichets: x.guichets,
+    bureauVide,
+    bloque: x.guichets === 0 && bureauVide && n >= 1,
+    agents,
+    ligne: parapheur ? ligneCircuit(x, parapheur) : null,
+  };
+}
+
 /** Écran Direction : ressources, demande de la bulle, scène et curseurs. Null hors de l'acte II. */
 export function vueDirection(
   s: GameState,
@@ -286,6 +356,8 @@ export function vueDirection(
     exemplaires: x.exemplaires,
     exemplairesVisible: m.exemplairesVisible,
     parapheur,
+    circuit: circuitDe(x, p, noms[p], parapheur),
+    formulairesVisible: x.guichets > 0 || s.formulaires < x.exemplaires,
     etapes: tableauCirculation(x, p, tete?.k ?? null),
     delivrance: { nom: doc.feminin ? 'Délivrée' : 'Délivré' },
     appel: usagers >= 1 ? numero - 1 : null,

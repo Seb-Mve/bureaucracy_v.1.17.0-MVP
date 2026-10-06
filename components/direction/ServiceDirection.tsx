@@ -13,11 +13,11 @@ import CarteUnite from '@/components/service/CarteUnite';
 const debitTotal = (v: number): string => (v < 0.01 ? '0' : formatDebit(v));
 
 /**
- * Onglet Service de l'acte II : fournitures (ramettes, puis Service des achats), guichets (franchissent les
- * étapes) et agents (accordent les visas).
+ * Onglet Service de l'acte II : fournitures (ramettes, puis Service des achats) dès que la colonne Formulaires
+ * apparaît (premier guichet, specs/013), guichets (franchissent les étapes) et agents (accordent les visas).
  */
 export default function ServiceDirection() {
-  const { service2, acheterGuichet, acheterAgent2, encre } = useGameState();
+  const { service2, direction, acheterGuichet, acheterAgent2, encre } = useGameState();
   if (!service2) return null;
   const { guichet, agents, etapesParSeconde, visasParSeconde } = service2;
 
@@ -25,9 +25,13 @@ export default function ServiceDirection() {
     <View style={styles.ecran}>
       <Hud />
       <ScrollView contentContainerStyle={styles.contenu}>
-        <Text style={styles.titre}>Fournitures</Text>
-        <CarteRamettes />
-        <CarteAchats />
+        {direction?.formulairesVisible && (
+          <>
+            <Text style={styles.titre}>Fournitures</Text>
+            <CarteRamettes />
+            <CarteAchats />
+          </>
+        )}
 
         <Text style={styles.titre}>
           Guichets{' '}

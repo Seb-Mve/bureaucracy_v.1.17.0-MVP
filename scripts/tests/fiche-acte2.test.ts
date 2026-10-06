@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { formatEuros } from '../../utils/formatters';
 import * as E from '../../data/engine';
 import * as D from '../../data/acte2/moteur';
 import * as F from '../../data/acte2/fiche';
@@ -39,19 +40,19 @@ test('fiche de poste du chef de service : trois lignes à la prise de fonctions,
   assert.deepEqual(
     f.lignes.map((l) => l.titre),
     [
-      'Les usagers demandent des Cartes d’identité.',
-      'Vous tamponnez le dernier : le visa.',
-      'Chaque carte délivrée rapporte une dotation.',
+      'Les usagers déposent leur demande au guichet.',
+      'Le guichet vérifie leurs pièces et vous transmet la demande.',
+      'Vous tamponnez le visa : la carte est délivrée.',
     ],
   );
   assert.deepEqual(
-    f.lignes.map((l) => l.texte),
-    [
-      'Chaque demande est une liasse de formulaires, un par étape.',
-      'La carte est délivrée à l’usager.',
-      'Plus elle exige de formulaires, plus elle rapporte.',
-    ],
+    f.lignes.slice(0, 2).map((l) => l.texte),
+    ['Pour une Carte d’identité.', 'Elle arrive dans « À viser ».'],
   );
+  // Ce que rapporte un visa est écrit en clair : exactement ce qu'un tap ajoute au budget.
+  const m = F.vueFiche2(base2(), 0) as F.VueFiche2;
+  const gain = D.tamponner2(base2(), 0, () => 0.99).s.budget - base2().budget;
+  assert.equal(m.lignes[2].texte, `Chaque visa rapporte ${formatEuros(gain)}\u00a0€ au service.`);
   assert.equal(
     f.nonLues,
     0,

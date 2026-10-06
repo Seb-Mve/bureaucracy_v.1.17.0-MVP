@@ -110,16 +110,18 @@ export default function Hud() {
           rupture={sansBudget}
           declencheur={verdict?.id}
         />
-        <Colonne
-          label="Formulaires"
-          place={serre ? 'libelleLong' : undefined}
-          valeur={formatEntier(etat.formulaires)}
-          compact={compact}
-          etroit={etroit}
-          rupture={rupture}
-          declencheur={verdict?.id}
-          effet="baisse"
-        />
+        {(!direction || direction.formulairesVisible) && (
+          <Colonne
+            label="Formulaires"
+            place={serre ? 'libelleLong' : undefined}
+            valeur={formatEntier(etat.formulaires)}
+            compact={compact}
+            etroit={etroit}
+            rupture={rupture}
+            declencheur={verdict?.id}
+            effet="baisse"
+          />
+        )}
         {direction ? (
           <Colonne
             label="À viser"

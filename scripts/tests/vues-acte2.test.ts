@@ -290,3 +290,31 @@ test('bulle : la chaîne se termine par « Délivrée » ou « Délivré », acc
   assert.deepEqual(vue(titre).delivrance, { nom: 'Délivré' });
   assert.equal(vue(titre).parapheur?.repart, 'Repart avec son Titre d’identité simplifié');
 });
+
+test('circuit (specs/013) : 14 usagers attendent, aucun guichet ouvert, la demande attend votre visa', () => {
+  const d = vue(base2());
+  assert.equal(d.circuit.procNom, 'Carte d’identité');
+  assert.equal(d.circuit.document, 'Carte');
+  assert.equal(d.circuit.attendent, BALANCE2.fileInitiale);
+  assert.equal(d.circuit.guichets, 0);
+  assert.equal(d.circuit.bureauVide, false);
+  assert.equal(d.circuit.bloque, false);
+  assert.match(d.circuit.ligne?.qui ?? '', /^(Mme|M\.) \S/);
+  assert.equal(d.circuit.ligne?.attente, 'attend votre visa');
+  assert.equal(d.circuit.ligne?.repart, 'repart avec sa Carte d’identité');
+  // Sans guichet, Formulaires reste caché : les demandes à viser n'en manquent jamais.
+  assert.equal(d.formulairesVisible, false);
+});
+
+test('circuit : plus rien à viser sans guichet, la case Guichets est bloquée et la demande attend qu’un guichet ouvre', () => {
+  const b = base2();
+  const d = vue(avec2(b, { usagers: { ...x(b).usagers, identite: [14, 0] } }));
+  assert.equal(d.circuit.bureauVide, true);
+  assert.equal(d.circuit.bloque, true);
+  assert.equal(d.circuit.ligne?.attente, 'attend qu’un guichet ouvre');
+  // Un guichet ouvert : plus de blocage, Formulaires apparaît, la demande attend la vérification.
+  const g = vue(avec2(b, { guichets: 1, usagers: { ...x(b).usagers, identite: [14, 0] } }));
+  assert.equal(g.circuit.bloque, false);
+  assert.equal(g.formulairesVisible, true);
+  assert.equal(g.circuit.ligne?.attente, 'attend la vérification des pièces');
+});

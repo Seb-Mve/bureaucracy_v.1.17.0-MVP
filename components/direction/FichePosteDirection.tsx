@@ -8,11 +8,11 @@ import {
   View,
 } from 'react-native';
 import {
-  Copy,
-  Paperclip,
+  Landmark,
   Stamp,
   Truck,
   UserRound,
+  Users,
   type LucideIcon,
 } from 'lucide-react-native';
 import {
@@ -32,9 +32,9 @@ import BoutonPoussoir from '@/components/charte/BoutonPoussoir';
 
 /** Pictogramme et fond de chaque ligne de la fiche. */
 const ICONES: Record<LigneFiche2Id, { Icone: LucideIcon; fond: string }> = {
-  circulation: { Icone: Paperclip, fond: Colors.pastelBleu },
-  guichets: { Icone: Stamp, fond: Colors.bleuFond },
-  dotation: { Icone: Copy, fond: Colors.pastelJaune },
+  circulation: { Icone: Users, fond: Colors.papierChaud },
+  guichets: { Icone: Landmark, fond: Colors.pastelVert },
+  dotation: { Icone: Stamp, fond: Colors.bleuFond },
   agents: { Icone: UserRound, fond: Colors.pastelJaune },
   achats: { Icone: Truck, fond: Colors.pastelVert },
 };

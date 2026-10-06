@@ -25,7 +25,7 @@ import { Encres, type Encre } from '@/constants/Colors';
 
 export type { UsagerAffiche };
 export type { ActionAtelier, Agent2Id, EtapeType, Exemplaires, ProcId } from '@/types/acte2';
-export type { EtapeChaine, ParapheurAffiche, UniteAffichee, VueDirection, VueService2 } from '@/data/acte2/vues';
+export type { CircuitAffiche, EtapeChaine, ParapheurAffiche, UniteAffichee, VueDirection, VueService2 } from '@/data/acte2/vues';
 export type { ChoixEtape, EffetAffiche, EtapeAtelier, ProcAtelier, VueAtelier } from '@/data/acte2/vueAtelier';
 export type { LigneFicheAffichee, VueFiche2 } from '@/data/acte2/fiche';
 export type { LigneProduction } from '@/data/acte2/production';

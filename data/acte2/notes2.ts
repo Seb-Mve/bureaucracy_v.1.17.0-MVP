@@ -37,7 +37,7 @@ export const NOTES2: NoteDef2[] = [
     id: 'prise',
     numero: 1,
     titre: 'Réouverture du guichet 3',
-    texte: 'Les pièces justificatives seront désormais vérifiées au guichet. Le guichet 3 rouvre, sous votre autorité.',
+    texte: 'Les usagers attendent. Le guichet 3 rouvre, sous votre autorité.',
     effet: 'Débloque le recrutement des guichets.',
     cout: 0,
     instruction: 0,

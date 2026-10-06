@@ -1,12 +1,18 @@
 /**
  * Fiche de poste du chef de service (acte II) : même format que celle du guichet 3. Elle s'ouvre à la prise
- * de fonctions, se relit depuis Options ; trois lignes d'orientation (specs/012 : la demande, le visa, la dotation),
+ * de fonctions, se relit depuis Options ; trois lignes qui suivent le circuit de l'écran (specs/013 : les usagers,
+ * les guichets, votre visa et ce qu'il rapporte),
  * puis les agents et le service des achats à leur note (aucune ligne n'explique un arbitrage). Rien ne nomme la
  * boucle ni la dématérialisation ; le seul mot pour ce que le service traite est « demande ».
  */
 import type { GameState } from '../../types/game';
 import type { EtatActe2, LigneFiche2Id, Note2Id } from '../../types/acte2';
-import { noteEffective2 } from './moteur';
+import { getModifiers2, noteEffective2 } from './moteur';
+import { BALANCE2, ETAPES, EXEMPLAIRES } from '../../constants/balanceActe2';
+import { formatEuros } from '../../utils/formatters';
+
+/** Remplacé dans le texte d'une ligne par ce que rapporte un visa (« 2,24 »), grade et exemplaires compris. */
+const MONTANT = '{montant}';
 
 interface LigneDef {
   id: LigneFiche2Id;
@@ -20,20 +26,20 @@ const LIGNES: LigneDef[] = [
   {
     id: 'circulation',
     note: null,
-    titre: 'Les usagers demandent des Cartes d’identité.',
-    texte: 'Chaque demande est une liasse de formulaires, un par étape.',
+    titre: 'Les usagers déposent leur demande au guichet.',
+    texte: 'Pour une Carte d’identité.',
   },
   {
     id: 'guichets',
     note: null,
-    titre: 'Vous tamponnez le dernier : le visa.',
-    texte: 'La carte est délivrée à l’usager.',
+    titre: 'Le guichet vérifie leurs pièces et vous transmet la demande.',
+    texte: 'Elle arrive dans « À viser ».',
   },
   {
     id: 'dotation',
     note: null,
-    titre: 'Chaque carte délivrée rapporte une dotation.',
-    texte: 'Plus elle exige de formulaires, plus elle rapporte.',
+    titre: 'Vous tamponnez le visa : la carte est délivrée.',
+    texte: `Chaque visa rapporte ${MONTANT}\u00a0€ au service.`,
   },
   {
     id: 'agents',
@@ -86,10 +92,14 @@ export function vueFiche2(s: GameState, maintenant: number): VueFiche2 | null {
   const x = s.acte === 2 ? s.acte2 : null;
   if (!x) return null;
   const ids = lignesFiche2(s, maintenant);
+  const m = getModifiers2(s, maintenant);
+  const montant = formatEuros(
+    BALANCE2.dotation * m.dotationMult * EXEMPLAIRES[x.exemplaires].dotation * ETAPES.visa.dotation,
+  );
   const lignes = LIGNES.filter((l) => ids.includes(l.id)).map((l) => ({
     id: l.id,
     titre: l.titre,
-    texte: l.texte,
+    texte: l.texte.replace(MONTANT, montant),
     nouvelle: !x.ficheLues.includes(l.id),
   }));
   return {
